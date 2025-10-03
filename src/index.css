@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Enterprise Industrial Design System - Dark Theme with Blue Accents */
+
+@layer base {
+  :root {
+    /* Dark enterprise theme */
+    --background: 215 25% 8%;
+    --foreground: 210 40% 95%;
+
+    --card: 215 25% 10%;
+    --card-foreground: 210 40% 95%;
+
+    --popover: 215 25% 12%;
+    --popover-foreground: 210 40% 95%;
+
+    /* Enterprise blue primary */
+    --primary: 214 95% 60%;
+    --primary-foreground: 215 25% 8%;
+    --primary-glow: 214 95% 70%;
+
+    /* Subtle secondary */
+    --secondary: 215 25% 16%;
+    --secondary-foreground: 210 40% 85%;
+
+    /* Muted grays */
+    --muted: 215 25% 14%;
+    --muted-foreground: 215 15% 65%;
+
+    /* Success and warning accents */
+    --accent: 151 75% 45%;
+    --accent-foreground: 215 25% 8%;
+
+    --warning: 45 95% 55%;
+    --warning-foreground: 215 25% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders and inputs */
+    --border: 215 25% 20%;
+    --input: 215 25% 16%;
+    --ring: 214 95% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(215 25% 12%));
+    --gradient-success: linear-gradient(135deg, hsl(var(--accent)), hsl(151 75% 55%));
+    
+    /* Shadows */
+    --shadow-lg: 0 20px 40px -12px hsl(215 25% 4% / 0.4);
+    --shadow-glow: 0 0 30px hsl(var(--primary) / 0.3);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

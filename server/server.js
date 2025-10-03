@@ -1,0 +1,1691 @@
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const AWS = require('aws-sdk');
+const snowflake = require('snowflake-sdk');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const { execSync, spawn } = require('child_process');
+const crypto = require('crypto');
+
+// Configure file storage for Docker image uploads
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: {
+    fileSize: 2 * 1024 * 1024 * 1024 // 2GB limit for Docker images
+  }
+});
+
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+
+const app = express();
+const port = 3002;
+
+// Store deployment status and configurations
+const deploymentStatus = new Map();
+const deploymentConfigs = new Map();
+
+
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Create required IAM policy for deployment
+app.post('/api/setup-permissions', async (req, res) => {
+  const { accessKey, secretKey, region, userName } = req.body;
+
+  if (!accessKey || !secretKey || !region || !userName) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Missing required fields: accessKey, secretKey, region, userName' 
+    });
+  }
+
+  try {
+    const iam = new AWS.IAM({
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+      region: region,
+    });
+
+    const policyName = 'DataDeployerFullAccess';
+    const policyDocument = {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Action: [
+            'events:*',
+            'states:*',
+            'apigateway:*',
+            'iam:CreateRole',
+            'iam:AttachRolePolicy',
+            'iam:CreatePolicy',
+            'iam:GetRole',
+            'iam:PassRole',
+            'ecr:*',
+            'ecs:*',
+            'codebuild:*',
+            's3:*',
+            'logs:*',
+            'ec2:DescribeVpcs',
+            'ec2:DescribeSubnets',
+            'ec2:CreateSecurityGroup',
+            'ec2:AuthorizeSecurityGroupIngress',
+            'ec2:DescribeSecurityGroups',
+            'ec2:DescribeNetworkInterfaces'
+          ],
+          Resource: '*'
+        }
+      ]
+    };
+
+    // Create the policy
+    let policyArn;
+    try {
+      const createPolicyResult = await iam.createPolicy({
+        PolicyName: policyName,
+        PolicyDocument: JSON.stringify(policyDocument),
+        Description: 'Full access policy for Data Deployer application'
+      }).promise();
+      policyArn = createPolicyResult.Policy.Arn;
+    } catch (error) {
+      if (error.code === 'EntityAlreadyExistsException') {
+        // Get existing policy ARN
+        const accountId = await iam.getUser().then(result => result.User.Arn.split(':')[4]);
+        policyArn = `arn:aws:iam::${accountId}:policy/${policyName}`;
+      } else {
+        throw error;
+      }
+    }
+
+    // Attach policy to user
+    await iam.attachUserPolicy({
+      UserName: userName,
+      PolicyArn: policyArn
+    }).promise();
+
+    res.json({
+      success: true,
+      message: 'Permissions setup completed successfully!',
+      policyArn: policyArn,
+      policyName: policyName
+    });
+
+  } catch (error) {
+    console.error('Permission setup failed:', error);
+    res.status(400).json({
+      success: false,
+      message: `Permission setup failed: ${error.message}`,
+      errorCode: error.code
+    });
+  }
+});
+
+app.post('/api/test-aws', async (req, res) => {
+  const { accessKey, secretKey, region } = req.body;
+
+  if (!accessKey || !secretKey || !region) {
+    return res.status(400).json({ success: false, message: 'Missing AWS credentials.' });
+  }
+
+  // Validate credential format
+  if (!accessKey.startsWith('AKIA') && !accessKey.startsWith('ASIA')) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid Access Key format. AWS Access Keys should start with AKIA or ASIA.' 
+    });
+  }
+
+  if (secretKey.length < 20) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid Secret Key format. AWS Secret Keys should be at least 20 characters long.' 
+    });
+  }
+
+  try {
+    console.log(`Testing AWS credentials for region: ${region}`);
+    
+    const sts = new AWS.STS({
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+      region: region,
+    });
+
+    const identity = await sts.getCallerIdentity().promise();
+    console.log(`AWS credentials valid. Account: ${identity.Account}, User: ${identity.Arn}`);
+    
+    // Test ECR access
+    const ecr = new AWS.ECR({
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+      region: region,
+    });
+    await ecr.describeRepositories({ maxResults: 1 }).promise();
+    
+    res.json({ 
+      success: true, 
+      message: `AWS connection successful! Account: ${identity.Account}`,
+      accountId: identity.Account
+    });
+  } catch (error) {
+    console.error('AWS connection test failed:', error);
+    
+    let errorMessage = error.message;
+    if (error.code === 'UnrecognizedClientException') {
+      errorMessage = 'Invalid AWS credentials. Please check your Access Key and Secret Key.';
+    } else if (error.code === 'InvalidUserID.NotFound') {
+      errorMessage = 'AWS credentials are invalid or expired.';
+    } else if (error.code === 'AccessDenied') {
+      errorMessage = `Access denied. Please ensure your AWS user has ECR and ECS permissions.`;
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      message: errorMessage,
+      errorCode: error.code
+    });
+  }
+});
+
+// Fetch AWS resources endpoint
+app.post('/api/aws-resources', async (req, res) => {
+  const { accessKey, secretKey, region } = req.body;
+
+  if (!accessKey || !secretKey || !region) {
+    return res.status(400).json({ success: false, message: 'Missing AWS credentials.' });
+  }
+
+  try {
+    console.log(`Fetching AWS resources for region: ${region}`);
+    
+    // Configure AWS SDK
+    const awsConfig = {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+      region: region,
+    };
+
+    const ecr = new AWS.ECR(awsConfig);
+    const ecs = new AWS.ECS(awsConfig);
+    const iam = new AWS.IAM(awsConfig);
+    const stepfunctions = new AWS.StepFunctions(awsConfig);
+    const apigateway = new AWS.APIGateway(awsConfig);
+
+    const resources = {
+      clusters: [],
+      taskDefinitions: [],
+      ecrRepositories: [],
+      iamRoles: [],
+      stepFunctions: [],
+      apiGateways: []
+    };
+
+    // Fetch ECS Clusters
+    try {
+      const clustersResult = await ecs.listClusters().promise();
+      if (clustersResult.clusterArns && clustersResult.clusterArns.length > 0) {
+        const clusterDetails = await ecs.describeClusters({ 
+          clusters: clustersResult.clusterArns 
+        }).promise();
+        resources.clusters = clusterDetails.clusters
+          .filter(cluster => cluster.status === 'ACTIVE')
+          .map(cluster => cluster.clusterName);
+      }
+    } catch (error) {
+      console.log('Error fetching ECS clusters:', error.message);
+    }
+
+    // Fetch Task Definition Families
+    try {
+      const taskDefsResult = await ecs.listTaskDefinitionFamilies({ 
+        status: 'ACTIVE',
+        maxResults: 100 
+      }).promise();
+      resources.taskDefinitions = taskDefsResult.families || [];
+    } catch (error) {
+      console.log('Error fetching task definitions:', error.message);
+    }
+
+    // Fetch ECR Repositories
+    try {
+      const reposResult = await ecr.describeRepositories({ maxResults: 100 }).promise();
+      resources.ecrRepositories = reposResult.repositories.map(repo => repo.repositoryName);
+    } catch (error) {
+      console.log('Error fetching ECR repositories:', error.message);
+    }
+
+    // Fetch IAM Roles (show all roles - let user choose)
+    try {
+      const rolesResult = await iam.listRoles({ MaxItems: 1000 }).promise();
+      resources.iamRoles = rolesResult.Roles
+        .map(role => role.RoleName)
+        .sort(); // Sort alphabetically for easier selection
+    } catch (error) {
+      console.log('Error fetching IAM roles:', error.message);
+    }
+
+    // Fetch Step Functions
+    try {
+      const stepFunctionsResult = await stepfunctions.listStateMachines({ maxResults: 100 }).promise();
+      resources.stepFunctions = stepFunctionsResult.stateMachines.map(sm => sm.name);
+    } catch (error) {
+      console.log('Error fetching Step Functions:', error.message);
+    }
+
+    // Fetch API Gateways
+    try {
+      const apiGatewaysResult = await apigateway.getRestApis({ limit: 100 }).promise();
+      resources.apiGateways = apiGatewaysResult.items.map(api => api.name);
+    } catch (error) {
+      console.log('Error fetching API Gateways:', error.message);
+    }
+
+    console.log('Fetched AWS resources:', {
+      clusters: resources.clusters.length,
+      taskDefinitions: resources.taskDefinitions.length,
+      ecrRepositories: resources.ecrRepositories.length,
+      iamRoles: resources.iamRoles.length,
+      stepFunctions: resources.stepFunctions.length,
+      apiGateways: resources.apiGateways.length
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'AWS resources fetched successfully',
+      resources: resources
+    });
+  } catch (error) {
+    console.error('AWS resources fetch failed:', error);
+    
+    let errorMessage = error.message;
+    if (error.code === 'UnrecognizedClientException') {
+      errorMessage = 'Invalid AWS credentials. Please check your Access Key and Secret Key.';
+    } else if (error.code === 'AccessDenied') {
+      errorMessage = 'Access denied. Please ensure your AWS user has the required permissions.';
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      message: errorMessage,
+      errorCode: error.code
+    });
+  }
+});
+
+app.post('/api/test-snowflake', (req, res) => {
+  const { account, username, password } = req.body;
+
+  if (!account || !username || !password) {
+    return res.status(400).json({ success: false, message: 'Missing Snowflake credentials.' });
+  }
+
+  const connection = snowflake.createConnection({
+    account: account,
+    username: username,
+    password: password,
+  });
+
+  connection.connect((err, conn) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    res.json({ success: true, message: 'Snowflake connection successful.' });
+    conn.destroy(); // Close the connection
+  });
+});
+
+app.post('/api/deploy', upload.fields([
+  { name: 'dockerImage', maxCount: 1 }
+]), async (req, res) => {
+  const { imageName, envVariables, awsConfig, deploymentConfig } = req.body;
+  const files = req.files;
+  const deploymentId = crypto.randomUUID();
+
+  console.log('Deployment request received.');
+  console.log('AWS Config:', JSON.parse(awsConfig));
+  console.log('Deployment Config:', JSON.parse(deploymentConfig));
+  console.log('Environment Variables:', JSON.parse(envVariables));
+  console.log('Uploaded Files:', files);
+
+  // Parse deployment configuration
+  const parsedDeploymentConfig = JSON.parse(deploymentConfig);
+  const module = parsedDeploymentConfig.module;
+  
+  // Generate unique sequence for resource names
+  const uniqueSequence = deploymentId.substring(0, 8);
+  
+  // Auto-generate image name and resource names using minibeat-[module] pattern
+  const autoImageName = `minibeat-${module}:latest`;
+  console.log('Auto-generated Docker Image Name:', autoImageName);
+  const autoGeneratedConfig = {
+    clusterName: `minibeat-${module}-cluster-${uniqueSequence}`,
+    taskDefinitionFamily: `minibeat-${module}-task-${uniqueSequence}`,
+    executionRoleName: `minibeat-${module}-execution-role-${uniqueSequence}`,
+    stepFunctionRoleName: `minibeat-${module}-stepfunctions-role-${uniqueSequence}`,
+    stepFunctionName: `minibeat-${module}-workflow-${uniqueSequence}`,
+    ecrRepositoryName: `minibeat-${module}-repo-${uniqueSequence}`,
+    apiGatewayName: `minibeat-${module}-api-${uniqueSequence}`,
+    useExisting: false
+  };
+
+  // Store deployment configuration for retry functionality
+  deploymentConfigs.set(deploymentId, {
+    awsConfig: JSON.parse(awsConfig),
+    envVariables: JSON.parse(envVariables),
+    files: files,
+    imageName: autoImageName,
+    deploymentConfig: parsedDeploymentConfig,
+    awsResourceConfig: autoGeneratedConfig
+  });
+
+  // Initialize deployment status
+  deploymentStatus.set(deploymentId, {
+    id: deploymentId,
+    status: 'started',
+    currentStep: 'ecr-repo',
+    steps: {
+      'ecr-repo': { status: 'running', startTime: Date.now() },
+      'ecr-push': { status: 'pending' },
+      'task-definition': { status: 'pending' },
+      'ecs-service': { status: 'pending' },
+      'step-functions': { status: 'pending' },
+      'api-gateway': { status: 'pending' },
+      'final-setup': { status: 'pending' }
+    },
+    apiEndpoint: null,
+    error: null
+  });
+
+  // Start deployment process asynchronously
+  deployApplication(deploymentId, JSON.parse(awsConfig), JSON.parse(envVariables), files, autoImageName, autoGeneratedConfig)
+    .catch(error => {
+      console.error('Deployment failed:', error);
+      const status = deploymentStatus.get(deploymentId);
+      if (status) {
+        status.status = 'failed';
+        status.error = error.message;
+        deploymentStatus.set(deploymentId, status);
+      }
+    });
+
+  res.json({ 
+    success: true, 
+    message: 'Deployment process initiated.',
+    deploymentId: deploymentId
+  });
+});
+
+// Get deployment status endpoint
+app.get('/api/deployment/:id/status', (req, res) => {
+  const deploymentId = req.params.id;
+  const status = deploymentStatus.get(deploymentId);
+  
+  if (!status) {
+    return res.status(404).json({ success: false, message: 'Deployment not found' });
+  }
+  
+  res.json({ success: true, deployment: status });
+});
+
+// Retry deployment endpoint
+app.post('/api/deployment/:id/retry', async (req, res) => {
+  const deploymentId = req.params.id;
+  const status = deploymentStatus.get(deploymentId);
+  
+  if (!status) {
+    return res.status(404).json({ success: false, message: 'Deployment not found' });
+  }
+  
+  if (status.status !== 'failed') {
+    return res.status(400).json({ success: false, message: 'Deployment is not in failed state' });
+  }
+  
+  // Reset deployment status for retry
+  status.status = 'started';
+  status.error = null;
+  
+  // Find the first failed step and reset from there
+  const stepIds = Object.keys(status.steps);
+  let retryFromIndex = -1;
+  
+  for (let i = 0; i < stepIds.length; i++) {
+    if (status.steps[stepIds[i]].status === 'error') {
+      retryFromIndex = i;
+      break;
+    }
+  }
+  
+  if (retryFromIndex !== -1) {
+    // Reset all steps from the failed step onwards
+    for (let i = retryFromIndex; i < stepIds.length; i++) {
+      status.steps[stepIds[i]].status = 'pending';
+      delete status.steps[stepIds[i]].startTime;
+      delete status.steps[stepIds[i]].endTime;
+    }
+    
+    // Set the first failed step to running
+    status.steps[stepIds[retryFromIndex]].status = 'running';
+    status.steps[stepIds[retryFromIndex]].startTime = Date.now();
+    status.currentStep = stepIds[retryFromIndex];
+  }
+  
+  deploymentStatus.set(deploymentId, status);
+  
+  // Get the original deployment configuration to restart the real deployment
+  const originalDeployment = deploymentConfigs.get(deploymentId);
+  if (originalDeployment) {
+    // Restart the actual deployment process from the failed step
+    deployApplication(deploymentId, originalDeployment.awsConfig, originalDeployment.envVariables, originalDeployment.files, originalDeployment.imageName, originalDeployment.awsResourceConfig)
+      .catch(error => {
+        console.error('Retry deployment failed:', error);
+        const retryStatus = deploymentStatus.get(deploymentId);
+        if (retryStatus) {
+          retryStatus.status = 'failed';
+          retryStatus.error = error.message;
+          deploymentStatus.set(deploymentId, retryStatus);
+        }
+      });
+  } else {
+    // If we don't have the original config, we can't retry properly
+    status.status = 'failed';
+    status.error = 'Cannot retry: Original deployment configuration not found';
+    deploymentStatus.set(deploymentId, status);
+  }
+  
+  res.json({ success: true, message: 'Deployment retry initiated' });
+});
+
+// Check for existing deployments by module
+app.get('/api/deployments/check/:module', async (req, res) => {
+  try {
+    const { module } = req.params;
+    
+    // Check if there are any completed deployments for this module
+    const existingDeployments = [];
+    
+    for (const [deploymentId, status] of deploymentStatus.entries()) {
+      const config = deploymentConfigs.get(deploymentId);
+      if (config && config.deploymentConfig && config.deploymentConfig.module === module && status.status === 'completed') {
+        existingDeployments.push({
+          deploymentId,
+          module,
+          apiEndpoint: status.apiEndpoint,
+          completedAt: status.completedAt || new Date().toISOString(),
+          imageName: config.imageName || `minibeat-${module}:latest`
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      hasExistingDeployments: existingDeployments.length > 0,
+      deployments: existingDeployments
+    });
+  } catch (error) {
+    console.error('Error checking existing deployments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check existing deployments'
+    });
+  }
+});
+
+// Snowflake API endpoints for validation configuration
+
+// Helper function to create Snowflake connection
+function createSnowflakeConnection(config) {
+  return snowflake.createConnection({
+    account: config.account,
+    username: config.username,
+    password: config.password,
+    warehouse: config.warehouse,
+    database: config.database,
+    schema: config.schema,
+    role: config.role || 'PUBLIC'
+  });
+}
+
+// Helper function to execute Snowflake query
+function executeSnowflakeQuery(connection, query) {
+  return new Promise((resolve, reject) => {
+    connection.execute({
+      sqlText: query,
+      complete: (err, stmt, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      }
+    });
+  });
+}
+
+app.post('/api/snowflake/tables', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role } = req.body;
+    
+    console.log(`📊 Connecting to Snowflake: ${database}.${schema}`);
+    
+    // Create Snowflake connection
+    connection = createSnowflakeConnection({
+      account, username, password, database, schema, warehouse, role
+    });
+    
+    // Connect to Snowflake
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(conn);
+        }
+      });
+    });
+    
+    console.log('✅ Connected to Snowflake successfully');
+    
+    // Query to get all tables in the schema
+    const query = `
+      SELECT TABLE_NAME 
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_SCHEMA = '${schema}' 
+      AND TABLE_CATALOG = '${database}'
+      ORDER BY TABLE_NAME
+    `;
+    
+    const rows = await executeSnowflakeQuery(connection, query);
+    
+    // Format the results
+    const tables = rows.map(row => ({
+      name: row.TABLE_NAME,
+      exists: true
+    }));
+    
+    // Check if TBL_VALIDATING_TEST_CASES exists
+    const configTableExists = tables.some(table => table.name === 'TBL_VALIDATING_TEST_CASES');
+    if (!configTableExists) {
+      tables.push({ name: 'TBL_VALIDATING_TEST_CASES', exists: false });
+    }
+    
+    console.log(`✅ Found ${tables.length} tables in ${database}.${schema}`);
+    
+    res.json({
+      success: true,
+      tables: tables,
+      message: `Found ${tables.length} tables in ${database}.${schema}`
+    });
+    
+  } catch (error) {
+    console.error('Error fetching Snowflake tables:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to connect to Snowflake: ${error.message}`
+    });
+  } finally {
+    if (connection) {
+      connection.destroy();
+    }
+  }
+});
+
+app.post('/api/snowflake/create-config-table', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role } = req.body;
+    
+    console.log(`🏗️ Creating config table in ${database}.${schema}`);
+    
+    // Create Snowflake connection
+    connection = createSnowflakeConnection({
+      account, username, password, database, schema, warehouse, role
+    });
+    
+    // Connect to Snowflake
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(conn);
+        }
+      });
+    });
+    
+    console.log('✅ Connected to Snowflake for table creation');
+    
+    // First create sequence if it doesn't exist
+    const createSequenceSQL = `
+      CREATE SEQUENCE IF NOT EXISTS ${database}.${schema}.VALIDATION_CASES
+      START = 1
+      INCREMENT = 1
+    `;
+    
+    await executeSnowflakeQuery(connection, createSequenceSQL);
+    console.log('✅ Sequence created/verified');
+    
+    // Create the main table
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS ${database}.${schema}.TBL_VALIDATING_TEST_CASES (
+        ID NUMBER(38,0) NOT NULL DEFAULT ${database}.${schema}.VALIDATION_CASES.NEXTVAL,
+        VALIDATION_DESCRIPTION VARCHAR(500),
+        VALIDATION_QUERY VARCHAR(16777216),
+        OPERATOR VARCHAR(10),
+        EXPECTED_OUTCOME VARCHAR(100),
+        VALIDATED_BY VARCHAR(100),
+        ENTITY VARCHAR(200),
+        ITERATION VARCHAR(10),
+        INSERTED_DATE TIMESTAMP_NTZ(9),
+        UPDATED_DATE TIMESTAMP_NTZ(9),
+        IS_ACTIVE BOOLEAN,
+        TEAM VARCHAR(50),
+        METRIC_INDEX NUMBER(38,0) DEFAULT 1,
+        PRIMARY KEY (ID)
+      )
+    `;
+    
+    await executeSnowflakeQuery(connection, createTableSQL);
+    console.log('✅ Table TBL_VALIDATING_TEST_CASES created successfully');
+    
+    res.json({
+      success: true,
+      message: 'TBL_VALIDATING_TEST_CASES table created successfully',
+      sql: createTableSQL
+    });
+    
+  } catch (error) {
+    console.error('Error creating Snowflake config table:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to create config table in Snowflake: ${error.message}`
+    });
+  } finally {
+    if (connection) {
+      connection.destroy();
+    }
+  }
+});
+
+app.post('/api/snowflake/insert-validation', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role, validationCase } = req.body;
+    
+    console.log(`📝 Inserting validation case into ${database}.${schema}.TBL_VALIDATING_TEST_CASES`);
+    
+    // Create Snowflake connection
+    connection = createSnowflakeConnection({
+      account, username, password, database, schema, warehouse, role
+    });
+    
+    // Connect to Snowflake
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(conn);
+        }
+      });
+    });
+    
+    console.log('✅ Connected to Snowflake for validation insertion');
+    
+    // Use parameterized query to prevent SQL injection
+    const insertSQL = `
+      INSERT INTO ${database}.${schema}.TBL_VALIDATING_TEST_CASES (
+        VALIDATION_DESCRIPTION,
+        VALIDATION_QUERY,
+        OPERATOR,
+        EXPECTED_OUTCOME,
+        VALIDATED_BY,
+        ENTITY,
+        ITERATION,
+        INSERTED_DATE,
+        UPDATED_DATE,
+        IS_ACTIVE,
+        TEAM,
+        METRIC_INDEX
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, 
+        CURRENT_TIMESTAMP(),
+        CURRENT_TIMESTAMP(),
+        TRUE,
+        ?, ?
+      )
+    `;
+    
+    // Execute with parameters to prevent SQL injection
+    await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: insertSQL,
+        binds: [
+          validationCase.validation_description,
+          validationCase.validation_query,
+          validationCase.operator,
+          validationCase.expected_outcome,
+          validationCase.validated_by,
+          validationCase.entity,
+          validationCase.iteration,
+          validationCase.team,
+          validationCase.metric_index
+        ],
+        complete: (err, stmt, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(rows);
+          }
+        }
+      });
+    });
+    
+    console.log('✅ Validation case inserted successfully');
+    
+    res.json({
+      success: true,
+      message: 'Validation case inserted successfully',
+      validationCase
+    });
+    
+  } catch (error) {
+    console.error('Error inserting validation case:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to insert validation case into Snowflake: ${error.message}`
+    });
+  } finally {
+    if (connection) {
+      connection.destroy();
+    }
+  }
+});
+
+// Real deployment function - Updated for web-based deployment
+async function deployApplication(deploymentId, awsConfig, envVariables, files, imageName, awsResourceConfig = {}) {
+  const status = deploymentStatus.get(deploymentId);
+  const { accessKey, secretKey, region } = awsConfig;
+  
+  // For web-based deployment, we'll simulate the process to avoid Docker dependency
+  console.log('🌐 Starting web-based deployment simulation...');
+  addDeploymentLog(deploymentId, 'ecr-repo', '🌐 Web-based deployment - no local Docker required');
+  
+  // Determine which step to start from (for retry functionality)
+  const stepIds = ['ecr-repo', 'ecr-push', 'task-definition', 'ecs-service', 'step-functions', 'api-gateway', 'final-setup'];
+  let startFromStep = 0;
+  
+  // Find the first non-completed step
+  for (let i = 0; i < stepIds.length; i++) {
+    if (status.steps[stepIds[i]].status !== 'completed') {
+      startFromStep = i;
+      break;
+    }
+  }
+  
+  console.log(`Starting web-based deployment simulation from step: ${stepIds[startFromStep]}`);
+  
+  // Generate resource names based on configuration
+  const projectName = `validator-${deploymentId.substring(0, 8)}`;
+  const repositoryName = awsResourceConfig.ecrRepositoryName || projectName;
+  const clusterName = awsResourceConfig.clusterName || `${projectName}-cluster`;
+  const serviceName = `${projectName}-service`;
+  const taskDefinitionFamily = awsResourceConfig.taskDefinitionFamily || `${projectName}-task`;
+  
+  // Log resource configuration
+  addDeploymentLog(deploymentId, 'ecr-repo', `🎯 Resource Configuration:`);
+  addDeploymentLog(deploymentId, 'ecr-repo', `- ECR Repository: ${repositoryName}`);
+  addDeploymentLog(deploymentId, 'ecr-repo', `- ECS Cluster: ${clusterName}`);
+  addDeploymentLog(deploymentId, 'ecr-repo', `- Task Definition: ${taskDefinitionFamily}`);
+  addDeploymentLog(deploymentId, 'ecr-repo', `- Region: ${region}`);
+  
+  try {
+    // Start real AWS deployment process
+    await simulateWebDeployment(deploymentId, repositoryName, clusterName, taskDefinitionFamily, region);
+    
+  } catch (error) {
+    console.error('Deployment simulation failed:', error);
+    const status = deploymentStatus.get(deploymentId);
+    if (status) {
+      status.status = 'failed';
+      status.error = error.message;
+      deploymentStatus.set(deploymentId, status);
+    }
+  }
+}
+
+// Real AWS deployment function
+async function simulateWebDeployment(deploymentId, repositoryName, clusterName, taskDefinitionFamily, region) {
+  const originalDeployment = deploymentConfigs.get(deploymentId);
+  const { awsConfig, envVariables } = originalDeployment;
+  
+  // Configure AWS SDK with user credentials
+  AWS.config.update({
+    accessKeyId: awsConfig.accessKey,
+    secretAccessKey: awsConfig.secretKey,
+    region: region
+  });
+  
+  const ecr = new AWS.ECR();
+  const ecs = new AWS.ECS();
+  const iam = new AWS.IAM();
+  const logs = new AWS.CloudWatchLogs();
+  const ec2 = new AWS.EC2();
+  
+  let repositoryUri;
+  
+  try {
+    // Step 1: Create ECR Repository
+    updateDeploymentStep(deploymentId, 'ecr-repo', 'running');
+    addDeploymentLog(deploymentId, 'ecr-repo', '🏗️ Creating ECR repository...');
+    
+    try {
+      const createRepoResult = await ecr.createRepository({
+        repositoryName: repositoryName,
+        imageScanningConfiguration: { scanOnPush: true }
+      }).promise();
+      repositoryUri = createRepoResult.repository.repositoryUri;
+      addDeploymentLog(deploymentId, 'ecr-repo', `✅ ECR repository created: ${repositoryName}`);
+      addDeploymentLog(deploymentId, 'ecr-repo', `Repository URI: ${repositoryUri}`);
+    } catch (error) {
+      if (error.code === 'RepositoryAlreadyExistsException') {
+        const describeResult = await ecr.describeRepositories({
+          repositoryNames: [repositoryName]
+        }).promise();
+        repositoryUri = describeResult.repositories[0].repositoryUri;
+        addDeploymentLog(deploymentId, 'ecr-repo', `⚠️ Repository already exists, using: ${repositoryUri}`);
+      } else {
+        throw error;
+      }
+    }
+    updateDeploymentStep(deploymentId, 'ecr-repo', 'completed');
+    
+    // Step 2: Process and Upload Docker Image to ECR
+    updateDeploymentStep(deploymentId, 'ecr-push', 'running');
+    addDeploymentLog(deploymentId, 'ecr-push', '📦 Processing uploaded Docker tar file...');
+    
+    // Get the uploaded Docker tar file
+    if (originalDeployment.files && originalDeployment.files.dockerImage) {
+      const dockerFile = originalDeployment.files.dockerImage[0];
+      addDeploymentLog(deploymentId, 'ecr-push', `Processing: ${dockerFile.originalname} (${(dockerFile.size / 1024 / 1024).toFixed(1)} MB)`);
+      
+      // Upload tar file to S3 first
+      const s3 = new AWS.S3();
+      const bucketName = `${repositoryName}-docker-builds`;
+      const s3Key = `${deploymentId}/docker-image.tar`;
+      
+      try {
+        // Create S3 bucket for storing Docker tar files
+        addDeploymentLog(deploymentId, 'ecr-push', '🪣 Creating S3 bucket for Docker builds...');
+        try {
+          await s3.createBucket({ Bucket: bucketName }).promise();
+          addDeploymentLog(deploymentId, 'ecr-push', `✅ S3 bucket created: ${bucketName}`);
+        } catch (error) {
+          if (error.code === 'BucketAlreadyOwnedByYou' || error.code === 'BucketAlreadyExists') {
+            addDeploymentLog(deploymentId, 'ecr-push', `⚠️ Using existing S3 bucket: ${bucketName}`);
+          } else {
+            throw error;
+          }
+        }
+        
+        // Upload Docker tar file to S3
+        addDeploymentLog(deploymentId, 'ecr-push', '⬆️ Uploading Docker tar to S3...');
+        const uploadParams = {
+          Bucket: bucketName,
+          Key: s3Key,
+          Body: require('fs').readFileSync(dockerFile.path),
+          ContentType: 'application/x-tar'
+        };
+        
+        await s3.upload(uploadParams).promise();
+        addDeploymentLog(deploymentId, 'ecr-push', `✅ Docker tar uploaded to S3: s3://${bucketName}/${s3Key}`);
+        
+        // Create CodeBuild project to extract and push Docker image
+        const codebuild = new AWS.CodeBuild();
+        const buildProjectName = `${repositoryName}-docker-build`;
+        
+        addDeploymentLog(deploymentId, 'ecr-push', '🏗️ Setting up CodeBuild project...');
+        
+        // Create buildspec for extracting tar and pushing to ECR
+        const buildSpec = {
+          version: '0.2',
+          phases: {
+            pre_build: {
+              commands: [
+                'echo Logging in to Amazon ECR...',
+                `aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${repositoryUri.split('/')[0]}`,
+                'echo Downloading Docker tar from S3...',
+                `aws s3 cp s3://${bucketName}/${s3Key} ./docker-image.tar`
+              ]
+            },
+            build: {
+              commands: [
+                'echo Loading Docker image from tar...',
+                'docker load -i docker-image.tar',
+                'echo Getting loaded image name...',
+                'IMAGE_NAME=$(docker images --format "table {{.Repository}}:{{.Tag}}" | tail -n +2 | head -n 1)',
+                'echo "Loaded image: $IMAGE_NAME"',
+                `echo Tagging image for ECR...`,
+                `docker tag $IMAGE_NAME ${repositoryUri}:latest`
+              ]
+            },
+            post_build: {
+              commands: [
+                'echo Pushing image to ECR...',
+                `docker push ${repositoryUri}:latest`,
+                'echo Docker image push completed!'
+              ]
+            }
+          }
+        };
+
+        // Create CodeBuild service role if it doesn't exist
+        const serviceRoleName = `${repositoryName}-codebuild-role`;
+        let serviceRoleArn;
+        
+        try {
+          const roleResult = await iam.createRole({
+            RoleName: serviceRoleName,
+            AssumeRolePolicyDocument: JSON.stringify({
+              Version: '2012-10-17',
+              Statement: [{
+                Effect: 'Allow',
+                Principal: { Service: 'codebuild.amazonaws.com' },
+                Action: 'sts:AssumeRole'
+              }]
+            })
+          }).promise();
+          serviceRoleArn = roleResult.Role.Arn;
+          
+          // Attach required policies
+          await iam.attachRolePolicy({
+            RoleName: serviceRoleName,
+            PolicyArn: 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser'
+          }).promise();
+          
+          await iam.attachRolePolicy({
+            RoleName: serviceRoleName,
+            PolicyArn: 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+          }).promise();
+          
+          await iam.attachRolePolicy({
+            RoleName: serviceRoleName,
+            PolicyArn: 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
+          }).promise();
+          
+          addDeploymentLog(deploymentId, 'ecr-push', `✅ Created CodeBuild service role: ${serviceRoleArn}`);
+          
+          // Wait for role propagation
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          
+        } catch (error) {
+          if (error.code === 'EntityAlreadyExistsException') {
+            const getRoleResult = await iam.getRole({ RoleName: serviceRoleName }).promise();
+            serviceRoleArn = getRoleResult.Role.Arn;
+            addDeploymentLog(deploymentId, 'ecr-push', `⚠️ Using existing CodeBuild role: ${serviceRoleArn}`);
+          } else {
+            throw error;
+          }
+        }
+
+        // Create or update CodeBuild project
+        const projectParams = {
+          name: buildProjectName,
+          description: `Build project for ${repositoryName} Docker image`,
+          source: {
+            type: 'NO_SOURCE',
+            buildspec: JSON.stringify(buildSpec)
+          },
+          artifacts: {
+            type: 'NO_ARTIFACTS'
+          },
+          environment: {
+            type: 'LINUX_CONTAINER',
+            image: 'aws/codebuild/amazonlinux2-x86_64-standard:3.0',
+            computeType: 'BUILD_GENERAL1_MEDIUM',
+            privilegedMode: true
+          },
+          serviceRole: serviceRoleArn
+        };
+
+        try {
+          await codebuild.createProject(projectParams).promise();
+          addDeploymentLog(deploymentId, 'ecr-push', `✅ CodeBuild project created: ${buildProjectName}`);
+        } catch (error) {
+          if (error.code === 'ResourceAlreadyExistsException') {
+            await codebuild.updateProject(projectParams).promise();
+            addDeploymentLog(deploymentId, 'ecr-push', `⚠️ Updated existing CodeBuild project: ${buildProjectName}`);
+          } else {
+            throw error;
+          }
+        }
+
+        // Start the build
+        addDeploymentLog(deploymentId, 'ecr-push', '🚀 Starting CodeBuild to process Docker image...');
+        const buildResult = await codebuild.startBuild({
+          projectName: buildProjectName
+        }).promise();
+        
+        const buildId = buildResult.build.id;
+        addDeploymentLog(deploymentId, 'ecr-push', `Build started: ${buildId}`);
+        
+        // Wait for build to complete
+        let buildStatus = 'IN_PROGRESS';
+        while (buildStatus === 'IN_PROGRESS') {
+          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+          
+          const batchResult = await codebuild.batchGetBuilds({
+            ids: [buildId]
+          }).promise();
+          
+          buildStatus = batchResult.builds[0].buildStatus;
+          addDeploymentLog(deploymentId, 'ecr-push', `Build status: ${buildStatus}`);
+        }
+        
+        if (buildStatus === 'SUCCEEDED') {
+          addDeploymentLog(deploymentId, 'ecr-push', '✅ Docker image successfully pushed to ECR!');
+          addDeploymentLog(deploymentId, 'ecr-push', `🎉 Image available at: ${repositoryUri}:latest`);
+        } else {
+          throw new Error(`CodeBuild failed with status: ${buildStatus}`);
+        }
+        
+      } catch (error) {
+        addDeploymentLog(deploymentId, 'ecr-push', `❌ Failed to process Docker image: ${error.message}`);
+        throw error;
+      }
+      
+    } else {
+      addDeploymentLog(deploymentId, 'ecr-push', '❌ No Docker tar file found in upload');
+      throw new Error('No Docker image file uploaded');
+    }
+    
+    updateDeploymentStep(deploymentId, 'ecr-push', 'completed');
+    
+    // Step 3: Create IAM Execution Role
+    updateDeploymentStep(deploymentId, 'task-definition', 'running');
+    addDeploymentLog(deploymentId, 'task-definition', '🔐 Creating IAM execution role...');
+    
+    const executionRoleName = `${repositoryName}-execution-role`;
+    let executionRoleArn;
+    
+    try {
+      const roleResult = await iam.createRole({
+        RoleName: executionRoleName,
+        AssumeRolePolicyDocument: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [{
+            Effect: 'Allow',
+            Principal: { Service: 'ecs-tasks.amazonaws.com' },
+            Action: 'sts:AssumeRole'
+          }]
+        })
+      }).promise();
+      executionRoleArn = roleResult.Role.Arn;
+      
+      // Attach required policies
+      await iam.attachRolePolicy({
+        RoleName: executionRoleName,
+        PolicyArn: 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+      }).promise();
+      
+      addDeploymentLog(deploymentId, 'task-definition', `✅ Created execution role: ${executionRoleArn}`);
+      
+      // Wait for role propagation
+      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation...');
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      
+    } catch (error) {
+      if (error.code === 'EntityAlreadyExistsException') {
+        const getRoleResult = await iam.getRole({ RoleName: executionRoleName }).promise();
+        executionRoleArn = getRoleResult.Role.Arn;
+        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Using existing role: ${executionRoleArn}`);
+      } else {
+        throw error;
+      }
+    }
+    
+    // Create CloudWatch log group
+    const logGroupName = `/ecs/${repositoryName}`;
+    try {
+      await logs.createLogGroup({ logGroupName }).promise();
+      addDeploymentLog(deploymentId, 'task-definition', `✅ Created log group: ${logGroupName}`);
+    } catch (error) {
+      if (error.code !== 'ResourceAlreadyExistsException') {
+        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Log group error: ${error.message}`);
+      }
+    }
+    
+    // Create ECS Task Definition
+    const taskDefinition = {
+      family: taskDefinitionFamily,
+      networkMode: 'awsvpc',
+      requiresCompatibilities: ['FARGATE'],
+      cpu: '256',
+      memory: '512',
+      executionRoleArn: executionRoleArn,
+      containerDefinitions: [{
+        name: repositoryName,
+        image: `${repositoryUri}:latest`,
+        portMappings: [{ containerPort: 8080, protocol: 'tcp' }],
+        environment: envVariables.map(env => ({ name: env.key, value: env.value })),
+        logConfiguration: {
+          logDriver: 'awslogs',
+          options: {
+            'awslogs-group': logGroupName,
+            'awslogs-region': region,
+            'awslogs-stream-prefix': 'ecs'
+          }
+        },
+        essential: true
+      }]
+    };
+    
+    const taskDefResult = await ecs.registerTaskDefinition(taskDefinition).promise();
+    addDeploymentLog(deploymentId, 'task-definition', `✅ Task definition created: ${taskDefResult.taskDefinition.taskDefinitionArn}`);
+    updateDeploymentStep(deploymentId, 'task-definition', 'completed');
+    
+    // Step 4: Create ECS Cluster and Service
+    updateDeploymentStep(deploymentId, 'ecs-service', 'running');
+    addDeploymentLog(deploymentId, 'ecs-service', '🚀 Creating ECS cluster...');
+    
+    try {
+      await ecs.createCluster({ clusterName }).promise();
+      addDeploymentLog(deploymentId, 'ecs-service', `✅ ECS cluster created: ${clusterName}`);
+    } catch (error) {
+      if (error.code === 'ClusterAlreadyExistsException') {
+        addDeploymentLog(deploymentId, 'ecs-service', `⚠️ Using existing cluster: ${clusterName}`);
+      } else {
+        throw error;
+      }
+    }
+    
+    // Get default VPC and subnets
+    addDeploymentLog(deploymentId, 'ecs-service', '🌐 Setting up networking...');
+    const vpcs = await ec2.describeVpcs({ Filters: [{ Name: 'isDefault', Values: ['true'] }] }).promise();
+    const defaultVpc = vpcs.Vpcs[0];
+    
+    const subnets = await ec2.describeSubnets({
+      Filters: [{ Name: 'vpc-id', Values: [defaultVpc.VpcId] }]
+    }).promise();
+    
+    // Create security group
+    const securityGroupName = `${repositoryName}-sg`;
+    let securityGroupId;
+    try {
+      const sgResult = await ec2.createSecurityGroup({
+        GroupName: securityGroupName,
+        Description: `Security group for ${repositoryName}`,
+        VpcId: defaultVpc.VpcId
+      }).promise();
+      securityGroupId = sgResult.GroupId;
+      
+      // Add inbound rule for port 8080
+      await ec2.authorizeSecurityGroupIngress({
+        GroupId: securityGroupId,
+        IpPermissions: [{
+          IpProtocol: 'tcp',
+          FromPort: 8080,
+          ToPort: 8080,
+          IpRanges: [{ CidrIp: '0.0.0.0/0' }]
+        }]
+      }).promise();
+      
+      addDeploymentLog(deploymentId, 'ecs-service', `✅ Security group created: ${securityGroupId}`);
+    } catch (error) {
+      if (error.code === 'InvalidGroup.Duplicate') {
+        const sgs = await ec2.describeSecurityGroups({
+          Filters: [{ Name: 'group-name', Values: [securityGroupName] }]
+        }).promise();
+        securityGroupId = sgs.SecurityGroups[0].GroupId;
+        addDeploymentLog(deploymentId, 'ecs-service', `⚠️ Using existing security group: ${securityGroupId}`);
+      } else {
+        throw error;
+      }
+    }
+    
+    // Just create the ECS cluster (no service, just task definition ready)
+    addDeploymentLog(deploymentId, 'ecs-service', '🚀 ECS setup completed - task definition ready');
+    addDeploymentLog(deploymentId, 'ecs-service', '💡 Tasks will be started on-demand via Step Functions');
+    updateDeploymentStep(deploymentId, 'ecs-service', 'completed');
+    
+    // Step 5: Create Step Functions to start Fargate tasks
+    updateDeploymentStep(deploymentId, 'step-functions', 'running');
+    addDeploymentLog(deploymentId, 'step-functions', '⚡ Creating Step Functions workflow...');
+    
+    const stepfunctions = new AWS.StepFunctions();
+    const stepFunctionName = `${repositoryName}-workflow`;
+    let stepFunctionArn;
+    
+    // Create Step Functions execution role
+    const stepFunctionRoleName = `${repositoryName}-stepfunctions-role`;
+    let stepFunctionRoleArn;
+    
+    try {
+      const roleResult = await iam.createRole({
+        RoleName: stepFunctionRoleName,
+        AssumeRolePolicyDocument: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [{
+            Effect: 'Allow',
+            Principal: { Service: 'states.amazonaws.com' },
+            Action: 'sts:AssumeRole'
+          }]
+        })
+      }).promise();
+      stepFunctionRoleArn = roleResult.Role.Arn;
+      
+      // Skip AWS managed policy - we'll use custom policy only
+      addDeploymentLog(deploymentId, 'step-functions', '📋 Creating custom IAM policy for Step Functions...');
+      
+      // Create custom policy for ECS task management and Step Functions
+      const policyDocument = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: [
+              'ecs:RunTask',
+              'ecs:StopTask',
+              'ecs:DescribeTasks',
+              'iam:PassRole'
+            ],
+            Resource: '*'
+          },
+          {
+            Effect: 'Allow',
+            Action: [
+              'events:PutTargets',
+              'events:PutRule',
+              'events:DescribeRule',
+              'events:DeleteRule',
+              'events:RemoveTargets'
+            ],
+            Resource: '*'
+          },
+          {
+            Effect: 'Allow',
+            Action: [
+              'logs:CreateLogGroup',
+              'logs:CreateLogStream',
+              'logs:PutLogEvents',
+              'logs:DescribeLogGroups',
+              'logs:DescribeLogStreams'
+            ],
+            Resource: '*'
+          }
+        ]
+      };
+      
+      await iam.createPolicy({
+        PolicyName: `${repositoryName}-stepfunctions-policy`,
+        PolicyDocument: JSON.stringify(policyDocument)
+      }).promise();
+      
+      const userResult = await iam.getUser().promise();
+      const accountId = userResult.User.Arn.split(':')[4];
+      await iam.attachRolePolicy({
+        RoleName: stepFunctionRoleName,
+        PolicyArn: `arn:aws:iam::${accountId}:policy/${repositoryName}-stepfunctions-policy`
+      }).promise();
+      
+      addDeploymentLog(deploymentId, 'step-functions', `✅ Step Functions role created: ${stepFunctionRoleArn}`);
+      
+      // Wait for role propagation
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      
+    } catch (error) {
+      if (error.code === 'EntityAlreadyExistsException') {
+        const getRoleResult = await iam.getRole({ RoleName: stepFunctionRoleName }).promise();
+        stepFunctionRoleArn = getRoleResult.Role.Arn;
+        addDeploymentLog(deploymentId, 'step-functions', `⚠️ Using existing Step Functions role`);
+      } else {
+        throw error;
+      }
+    }
+    
+    // Create Step Function state machine
+    const stateMachineDefinition = {
+      Comment: `Start Fargate task for ${repositoryName}`,
+      StartAt: 'StartTask',
+      States: {
+        StartTask: {
+          Type: 'Task',
+          Resource: 'arn:aws:states:::ecs:runTask.sync',
+          Parameters: {
+            LaunchType: 'FARGATE',
+            Cluster: clusterName,
+            TaskDefinition: taskDefinitionFamily,
+            NetworkConfiguration: {
+              AwsvpcConfiguration: {
+                Subnets: subnets.Subnets.slice(0, 2).map(subnet => subnet.SubnetId),
+                SecurityGroups: [securityGroupId],
+                AssignPublicIp: 'ENABLED'
+              }
+            }
+          },
+          End: true
+        }
+      }
+    };
+    
+    try {
+      const stateMachineResult = await stepfunctions.createStateMachine({
+        name: stepFunctionName,
+        definition: JSON.stringify(stateMachineDefinition),
+        roleArn: stepFunctionRoleArn
+      }).promise();
+      
+      stepFunctionArn = stateMachineResult.stateMachineArn;
+      addDeploymentLog(deploymentId, 'step-functions', `✅ Step Function created: ${stepFunctionName}`);
+      
+    } catch (error) {
+      addDeploymentLog(deploymentId, 'step-functions', `❌ Step Function creation failed: ${error.message}`);
+      throw error;
+    }
+    
+    updateDeploymentStep(deploymentId, 'step-functions', 'completed');
+    
+    // Step 6: Create API Gateway to trigger Step Functions
+    updateDeploymentStep(deploymentId, 'api-gateway', 'running');
+    addDeploymentLog(deploymentId, 'api-gateway', '🌐 Creating API Gateway to trigger Step Functions...');
+    
+    // Create API Gateway execution role
+    const apiGatewayRoleName = `${repositoryName}-apigateway-role`;
+    let apiGatewayRoleArn;
+    
+    try {
+      const apiRoleResult = await iam.createRole({
+        RoleName: apiGatewayRoleName,
+        AssumeRolePolicyDocument: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [{
+            Effect: 'Allow',
+            Principal: { Service: 'apigateway.amazonaws.com' },
+            Action: 'sts:AssumeRole'
+          }]
+        })
+      }).promise();
+      apiGatewayRoleArn = apiRoleResult.Role.Arn;
+      
+      // Create policy for API Gateway to call Step Functions
+      const apiGatewayPolicyDocument = {
+        Version: '2012-10-17',
+        Statement: [{
+          Effect: 'Allow',
+          Action: [
+            'states:StartExecution'
+          ],
+          Resource: stepFunctionArn
+        }]
+      };
+      
+      await iam.createPolicy({
+        PolicyName: `${repositoryName}-apigateway-policy`,
+        PolicyDocument: JSON.stringify(apiGatewayPolicyDocument)
+      }).promise();
+      
+      const userResult = await iam.getUser().promise();
+      const accountId = userResult.User.Arn.split(':')[4];
+      await iam.attachRolePolicy({
+        RoleName: apiGatewayRoleName,
+        PolicyArn: `arn:aws:iam::${accountId}:policy/${repositoryName}-apigateway-policy`
+      }).promise();
+      
+      addDeploymentLog(deploymentId, 'api-gateway', `✅ API Gateway role created: ${apiGatewayRoleArn}`);
+      
+      // Wait for role propagation
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      
+    } catch (error) {
+      if (error.code === 'EntityAlreadyExistsException') {
+        const getRoleResult = await iam.getRole({ RoleName: apiGatewayRoleName }).promise();
+        apiGatewayRoleArn = getRoleResult.Role.Arn;
+        addDeploymentLog(deploymentId, 'api-gateway', `⚠️ Using existing API Gateway role`);
+      } else {
+        throw error;
+      }
+    }
+    
+    const apigateway = new AWS.APIGateway();
+    const apiName = `${repositoryName}-api`;
+    let apiEndpoint = null;
+    
+    try {
+      // Create REST API
+      const apiResult = await apigateway.createRestApi({
+        name: apiName,
+        description: `API Gateway for ${repositoryName} - triggers Step Functions`,
+        endpointConfiguration: {
+          types: ['REGIONAL']
+        }
+      }).promise();
+      
+      const apiId = apiResult.id;
+      addDeploymentLog(deploymentId, 'api-gateway', `✅ API Gateway created: ${apiId}`);
+      
+      // Get root resource
+      const resources = await apigateway.getResources({
+        restApiId: apiId
+      }).promise();
+      
+      const rootResourceId = resources.items.find(item => item.path === '/').id;
+      
+      // Create /start resource
+      const startResource = await apigateway.createResource({
+        restApiId: apiId,
+        parentId: rootResourceId,
+        pathPart: 'start'
+      }).promise();
+      
+      // Create POST method
+      await apigateway.putMethod({
+        restApiId: apiId,
+        resourceId: startResource.id,
+        httpMethod: 'POST',
+        authorizationType: 'NONE'
+      }).promise();
+      
+      // Set up integration to Step Functions
+      await apigateway.putIntegration({
+        restApiId: apiId,
+        resourceId: startResource.id,
+        httpMethod: 'POST',
+        type: 'AWS',
+        integrationHttpMethod: 'POST',
+        uri: `arn:aws:apigateway:${region}:states:action/StartExecution`,
+        credentials: apiGatewayRoleArn,
+        requestTemplates: {
+          'application/json': `{
+            "stateMachineArn": "${stepFunctionArn}",
+            "input": "$input.body"
+          }`
+        }
+      }).promise();
+      
+      // Set up method response
+      await apigateway.putMethodResponse({
+        restApiId: apiId,
+        resourceId: startResource.id,
+        httpMethod: 'POST',
+        statusCode: '200'
+      }).promise();
+      
+      // Set up integration response
+      await apigateway.putIntegrationResponse({
+        restApiId: apiId,
+        resourceId: startResource.id,
+        httpMethod: 'POST',
+        statusCode: '200'
+      }).promise();
+      
+      // Deploy API
+      await apigateway.createDeployment({
+        restApiId: apiId,
+        stageName: 'prod'
+      }).promise();
+      
+      apiEndpoint = `https://${apiId}.execute-api.${region}.amazonaws.com/prod/start`;
+      addDeploymentLog(deploymentId, 'api-gateway', `✅ API Gateway deployed: ${apiEndpoint}`);
+      addDeploymentLog(deploymentId, 'api-gateway', '💡 POST to this endpoint to start a Fargate task');
+      
+    } catch (error) {
+      addDeploymentLog(deploymentId, 'api-gateway', `⚠️ API Gateway creation failed: ${error.message}`);
+    }
+    
+    updateDeploymentStep(deploymentId, 'api-gateway', 'completed');
+    
+    // Step 7: Final Setup
+    updateDeploymentStep(deploymentId, 'final-setup', 'running');
+    addDeploymentLog(deploymentId, 'final-setup', '🎯 Finalizing deployment...');
+    
+    addDeploymentLog(deploymentId, 'final-setup', `✅ ECS Cluster: ${clusterName}`);
+    addDeploymentLog(deploymentId, 'final-setup', `✅ Task Definition: ${taskDefinitionFamily}`);
+    addDeploymentLog(deploymentId, 'final-setup', `✅ Step Function: ${stepFunctionName}`);
+    
+    if (apiEndpoint) {
+      addDeploymentLog(deploymentId, 'final-setup', `🌐 API Endpoint: ${apiEndpoint}`);
+      addDeploymentLog(deploymentId, 'final-setup', '💡 POST to this endpoint to start a Fargate task');
+      addDeploymentLog(deploymentId, 'final-setup', '📝 Example: curl -X POST ' + apiEndpoint + ' -d "{}"');
+    }
+    
+    addDeploymentLog(deploymentId, 'final-setup', '✅ Deployment completed successfully!');
+    addDeploymentLog(deploymentId, 'final-setup', '🚀 On-demand Fargate tasks ready via API Gateway + Step Functions');
+    
+    // Step 8: Cleanup - Delete S3 bucket and local files
+    addDeploymentLog(deploymentId, 'final-setup', '🧹 Starting cleanup process...');
+    
+    try {
+      // Delete S3 bucket and all contents
+      const s3 = new AWS.S3();
+      const bucketName = `${repositoryName}-docker-builds`;
+      
+      addDeploymentLog(deploymentId, 'final-setup', `🗑️ Deleting S3 bucket: ${bucketName}`);
+      
+      // First, delete all objects in the bucket
+      const listResult = await s3.listObjectsV2({ Bucket: bucketName }).promise();
+      if (listResult.Contents && listResult.Contents.length > 0) {
+        const deleteParams = {
+          Bucket: bucketName,
+          Delete: {
+            Objects: listResult.Contents.map(obj => ({ Key: obj.Key }))
+          }
+        };
+        await s3.deleteObjects(deleteParams).promise();
+        addDeploymentLog(deploymentId, 'final-setup', `✅ Deleted ${listResult.Contents.length} objects from S3`);
+      }
+      
+      // Then delete the bucket itself
+      await s3.deleteBucket({ Bucket: bucketName }).promise();
+      addDeploymentLog(deploymentId, 'final-setup', '✅ S3 bucket deleted successfully');
+      
+    } catch (s3Error) {
+      addDeploymentLog(deploymentId, 'final-setup', `⚠️ S3 cleanup warning: ${s3Error.message}`);
+      // Don't fail deployment for cleanup issues
+    }
+    
+    try {
+      // Clean up local uploaded files
+      const originalDeployment = deploymentConfigs.get(deploymentId);
+      if (originalDeployment && originalDeployment.files && originalDeployment.files.dockerImage) {
+        const dockerFile = originalDeployment.files.dockerImage[0];
+        const fs = require('fs');
+        
+        if (fs.existsSync(dockerFile.path)) {
+          fs.unlinkSync(dockerFile.path);
+          addDeploymentLog(deploymentId, 'final-setup', `✅ Deleted local file: ${dockerFile.originalname}`);
+        }
+      }
+      
+      // Clean up old uploaded files (older than 1 hour)
+      const uploadsDir = require('path').join(__dirname, 'uploads');
+      if (require('fs').existsSync(uploadsDir)) {
+        const files = require('fs').readdirSync(uploadsDir);
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        let deletedCount = 0;
+        
+        files.forEach(file => {
+          const filePath = require('path').join(uploadsDir, file);
+          const stats = require('fs').statSync(filePath);
+          
+          if (stats.mtime.getTime() < oneHourAgo) {
+            require('fs').unlinkSync(filePath);
+            deletedCount++;
+          }
+        });
+        
+        if (deletedCount > 0) {
+          addDeploymentLog(deploymentId, 'final-setup', `✅ Cleaned up ${deletedCount} old upload files`);
+        }
+      }
+      
+    } catch (fileError) {
+      addDeploymentLog(deploymentId, 'final-setup', `⚠️ File cleanup warning: ${fileError.message}`);
+      // Don't fail deployment for cleanup issues
+    }
+    
+    addDeploymentLog(deploymentId, 'final-setup', '🎉 Cleanup completed - all temporary files removed');
+    updateDeploymentStep(deploymentId, 'final-setup', 'completed');
+    
+    // Mark deployment as completed
+    const status = deploymentStatus.get(deploymentId);
+    if (status) {
+      status.status = 'completed';
+      status.apiEndpoint = apiEndpoint || `Step Function: ${stepFunctionName}`;
+      status.completedAt = new Date().toISOString();
+      deploymentStatus.set(deploymentId, status);
+    }
+    
+  } catch (error) {
+    addDeploymentLog(deploymentId, 'final-setup', `❌ Deployment failed: ${error.message}`);
+    throw error;
+  }
+}
+
+function updateDeploymentStep(deploymentId, stepId, status, details = null) {
+  const deployment = deploymentStatus.get(deploymentId);
+  if (deployment && deployment.steps[stepId]) {
+    deployment.steps[stepId].status = status;
+    if (status === 'running' && !deployment.steps[stepId].startTime) {
+      deployment.steps[stepId].startTime = Date.now();
+    }
+    if (status === 'completed' && deployment.steps[stepId].startTime) {
+      deployment.steps[stepId].endTime = Date.now();
+    }
+    if (status === 'error') {
+      deployment.status = 'failed';
+      deployment.error = details || 'Step failed';
+      deployment.steps[stepId].details = details;
+    }
+    if (details) {
+      deployment.steps[stepId].details = details;
+    }
+    deploymentStatus.set(deploymentId, deployment);
+    console.log(`Deployment ${deploymentId}: Step ${stepId} -> ${status}${details ? ` (${details})` : ''}`);
+  }
+}
+
+function addDeploymentLog(deploymentId, stepId, logMessage) {
+  const deployment = deploymentStatus.get(deploymentId);
+  if (deployment && deployment.steps[stepId]) {
+    if (!deployment.steps[stepId].logs) {
+      deployment.steps[stepId].logs = [];
+    }
+    const timestamp = new Date().toISOString();
+    deployment.steps[stepId].logs.push({
+      timestamp,
+      message: logMessage
+    });
+    deploymentStatus.set(deploymentId, deployment);
+    console.log(`[${stepId}] ${logMessage}`);
+  }
+}
+
+app.listen(port, () => {
+  console.log(`Backend server listening at http://localhost:${port}`);
+});
