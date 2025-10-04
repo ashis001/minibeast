@@ -328,34 +328,34 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
 
       {/* Existing Deployments Warning */}
       {hasExistingDeployments && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+            <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
               Module Already Deployed
             </CardTitle>
-            <CardDescription className="text-amber-700 dark:text-amber-300">
+            <CardDescription>
               The {deploymentConfig.module} module is already deployed and running. You can access the existing deployment or redeploy with new settings.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {existingDeployments.map((deployment, index) => (
-              <div key={deployment.deploymentId} className="p-4 bg-white dark:bg-gray-900 rounded-lg border">
+              <div key={deployment.deploymentId} className="p-4 bg-slate-800 rounded-lg border border-slate-700">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">Active Deployment</span>
-                      <span className="text-sm text-muted-foreground">
+                      <CheckCircle className="h-4 w-4 text-green-400" />
+                      <span className="font-medium text-white">Active Deployment</span>
+                      <span className="text-sm text-slate-400">
                         ({new Date(deployment.completedAt).toLocaleDateString()})
                       </span>
                     </div>
-                    <div className="text-sm space-y-1">
-                      <div><strong>Module:</strong> {deployment.module}</div>
-                      <div><strong>Image:</strong> {deployment.imageName}</div>
+                    <div className="text-sm space-y-1 text-slate-300">
+                      <div><strong className="text-white">Module:</strong> {deployment.module}</div>
+                      <div><strong className="text-white">Image:</strong> {deployment.imageName}</div>
                       <div className="flex items-center gap-2">
-                        <strong>API Endpoint:</strong>
-                        <code className="bg-muted px-2 py-1 rounded text-xs font-mono">
+                        <strong className="text-white">API Endpoint:</strong>
+                        <code className="bg-slate-900 px-2 py-1 rounded text-xs font-mono text-slate-200">
                           {deployment.apiEndpoint}
                         </code>
                         <Button

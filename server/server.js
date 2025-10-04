@@ -808,6 +808,413 @@ app.post('/api/snowflake/insert-validation', async (req, res) => {
   }
 });
 
+// Essential API endpoints for ViewValidations
+app.post('/api/snowflake/entities', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role } = req.body;
+    
+    if (!account || !username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required Snowflake credentials'
+      });
+    }
+
+    connection = snowflake.createConnection({
+      account, username, password,
+      database: database || 'DEMO_DB',
+      schema: schema || 'PUBLIC',
+      warehouse: warehouse || 'COMPUTE_WH',
+      role: role || 'SYSADMIN'
+    });
+
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => err ? reject(err) : resolve(conn));
+    });
+
+    // First check what tables exist
+    const tables = await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: `SHOW TABLES`,
+        complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+      });
+    });
+    
+    console.log('📋 Available tables:', tables.map(t => t.name));
+    
+    const rows = await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: `SELECT DISTINCT ENTITY FROM TBL_VALIDATING_TEST_CASES WHERE ENTITY IS NOT NULL ORDER BY ENTITY`,
+        complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+      });
+    });
+    
+    res.json({
+      success: true,
+      entities: rows.map(row => row.ENTITY),
+      message: `Found ${rows.length} unique entities`
+    });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to fetch entities: ${error.message}` });
+  } finally {
+    if (connection) connection.destroy();
+  }
+});
+
+app.post('/api/snowflake/descriptions', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role, entities } = req.body;
+    
+    connection = snowflake.createConnection({
+      account, username, password,
+      database: database || 'DEMO_DB',
+      schema: schema || 'PUBLIC',
+      warehouse: warehouse || 'COMPUTE_WH',
+      role: role || 'SYSADMIN'
+    });
+
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => err ? reject(err) : resolve(conn));
+    });
+
+    const rows = await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: `SELECT DISTINCT VALIDATION_DESCRIPTION FROM TBL_VALIDATING_TEST_CASES WHERE ENTITY IN (${entities.map(e => `'${e}'`).join(',')}) AND VALIDATION_DESCRIPTION IS NOT NULL ORDER BY VALIDATION_DESCRIPTION`,
+        complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+      });
+    });
+    
+    res.json({
+      success: true,
+      descriptions: rows.map(row => row.VALIDATION_DESCRIPTION),
+      message: `Found ${rows.length} descriptions`
+    });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to fetch descriptions: ${error.message}` });
+  } finally {
+    if (connection) connection.destroy();
+  }
+});
+
+app.post('/api/snowflake/validations-filtered', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role, entities, descriptions } = req.body;
+    
+    connection = snowflake.createConnection({
+      account, username, password,
+      database: database || 'DEMO_DB',
+      schema: schema || 'PUBLIC',
+      warehouse: warehouse || 'COMPUTE_WH',
+      role: role || 'SYSADMIN'
+    });
+
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => err ? reject(err) : resolve(conn));
+    });
+
+    const rows = await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: `SELECT ID, VALIDATION_DESCRIPTION, VALIDATION_QUERY, OPERATOR, EXPECTED_OUTCOME, VALIDATED_BY, ENTITY, ITERATION, IS_ACTIVE, INSERTED_DATE, UPDATED_DATE, TEAM, METRIC_INDEX FROM TBL_VALIDATING_TEST_CASES WHERE ENTITY IN (${entities.map(e => `'${e}'`).join(',')}) AND VALIDATION_DESCRIPTION IN (${descriptions.map(d => `'${d.replace(/'/g, "''")}'`).join(',')}) ORDER BY INSERTED_DATE DESC`,
+        complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+      });
+    });
+    
+    res.json({ success: true, validations: rows, message: `Found ${rows.length} validation rules` });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to fetch validations: ${error.message}` });
+  } finally {
+    if (connection) connection.destroy();
+  }
+});
+
+app.post('/api/snowflake/update-validations', async (req, res) => {
+  let connection;
+  try {
+    const { snowflakeConfig, selectedValidationIds } = req.body;
+    const { account, username, password, database, schema, warehouse, role } = snowflakeConfig;
+    
+    connection = snowflake.createConnection({
+      account, username, password,
+      database: database || 'DEMO_DB',
+      schema: schema || 'PUBLIC',
+      warehouse: warehouse || 'COMPUTE_WH',
+      role: role || 'SYSADMIN'
+    });
+
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => err ? reject(err) : resolve(conn));
+    });
+
+    await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: `UPDATE TBL_VALIDATING_TEST_CASES SET IS_ACTIVE = FALSE, UPDATED_DATE = CURRENT_TIMESTAMP()`,
+        complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+      });
+    });
+
+    if (selectedValidationIds.length > 0) {
+      await new Promise((resolve, reject) => {
+        connection.execute({
+          sqlText: `UPDATE TBL_VALIDATING_TEST_CASES SET IS_ACTIVE = TRUE, UPDATED_DATE = CURRENT_TIMESTAMP() WHERE ID IN (${selectedValidationIds.map(id => `'${id}'`).join(',')})`,
+          complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+        });
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: `Successfully activated ${selectedValidationIds.length} validation rules`,
+      activeCount: selectedValidationIds.length
+    });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to update validations: ${error.message}` });
+  } finally {
+    if (connection) connection.destroy();
+  }
+});
+
+// Check deployment status for a module
+app.get('/api/deployment/status/:module', async (req, res) => {
+  try {
+    const { module } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    
+    const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
+    const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
+    const moduleDir = path.join(MODULES_DIR, module);
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
+    const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    
+    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
+      return res.json({
+        success: true,
+        isDeployed: false,
+        message: `Module '${module}' is not deployed`
+      });
+    }
+    
+    // Load and validate deployment data
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    
+    // Check if deployment is valid (has required fields)
+    const isValid = deploymentData.status === 'completed' && 
+                   resourcesData.stepFunctionArn && 
+                   resourcesData.ecsCluster &&
+                   deploymentData.awsConfig;
+    
+    if (isValid) {
+      console.log(`✅ Found valid deployment for module '${module}':`, resourcesData.stepFunctionArn);
+      
+      res.json({
+        success: true,
+        isDeployed: true,
+        deploymentData: {
+          id: deploymentData.id,
+          status: deploymentData.status,
+          completedAt: deploymentData.completedAt,
+          apiEndpoint: deploymentData.apiEndpoint,
+          stepFunctionArn: resourcesData.stepFunctionArn,
+          region: resourcesData.region,
+          deploymentDate: resourcesData.deploymentDate
+        },
+        message: `Module '${module}' is already deployed`
+      });
+    } else {
+      // Invalid deployment - remove corrupted files
+      try {
+        fs.unlinkSync(deploymentFile);
+        fs.unlinkSync(resourcesFile);
+        console.log(`🗑️ Removed corrupted deployment files for module '${module}'`);
+      } catch (error) {
+        console.log(`⚠️ Could not remove corrupted files: ${error.message}`);
+      }
+      
+      res.json({
+        success: true,
+        isDeployed: false,
+        message: `Module '${module}' deployment is corrupted and has been reset`
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error checking deployment status:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to check deployment status: ${error.message}`
+    });
+  }
+});
+
+// Load saved deployment details
+app.get('/api/deployment/load-resources', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
+    const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
+    const validatorDir = path.join(MODULES_DIR, 'validator');
+    const resourcesFile = path.join(validatorDir, 'aws-resources.json');
+    
+    if (!fs.existsSync(resourcesFile)) {
+      return res.status(404).json({
+        success: false,
+        message: 'No deployment found. Please deploy the validator module first.'
+      });
+    }
+    
+    const savedResources = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    
+    console.log('📋 Loaded saved AWS resources:', savedResources.stepFunctionArn);
+    
+    res.json({
+      success: true,
+      resources: savedResources,
+      message: 'Deployment resources loaded successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error loading deployment resources:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to load deployment resources: ${error.message}`
+    });
+  }
+});
+
+// Clear deployment for redeployment
+app.delete('/api/deployment/clear/:module', async (req, res) => {
+  try {
+    const { module } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    
+    const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
+    const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
+    const moduleDir = path.join(MODULES_DIR, module);
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
+    const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    
+    let filesRemoved = 0;
+    
+    // Remove deployment files
+    if (fs.existsSync(deploymentFile)) {
+      fs.unlinkSync(deploymentFile);
+      filesRemoved++;
+      console.log(`🗑️ Removed deployment.json for module '${module}'`);
+    }
+    
+    if (fs.existsSync(resourcesFile)) {
+      fs.unlinkSync(resourcesFile);
+      filesRemoved++;
+      console.log(`🗑️ Removed aws-resources.json for module '${module}'`);
+    }
+    
+    // Remove from memory
+    for (const [deploymentId, deployment] of deploymentStatus.entries()) {
+      if (deployment.module === module || deploymentId.includes(module)) {
+        deploymentStatus.delete(deploymentId);
+        deploymentConfigs.delete(deploymentId);
+        console.log(`🗑️ Removed deployment '${deploymentId}' from memory`);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Module '${module}' cleared for redeployment. ${filesRemoved} files removed.`,
+      filesRemoved: filesRemoved
+    });
+    
+  } catch (error) {
+    console.error('❌ Error clearing deployment:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to clear deployment: ${error.message}`
+    });
+  }
+});
+
+// Execute Step Function directly using saved deployment details
+app.post('/api/stepfunction/execute', async (req, res) => {
+  try {
+    console.log('🚀 Executing Step Function from saved deployment...');
+    
+    // Load saved AWS resources
+    const fs = require('fs');
+    const path = require('path');
+    
+    const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
+    const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
+    const validatorDir = path.join(MODULES_DIR, 'validator');
+    const resourcesFile = path.join(validatorDir, 'aws-resources.json');
+    const deploymentFile = path.join(validatorDir, 'deployment.json');
+    
+    if (!fs.existsSync(resourcesFile) || !fs.existsSync(deploymentFile)) {
+      return res.status(404).json({
+        success: false,
+        message: 'No deployment found. Please deploy the validator module first.'
+      });
+    }
+    
+    const savedResources = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    const deploymentDetails = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    
+    // Configure AWS SDK with saved credentials
+    const AWS = require('aws-sdk');
+    AWS.config.update({
+      accessKeyId: deploymentDetails.awsConfig.accessKey,
+      secretAccessKey: deploymentDetails.awsConfig.secretKey,
+      region: savedResources.region
+    });
+    
+    const stepfunctions = new AWS.StepFunctions();
+    
+    // Start Step Function execution
+    const executionParams = {
+      stateMachineArn: savedResources.stepFunctionArn,
+      name: `validation-run-${Date.now()}`,
+      input: JSON.stringify({
+        action: 'run_active_validations',
+        timestamp: new Date().toISOString()
+      })
+    };
+    
+    console.log('🔄 Starting Step Function:', savedResources.stepFunctionArn);
+    
+    const execution = await stepfunctions.startExecution(executionParams).promise();
+    
+    console.log('✅ Step Function started:', execution.executionArn);
+    
+    // Return success response
+    res.json({
+      success: true,
+      message: 'Validation execution started successfully',
+      executionArn: execution.executionArn,
+      startDate: execution.startDate,
+      stepFunctionArn: savedResources.stepFunctionArn,
+      totalValidations: 'In Progress',
+      passedValidations: 'Calculating...',
+      failedValidations: 'Calculating...'
+    });
+    
+  } catch (error) {
+    console.error('❌ Step Function execution error:', error);
+    res.status(500).json({
+      success: false,
+      message: `Step Function execution failed: ${error.message}`
+    });
+  }
+});
+
 // Real deployment function - Updated for web-based deployment
 async function deployApplication(deploymentId, awsConfig, envVariables, files, imageName, awsResourceConfig = {}) {
   const status = deploymentStatus.get(deploymentId);
@@ -1632,13 +2039,96 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     addDeploymentLog(deploymentId, 'final-setup', '🎉 Cleanup completed - all temporary files removed');
     updateDeploymentStep(deploymentId, 'final-setup', 'completed');
     
-    // Mark deployment as completed
+    // Mark deployment as completed and save all AWS resources
     const status = deploymentStatus.get(deploymentId);
+    const config = deploymentConfigs.get(deploymentId);
+    
     if (status) {
       status.status = 'completed';
       status.apiEndpoint = apiEndpoint || `Step Function: ${stepFunctionName}`;
       status.completedAt = new Date().toISOString();
+      status.timestamp = Date.now();
+      
+      // Get account ID for ARNs
+      const accountId = status.accountId || '156075000715'; // Will be populated during IAM setup
+      
+      // Save all AWS resource details for persistence
+      status.awsResources = {
+        // Core resources
+        ecrRepository: repositoryName,
+        ecsCluster: clusterName,
+        taskDefinition: taskDefinitionFamily,
+        stepFunction: stepFunctionName,
+        region: region,
+        accountId: accountId,
+        
+        // ARNs for direct access
+        stepFunctionArn: `arn:aws:states:${region}:${accountId}:stateMachine:${stepFunctionName}`,
+        taskDefinitionArn: `arn:aws:ecs:${region}:${accountId}:task-definition/${taskDefinitionFamily}:1`,
+        clusterArn: `arn:aws:ecs:${region}:${accountId}:cluster/${clusterName}`,
+        
+        // CloudWatch log groups (ECS tasks create these automatically)
+        logGroups: {
+          ecsTask: `/ecs/${taskDefinitionFamily}`,
+          ecsTaskAlt: `/aws/ecs/${taskDefinitionFamily}`,
+          stepFunction: `/aws/stepfunctions/${stepFunctionName}`,
+          apiGateway: `/aws/apigateway/${repositoryName}`,
+          // Try multiple naming patterns
+          possibleEcsLogs: [
+            `/ecs/${taskDefinitionFamily}`,
+            `/aws/ecs/${taskDefinitionFamily}`,
+            `/ecs/${repositoryName}`,
+            `/aws/ecs/${repositoryName}`
+          ]
+        },
+        
+        // API endpoints
+        apiGateway: apiEndpoint,
+        deploymentDate: new Date().toISOString()
+      };
+      
+      // Add configuration details
+      if (config) {
+        status.awsConfig = config.awsConfig;
+        status.envVariables = config.envVariables;
+        status.imageName = config.imageName;
+      }
+      
       deploymentStatus.set(deploymentId, status);
+      
+      // Save deployment to file system for persistence across restarts
+      const fs = require('fs');
+      const path = require('path');
+      
+      const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
+      const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
+      const module = config?.deploymentConfig?.module || 'validator';
+      const moduleDir = path.join(MODULES_DIR, module);
+      
+      // Ensure directories exist
+      if (!fs.existsSync(DEPLOYMENTS_DIR)) fs.mkdirSync(DEPLOYMENTS_DIR, { recursive: true });
+      if (!fs.existsSync(MODULES_DIR)) fs.mkdirSync(MODULES_DIR, { recursive: true });
+      if (!fs.existsSync(moduleDir)) fs.mkdirSync(moduleDir, { recursive: true });
+      
+      // Save deployment details
+      const deploymentFile = path.join(moduleDir, 'deployment.json');
+      const dataToSave = {
+        ...status,
+        module: module,
+        savedAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      };
+      
+      fs.writeFileSync(deploymentFile, JSON.stringify(dataToSave, null, 2));
+      
+      // Save AWS resources separately for easy access
+      const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+      fs.writeFileSync(resourcesFile, JSON.stringify(status.awsResources, null, 2));
+      
+      console.log(`💾 Deployment ${deploymentId} completed and saved to file system`);
+      console.log(`📋 AWS Resources saved: ${resourcesFile}`);
+      console.log(`🔗 Step Function ARN: ${status.awsResources.stepFunctionArn}`);
+      console.log(`📊 Log Groups: ${JSON.stringify(status.awsResources.logGroups.possibleEcsLogs)}`);
     }
     
   } catch (error) {

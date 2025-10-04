@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import DeploymentWizard from "./DeploymentWizard";
 import ValidationStep from "./ValidationStep";
+import ViewValidations from "./ViewValidations";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -304,7 +305,11 @@ const Dashboard = () => {
       );
     } else if (currentView === 'add-validation') {
       return <ValidationStep onNext={() => setCurrentView('home')} snowflakeConfig={snowflakeConfig} />;
-    } else if (currentView !== 'config') {
+    } else if (currentView === 'view-validations') {
+      return <ViewValidations snowflakeConfig={snowflakeConfig} />;
+    } else if (currentView === 'config') {
+      return <DeploymentWizard />;
+    } else {
       return (
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
