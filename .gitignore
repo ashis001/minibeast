@@ -41,7 +41,10 @@ next-env.d.ts
 
 # uploads folder - auto cleanup after deployment
 /uploads
-/server/uploads.txt
+/server/uploads
+
+# deployments folder - contains sensitive AWS credentials
+/server/deployments
 
 # Docker files (obsolete - using pre-built images now)
 Dockerfile
