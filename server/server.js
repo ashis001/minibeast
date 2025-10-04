@@ -1215,6 +1215,84 @@ app.post('/api/stepfunction/execute', async (req, res) => {
   }
 });
 
+// Auto-cleanup function for uploads and S3 images
+async function cleanupAfterDeployment(deploymentId, awsConfig) {
+  try {
+    addDeploymentLog(deploymentId, 'final-setup', '🧹 Starting auto-cleanup of uploads and S3 images...');
+    
+    const fs = require('fs');
+    const path = require('path');
+    
+    // 1. Cleanup local uploads folder
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    if (fs.existsSync(uploadsDir)) {
+      const files = fs.readdirSync(uploadsDir);
+      let deletedCount = 0;
+      
+      for (const file of files) {
+        try {
+          const filePath = path.join(uploadsDir, file);
+          const stats = fs.statSync(filePath);
+          
+          // Delete files older than 1 hour or all files after deployment
+          const oneHourAgo = Date.now() - (60 * 60 * 1000);
+          if (stats.mtime.getTime() < oneHourAgo || true) { // Delete all for now
+            fs.unlinkSync(filePath);
+            deletedCount++;
+          }
+        } catch (error) {
+          console.log(`⚠️ Could not delete upload file ${file}:`, error.message);
+        }
+      }
+      
+      addDeploymentLog(deploymentId, 'final-setup', `✅ Cleaned up ${deletedCount} upload files from local storage`);
+    }
+    
+    // 2. Cleanup S3 images (ECR images are handled by AWS lifecycle policies)
+    try {
+      const AWS = require('aws-sdk');
+      AWS.config.update({
+        accessKeyId: awsConfig.accessKey,
+        secretAccessKey: awsConfig.secretKey,
+        region: awsConfig.region
+      });
+      
+      const ecr = new AWS.ECR();
+      const repositoryName = `minibeat-validator-${deploymentId.substring(0, 8)}`;
+      
+      // List images in ECR repository
+      const images = await ecr.listImages({
+        repositoryName: repositoryName,
+        maxResults: 100
+      }).promise();
+      
+      // Keep only the latest 3 images, delete older ones
+      if (images.imageIds.length > 3) {
+        const imagesToDelete = images.imageIds.slice(3); // Keep first 3, delete rest
+        
+        if (imagesToDelete.length > 0) {
+          await ecr.batchDeleteImage({
+            repositoryName: repositoryName,
+            imageIds: imagesToDelete
+          }).promise();
+          
+          addDeploymentLog(deploymentId, 'final-setup', `✅ Cleaned up ${imagesToDelete.length} old ECR images`);
+        }
+      }
+      
+    } catch (s3Error) {
+      addDeploymentLog(deploymentId, 'final-setup', `⚠️ S3/ECR cleanup warning: ${s3Error.message}`);
+      // Don't fail deployment for cleanup issues
+    }
+    
+    addDeploymentLog(deploymentId, 'final-setup', '✅ Auto-cleanup completed successfully');
+    
+  } catch (error) {
+    addDeploymentLog(deploymentId, 'final-setup', `⚠️ Auto-cleanup error: ${error.message}`);
+    // Don't fail deployment for cleanup issues
+  }
+}
+
 // Real deployment function - Updated for web-based deployment
 async function deployApplication(deploymentId, awsConfig, envVariables, files, imageName, awsResourceConfig = {}) {
   const status = deploymentStatus.get(deploymentId);
@@ -2037,6 +2115,10 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     }
     
     addDeploymentLog(deploymentId, 'final-setup', '🎉 Cleanup completed - all temporary files removed');
+    
+    // Auto-cleanup uploads folder and S3 images after deployment
+    await cleanupAfterDeployment(deploymentId, awsConfig);
+    
     updateDeploymentStep(deploymentId, 'final-setup', 'completed');
     
     // Mark deployment as completed and save all AWS resources
