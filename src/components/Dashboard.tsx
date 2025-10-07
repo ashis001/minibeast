@@ -31,6 +31,7 @@ import {
 import DeploymentWizard from "./DeploymentWizard";
 import ValidationStep from "./ValidationStep";
 import ViewValidations from "./ViewValidations";
+import ActivityLog from "./ActivityLog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -306,7 +307,12 @@ const Dashboard = () => {
     } else if (currentView === 'add-validation') {
       return <ValidationStep onNext={() => setCurrentView('home')} snowflakeConfig={snowflakeConfig} />;
     } else if (currentView === 'view-validations') {
-      return <ViewValidations snowflakeConfig={snowflakeConfig} />;
+      return <ViewValidations 
+        snowflakeConfig={snowflakeConfig} 
+        onNavigate={() => setCurrentView('activity-logs')} 
+      />;
+    } else if (currentView === 'activity-logs') {
+      return <ActivityLog />;
     } else if (currentView === 'config') {
       return <DeploymentWizard />;
     } else {
