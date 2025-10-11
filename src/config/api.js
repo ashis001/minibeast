@@ -1,6 +1,8 @@
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-3e86.up.railway.app';
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
+console.log('🔧 Environment:', process.env.NODE_ENV);
+console.log('🔧 All env vars:', process.env);
 
 export const API_ENDPOINTS = {
   // Health endpoints

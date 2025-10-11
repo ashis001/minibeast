@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, AlertTriangle, Settings } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Settings, Shield, Cloud, Snowflake, Edit, Eye, EyeOff, TestTube, AlertCircle } from "lucide-react";
 import { API_ENDPOINTS } from '../config/api';
 import { AWSConfig } from "@/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ConfigurationStepProps {
   onNext: (config: AWSConfig) => void;
