@@ -1,0 +1,22 @@
+{
+  "name": "data-deployer-backend",
+  "version": "1.0.0",
+  "description": "Backend server for data deployer",
+  "main": "server/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "snowflake-sdk": "^2.2.0"
+  }
+}
