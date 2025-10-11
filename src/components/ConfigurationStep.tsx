@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, EyeOff, TestTube, CheckCircle, AlertCircle, Snowflake, Cloud, Edit, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Settings } from "lucide-react";
+import { API_ENDPOINTS } from '../config/api';
 import { AWSConfig } from "@/types";
 
 interface ConfigurationStepProps {
@@ -46,7 +47,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setAwsStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('http://localhost:3002/api/test-aws', {
+      const response = await fetch(API_ENDPOINTS.TEST_AWS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +86,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setSnowflakeStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('http://localhost:3002/api/test-snowflake', {
+      const response = await fetch(API_ENDPOINTS.TEST_SNOWFLAKE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +165,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
 
     setSettingUpPermissions(true);
     try {
-      const response = await fetch('http://localhost:3002/api/setup-permissions', {
+      const response = await fetch(API_ENDPOINTS.SETUP_PERMISSIONS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../config/api';
 import { Settings, Upload, Rocket, CheckCircle, RefreshCw, Trash2 } from "lucide-react";
 import Header from "./Header";
 import StepIndicator from "./StepIndicator";
@@ -67,7 +68,7 @@ const DeploymentWizard = () => {
     
     // Check deployment status immediately
     try {
-      const response = await fetch(`http://localhost:3002/api/deployment/status/${moduleId}`);
+      const response = await fetch(`${API_ENDPOINTS.DEPLOYMENT_MODULE_STATUS}/${moduleId}`);
       const data = await response.json();
       
       if (data.success && data.isDeployed) {
@@ -93,7 +94,7 @@ const DeploymentWizard = () => {
   const handleRedeploy = async () => {
     setIsClearing(true);
     try {
-      const response = await fetch(`http://localhost:3002/api/deployment/clear/${selectedModule}`, {
+      const response = await fetch(`${API_ENDPOINTS.DEPLOYMENT_CLEAR}/${selectedModule}`, {
         method: 'DELETE'
       });
       const data = await response.json();
