@@ -1,7 +1,7 @@
-import AWS from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
+const AWS = require('aws-sdk');
+const { v4: uuidv4 } = require('uuid');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
