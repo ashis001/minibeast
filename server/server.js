@@ -23,7 +23,7 @@ if (!fs.existsSync('uploads')) {
 }
 
 const app = express();
-const port = 3002;
+const port = process.env.PORT || 3002;
 
 // Store deployment status and configurations
 const deploymentStatus = new Map();
@@ -33,6 +33,19 @@ const deploymentConfigs = new Map();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Health check endpoint for Railway
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Data Deployer Backend Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
 
 // Create required IAM policy for deployment
 app.post('/api/setup-permissions', async (req, res) => {
@@ -2611,6 +2624,6 @@ function addDeploymentLog(deploymentId, stepId, logMessage) {
   }
 }
 
-app.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Backend server listening on port ${port}`);
 });
