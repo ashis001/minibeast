@@ -251,3 +251,4 @@ After successful deployment, you receive:
 ## 📝 License
 
 This project is built with modern web technologies and cloud-native architecture for scalable, production-ready deployments.
+# Trigger Vercel redeploy
