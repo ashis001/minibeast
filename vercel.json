@@ -1,0 +1,8 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "env": {
+    "REACT_APP_API_URL": "https://web-production-3e86.up.railway.app"
+  }
+}

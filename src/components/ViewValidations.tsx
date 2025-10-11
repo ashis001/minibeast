@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { useToast } from './ui/use-toast';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Edit, Play, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from './ui/dropdown-menu';
-import { AlertTriangle, Activity, Play, RefreshCw, ChevronDown, Edit, X } from 'lucide-react';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { API_ENDPOINTS } from '../config/api';
 
 interface ValidationRule {
   ID: string;
@@ -286,7 +294,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const loadEntities = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/entities', {
+      const response = await fetch(API_ENDPOINTS.SNOWFLAKE_ENTITIES, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -318,7 +326,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const loadDescriptions = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/descriptions', {
+      const response = await fetch(API_ENDPOINTS.SNOWFLAKE_DESCRIPTIONS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +362,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const loadValidations = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/validations-filtered', {
+      const response = await fetch(API_ENDPOINTS.SNOWFLAKE_VALIDATIONS_FILTERED, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -389,7 +397,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const saveActivationChanges = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/update-validations', {
+      const response = await fetch(API_ENDPOINTS.SNOWFLAKE_UPDATE_VALIDATIONS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -428,7 +436,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const updateValidation = async (updatedValidation: ValidationRule) => {
     setIsUpdating(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/update-validation', {
+      const response = await fetch(API_ENDPOINTS.SNOWFLAKE_UPDATE_VALIDATION, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -474,7 +482,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
     setIsRunning(true);
     try {
       // Execute Step Function using saved deployment details
-      const validationResponse = await fetch('http://localhost:3002/api/stepfunction/execute', {
+      const validationResponse = await fetch(API_ENDPOINTS.STEPFUNCTION_EXECUTE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
