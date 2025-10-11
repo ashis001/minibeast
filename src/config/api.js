@@ -1,8 +1,8 @@
-// API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-3e86.up.railway.app';
+// API Configuration - Now using Vercel serverless functions
+const API_BASE_URL = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
 console.log('🔧 Environment:', process.env.NODE_ENV);
-console.log('🔧 All env vars:', process.env);
+console.log('🔧 Using Vercel serverless functions');
 
 export const API_ENDPOINTS = {
   // Health endpoints
