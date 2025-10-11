@@ -1,5 +1,6 @@
 // API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002';
+console.log('🔧 API_BASE_URL:', API_BASE_URL);
 
 export const API_ENDPOINTS = {
   // Health endpoints
@@ -37,4 +38,5 @@ export const API_ENDPOINTS = {
   SETUP_PERMISSIONS: `${API_BASE_URL}/api/setup-permissions`
 };
 
+export { API_BASE_URL };
 export default API_BASE_URL;
