@@ -1,8 +1,8 @@
 // API Configuration - Now using Vercel serverless functions
-const API_BASE_URL = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
-console.log('🔧 API_BASE_URL:', API_BASE_URL);
+const API_BASE_URL = ''; // Always use relative paths for Vercel functions
+console.log('🔧 API_BASE_URL:', API_BASE_URL || 'Using relative paths');
 console.log('🔧 Environment:', process.env.NODE_ENV);
-console.log('🔧 Using Vercel serverless functions');
+console.log('🔧 Using Vercel serverless functions - NO Railway needed!');
 
 export const API_ENDPOINTS = {
   // Health endpoints
