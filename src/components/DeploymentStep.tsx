@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../config/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +76,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
   useEffect(() => {
     const checkExistingDeployments = async () => {
       try {
-        const response = await fetch(`http://localhost:3002/api/deployments/check/${deploymentConfig.module}`);
+        const response = await fetch(`${API_ENDPOINTS.DEPLOYMENTS_CHECK}/${deploymentConfig.module}`);
         const data = await response.json();
         
         if (response.ok && data.success) {
@@ -107,7 +108,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
     formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
 
     try {
-      const response = await fetch('http://localhost:3002/api/deploy', {
+      const response = await fetch(API_ENDPOINTS.DEPLOY, {
         method: 'POST',
         body: formData,
       });
