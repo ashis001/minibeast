@@ -92,7 +92,7 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
 
     const pollDeploymentStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:3002/api/deployment/${deploymentId}/status`);
+        const response = await fetch(`http://134.209.148.250/api/deployment/${deploymentId}/status`);
         const data = await response.json();
         
         if (response.ok && data.success) {
@@ -162,7 +162,7 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
     if (!deploymentId) return;
     
     try {
-      const response = await fetch(`http://localhost:3002/api/deployment/${deploymentId}/retry`, {
+      const response = await fetch(`http://134.209.148.250/api/deployment/${deploymentId}/retry`, {
         method: 'POST'
       });
       

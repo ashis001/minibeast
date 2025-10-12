@@ -46,7 +46,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setAwsStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('http://localhost:3002/api/test-aws', {
+      const response = await fetch('http://134.209.148.250/api/test-aws', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setSnowflakeStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('http://localhost:3002/api/test-snowflake', {
+      const response = await fetch('http://134.209.148.250/api/test-snowflake', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
 
     setSettingUpPermissions(true);
     try {
-      const response = await fetch('http://localhost:3002/api/setup-permissions', {
+      const response = await fetch('http://134.209.148.250/api/setup-permissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

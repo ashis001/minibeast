@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { useToast } from './ui/use-toast';
-import { AlertTriangle, Activity, Play, RefreshCw } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from './ui/dropdown-menu';
+import { AlertTriangle, Activity, Play, RefreshCw, ChevronDown, Edit, X } from 'lucide-react';
 
 interface ValidationRule {
   ID: string;
@@ -22,19 +29,217 @@ interface ValidationRule {
 
 interface ViewValidationsProps {
   snowflakeConfig: any;
+  onNavigate?: () => void;
 }
 
-const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
+interface EditValidationFormProps {
+  validation: ValidationRule;
+  onUpdate: (validation: ValidationRule) => void;
+  onCancel: () => void;
+  isUpdating: boolean;
+}
+
+const EditValidationForm = ({ validation, onUpdate, onCancel, isUpdating }: EditValidationFormProps) => {
+  const [formData, setFormData] = useState<ValidationRule>(validation);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdate(formData);
+  };
+
+  const handleChange = (field: keyof ValidationRule, value: string | boolean | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Validation Description */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Validation Description *
+          </label>
+          <input
+            type="text"
+            value={formData.VALIDATION_DESCRIPTION}
+            onChange={(e) => handleChange('VALIDATION_DESCRIPTION', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="e.g., Check record count matches expected"
+            required
+          />
+        </div>
+
+        {/* Entity */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Entity *
+          </label>
+          <input
+            type="text"
+            value={formData.ENTITY}
+            onChange={(e) => handleChange('ENTITY', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="e.g., Customer, Order, Product"
+            required
+          />
+        </div>
+
+        {/* Validated By */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Validated By *
+          </label>
+          <input
+            type="text"
+            value={formData.VALIDATED_BY}
+            onChange={(e) => handleChange('VALIDATED_BY', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="Your name or team"
+            required
+          />
+        </div>
+
+        {/* Team */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Team *
+          </label>
+          <input
+            type="text"
+            value={formData.TEAM}
+            onChange={(e) => handleChange('TEAM', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="e.g., Data Engineering, QA"
+            required
+          />
+        </div>
+
+        {/* Operator */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Operator
+          </label>
+          <select
+            value={formData.OPERATOR}
+            onChange={(e) => handleChange('OPERATOR', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="=">=</option>
+            <option value=">">&gt;</option>
+            <option value="<">&lt;</option>
+            <option value=">=">&gt;=</option>
+            <option value="<=">&lt;=</option>
+            <option value="!=">&ne;</option>
+          </select>
+        </div>
+
+        {/* Expected Outcome */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Expected Outcome *
+          </label>
+          <input
+            type="text"
+            value={formData.EXPECTED_OUTCOME}
+            onChange={(e) => handleChange('EXPECTED_OUTCOME', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="e.g., 1000, 'SUCCESS', 0"
+            required
+          />
+        </div>
+
+        {/* Iteration */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Iteration
+          </label>
+          <input
+            type="text"
+            value={formData.ITERATION}
+            onChange={(e) => handleChange('ITERATION', e.target.value)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="1"
+          />
+        </div>
+
+        {/* Metric Index */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-gray-300">
+            Metric Index
+          </label>
+          <input
+            type="number"
+            value={formData.METRIC_INDEX}
+            onChange={(e) => handleChange('METRIC_INDEX', parseInt(e.target.value) || 0)}
+            className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            placeholder="1"
+          />
+        </div>
+      </div>
+
+      {/* Validation Query */}
+      <div>
+        <label className="block text-sm font-medium mb-2 text-gray-300">
+          Validation Query *
+        </label>
+        <textarea
+          value={formData.VALIDATION_QUERY}
+          onChange={(e) => handleChange('VALIDATION_QUERY', e.target.value)}
+          className="w-full p-3 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 h-32 resize-none"
+          placeholder="SELECT COUNT(*) FROM YOUR_TABLE WHERE condition"
+          required
+        />
+        <p className="text-xs text-gray-400 mt-1">Enter your SQL query for data validation</p>
+      </div>
+
+      {/* Active Status */}
+      <div className="flex items-center space-x-3">
+        <input
+          type="checkbox"
+          id="isActive"
+          checked={formData.IS_ACTIVE}
+          onChange={(e) => handleChange('IS_ACTIVE', e.target.checked)}
+          className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+        />
+        <label htmlFor="isActive" className="text-sm font-medium text-gray-300">
+          Active
+        </label>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-center pt-6">
+        <Button
+          type="submit"
+          disabled={isUpdating}
+          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center gap-2 min-w-[120px] justify-center"
+        >
+          {isUpdating ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            'Update'
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) => {
   const { toast } = useToast();
   const [lastRunResult, setLastRunResult] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
   // Filter states
   const [selectedEntities, setSelectedEntities] = useState<string[]>([]);
   const [selectedDescriptions, setSelectedDescriptions] = useState<string[]>([]);
-  const [entitySelectAll, setEntitySelectAll] = useState(true);
-  const [descriptionSelectAll, setDescriptionSelectAll] = useState(true);
+  const [entitySelectAll, setEntitySelectAll] = useState(false);
+  const [descriptionSelectAll, setDescriptionSelectAll] = useState(false);
   
   // Data states
   const [entities, setEntities] = useState<string[]>([]);
@@ -44,6 +249,11 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
   
   // Selection states for activation/deactivation
   const [selectedValidations, setSelectedValidations] = useState<string[]>([]);
+  
+  // Edit modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingValidation, setEditingValidation] = useState<ValidationRule | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Load entities on component mount
   useEffect(() => {
@@ -58,6 +268,8 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
       loadDescriptions();
     } else {
       setDescriptions([]);
+      setSelectedDescriptions([]);
+      setDescriptionSelectAll(false);
       setValidations([]);
     }
   }, [selectedEntities]);
@@ -74,7 +286,7 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
   const loadEntities = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/entities', {
+      const response = await fetch('http://134.209.148.250/api/snowflake/entities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +297,7 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
       const data = await response.json();
       if (data.success) {
         setEntities(data.entities);
-        setSelectedEntities(data.entities); // Select all by default
+        setSelectedEntities([]); // Start with no entities selected
       } else {
         toast({
           title: "Error",
@@ -106,7 +318,7 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
   const loadDescriptions = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/descriptions', {
+      const response = await fetch('http://134.209.148.250/api/snowflake/descriptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +332,8 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
       const data = await response.json();
       if (data.success) {
         setDescriptions(data.descriptions);
-        setSelectedDescriptions(data.descriptions); // Select all by default
+        setSelectedDescriptions([]); // Don't auto-select descriptions
+        setDescriptionSelectAll(false); // Reset select all state
       } else {
         toast({
           title: "Error",
@@ -141,7 +354,7 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
   const loadValidations = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/validations-filtered', {
+      const response = await fetch('http://134.209.148.250/api/snowflake/validations-filtered', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,7 +389,7 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
   const saveActivationChanges = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('http://localhost:3002/api/snowflake/update-validations', {
+      const response = await fetch('http://134.209.148.250/api/snowflake/update-validations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,11 +425,56 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
     setIsSaving(false);
   };
 
+  const updateValidation = async (updatedValidation: ValidationRule) => {
+    setIsUpdating(true);
+    try {
+      const response = await fetch('http://134.209.148.250/api/snowflake/update-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          snowflakeConfig,
+          validation: updatedValidation
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Update the local state
+        setValidations(prev => prev.map(v => 
+          v.ID === updatedValidation.ID ? updatedValidation : v
+        ));
+        
+        setIsEditModalOpen(false);
+        setEditingValidation(null);
+        
+        toast({
+          title: "Success",
+          description: "Validation rule updated successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Connection Error",
+        description: "Failed to update validation rule in Snowflake",
+        variant: "destructive",
+      });
+    }
+    setIsUpdating(false);
+  };
+
   const runValidations = async () => {
     setIsRunning(true);
     try {
       // Execute Step Function using saved deployment details
-      const validationResponse = await fetch('http://localhost:3002/api/stepfunction/execute', {
+      const validationResponse = await fetch('http://134.209.148.250/api/stepfunction/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,8 +488,15 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
         setLastRunResult(validationData);
         toast({
           title: "Validations Started",
-          description: `Step Function execution started successfully. Execution ARN: ${validationData.executionArn}`,
+          description: `Step Function execution started successfully. Redirecting to Activity Log...`,
         });
+        
+        // Redirect to Activity Log after successful start
+        setTimeout(() => {
+          if (onNavigate) {
+            onNavigate();
+          }
+        }, 1500); // Small delay to show the success message
       } else {
         toast({
           title: "Validation Run Failed",
@@ -270,81 +535,114 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
 
       {/* Filters Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Entity Filter */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Filter by Entity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
+        {/* Entity Filter Dropdown */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Filter by Entity</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {selectedEntities.length === 0 
+                  ? "Select entities..." 
+                  : `${selectedEntities.length} selected`
+                }
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              className="min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+              sideOffset={4}
+            >
+              <DropdownMenuCheckboxItem
                 checked={entitySelectAll}
-                onChange={(e) => {
-                  setEntitySelectAll(e.target.checked);
-                  setSelectedEntities(e.target.checked ? entities : []);
+                onCheckedChange={(checked) => {
+                  setEntitySelectAll(checked);
+                  setSelectedEntities(checked ? entities : []);
                 }}
-              />
-              <label className="text-sm font-medium">Select All</label>
-            </div>
-            <div className="max-h-32 overflow-y-auto space-y-1">
+                onSelect={(e) => e.preventDefault()}
+              >
+                Select All
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
               {entities.map((entity) => (
-                <div key={entity} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedEntities.includes(entity)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedEntities([...selectedEntities, entity]);
-                      } else {
-                        setSelectedEntities(selectedEntities.filter(e => e !== entity));
+                <DropdownMenuCheckboxItem
+                  key={entity}
+                  checked={selectedEntities.includes(entity)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      const newSelected = [...selectedEntities, entity];
+                      setSelectedEntities(newSelected);
+                      if (newSelected.length === entities.length) {
+                        setEntitySelectAll(true);
                       }
-                    }}
-                  />
-                  <label className="text-xs">{entity}</label>
-                </div>
+                    } else {
+                      setSelectedEntities(selectedEntities.filter(e => e !== entity));
+                      setEntitySelectAll(false);
+                    }
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {entity}
+                </DropdownMenuCheckboxItem>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        {/* Description Filter */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Filter by Description</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
+        {/* Description Filter Dropdown */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Filter by Description</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {selectedDescriptions.length === 0 
+                  ? "Select descriptions..." 
+                  : `${selectedDescriptions.length} selected`
+                }
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              className="min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto"
+              align="start"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+              sideOffset={4}
+            >
+              <DropdownMenuCheckboxItem
                 checked={descriptionSelectAll}
-                onChange={(e) => {
-                  setDescriptionSelectAll(e.target.checked);
-                  setSelectedDescriptions(e.target.checked ? descriptions : []);
+                onCheckedChange={(checked) => {
+                  setDescriptionSelectAll(checked);
+                  setSelectedDescriptions(checked ? descriptions : []);
                 }}
-              />
-              <label className="text-sm font-medium">Select All</label>
-            </div>
-            <div className="max-h-32 overflow-y-auto space-y-1">
+                onSelect={(e) => e.preventDefault()}
+              >
+                Select All
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
               {descriptions.map((desc) => (
-                <div key={desc} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedDescriptions.includes(desc)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedDescriptions([...selectedDescriptions, desc]);
-                      } else {
-                        setSelectedDescriptions(selectedDescriptions.filter(d => d !== desc));
+                <DropdownMenuCheckboxItem
+                  key={desc}
+                  checked={selectedDescriptions.includes(desc)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      const newSelected = [...selectedDescriptions, desc];
+                      setSelectedDescriptions(newSelected);
+                      if (newSelected.length === descriptions.length) {
+                        setDescriptionSelectAll(true);
                       }
-                    }}
-                  />
-                  <label className="text-xs">{desc}</label>
-                </div>
+                    } else {
+                      setSelectedDescriptions(selectedDescriptions.filter(d => d !== desc));
+                      setDescriptionSelectAll(false);
+                    }
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <span className="text-sm">{desc}</span>
+                </DropdownMenuCheckboxItem>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Actions */}
         <Card>
@@ -361,13 +659,18 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
             </Button>
             <Button 
               onClick={runValidations} 
-              disabled={isRunning}
+              disabled={isRunning || validations.some(v => !v.IS_ACTIVE)}
               className="w-full flex items-center gap-2"
             >
               {isRunning ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin" />
                   Running...
+                </>
+              ) : validations.some(v => !v.IS_ACTIVE) ? (
+                <>
+                  <AlertTriangle className="h-4 w-4" />
+                  Inactive Rules Found - Cannot Run
                 </>
               ) : (
                 <>
@@ -390,7 +693,7 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-black">
                     <th className="border border-gray-300 p-2 text-left">
                       <input
                         type="checkbox"
@@ -403,18 +706,15 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
                         }}
                       />
                     </th>
-                    <th className="border border-gray-300 p-2 text-left">Active</th>
-                    <th className="border border-gray-300 p-2 text-left">Description</th>
-                    <th className="border border-gray-300 p-2 text-left">Entity</th>
-                    <th className="border border-gray-300 p-2 text-left">Operator</th>
-                    <th className="border border-gray-300 p-2 text-left">Expected</th>
-                    <th className="border border-gray-300 p-2 text-left">Validated By</th>
-                    <th className="border border-gray-300 p-2 text-left">Team</th>
+                    <th className="border border-gray-300 p-2 text-left text-white">Entity</th>
+                    <th className="border border-gray-300 p-2 text-left text-white">Description</th>
+                    <th className="border border-gray-300 p-2 text-left text-white">Active</th>
+                    <th className="border border-gray-300 p-2 text-left text-white">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {validations.map((validation) => (
-                    <tr key={validation.ID} className="hover:bg-gray-50">
+                    <tr key={validation.ID}>
                       <td className="border border-gray-300 p-2">
                         <input
                           type="checkbox"
@@ -428,17 +728,27 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
                           }}
                         />
                       </td>
+                      <td className="border border-gray-300 p-2 text-sm">{validation.ENTITY}</td>
+                      <td className="border border-gray-300 p-2 text-sm">{validation.VALIDATION_DESCRIPTION}</td>
                       <td className="border border-gray-300 p-2">
                         <span className={`px-2 py-1 rounded text-xs ${validation.IS_ACTIVE ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                           {validation.IS_ACTIVE ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="border border-gray-300 p-2 text-sm">{validation.VALIDATION_DESCRIPTION}</td>
-                      <td className="border border-gray-300 p-2 text-sm">{validation.ENTITY}</td>
-                      <td className="border border-gray-300 p-2 text-sm">{validation.OPERATOR}</td>
-                      <td className="border border-gray-300 p-2 text-sm">{validation.EXPECTED_OUTCOME}</td>
-                      <td className="border border-gray-300 p-2 text-sm">{validation.VALIDATED_BY}</td>
-                      <td className="border border-gray-300 p-2 text-sm">{validation.TEAM}</td>
+                      <td className="border border-gray-300 p-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingValidation(validation);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Edit className="h-3 w-3" />
+                          Edit
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -471,6 +781,38 @@ const ViewValidations = ({ snowflakeConfig }: ViewValidationsProps) => {
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto" />
           <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingValidation && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-700">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Edit Validation Rule</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingValidation(null);
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <EditValidationForm
+              validation={editingValidation}
+              onUpdate={updateValidation}
+              onCancel={() => {
+                setIsEditModalOpen(false);
+                setEditingValidation(null);
+              }}
+              isUpdating={isUpdating}
+            />
+          </div>
         </div>
       )}
     </div>
