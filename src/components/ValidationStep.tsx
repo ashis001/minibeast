@@ -73,7 +73,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     
     setIsLoadingTables(true);
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/tables', {
+      const response = await fetch('/api/snowflake/tables', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     
     setIsCreatingConfigTable(true);
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/create-config-table', {
+      const response = await fetch('/api/snowflake/create-config-table', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
 
     setIsSubmittingValidation(true);
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/insert-validation', {
+      const response = await fetch('/api/snowflake/insert-validation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

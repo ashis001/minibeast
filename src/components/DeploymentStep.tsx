@@ -75,7 +75,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
   useEffect(() => {
     const checkExistingDeployments = async () => {
       try {
-        const response = await fetch(`https://trading-cons-brochures-switching.trycloudflare.com/api/deployments/check/${deploymentConfig.module}`);
+        const response = await fetch(`/api/deployments/check/${deploymentConfig.module}`);
         const data = await response.json();
         
         if (response.ok && data.success) {

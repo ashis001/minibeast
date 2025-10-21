@@ -175,7 +175,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
 
     setSettingUpPermissions(true);
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/setup-permissions', {
+      const response = await fetch('/api/setup-permissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -150,7 +150,7 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
     if (!deploymentId) return;
     
     try {
-      const response = await fetch(`https://trading-cons-brochures-switching.trycloudflare.com/api/deployment/${deploymentId}/retry`, {
+      const response = await fetch(`/api/deployment/${deploymentId}/retry`, {
         method: 'POST'
       });
       
