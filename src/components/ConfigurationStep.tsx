@@ -222,46 +222,6 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
         </p>
       </div>
 
-      {/* Permission Setup Section */}
-      <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
-            <Shield className="h-5 w-5" />
-            AWS Permissions Setup
-          </CardTitle>
-          <CardDescription>
-            If you encounter permission errors during deployment, use this tool to automatically set up the required AWS permissions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="aws-username">AWS IAM Username</Label>
-              <Input
-                id="aws-username"
-                type="text"
-                placeholder="your-iam-username"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button 
-                onClick={setupPermissions} 
-                disabled={settingUpPermissions || !awsConfig.accessKey || !awsConfig.secretKey || !userName}
-                className="w-full"
-                variant="outline"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                {settingUpPermissions ? 'Setting up...' : 'Setup Permissions'}
-              </Button>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            This will create and attach a policy called 'DataDeployerFullAccess' to your IAM user with all required permissions.
-          </div>
-        </CardContent>
-      </Card>
 
       <Tabs defaultValue="aws" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
