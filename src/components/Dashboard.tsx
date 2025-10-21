@@ -40,38 +40,46 @@ const Dashboard = () => {
   // Snowflake config state - will be populated from configuration
   const [snowflakeConfig, setSnowflakeConfig] = useState(null);
   
-  // Load Snowflake config from localStorage or backend
-  React.useEffect(() => {
-    const loadSnowflakeConfig = async () => {
-      // First try localStorage
-      const savedConfig = localStorage.getItem('snowflakeConfig');
-      if (savedConfig) {
-        try {
-          setSnowflakeConfig(JSON.parse(savedConfig));
-          return;
-        } catch (error) {
-          console.error('Failed to parse saved Snowflake config:', error);
-        }
-      }
-      
-      // Fallback: try to load from backend if localStorage is empty
+  // Function to load Snowflake config
+  const loadSnowflakeConfig = React.useCallback(async () => {
+    // First try localStorage
+    const savedConfig = localStorage.getItem('snowflakeConfig');
+    if (savedConfig) {
       try {
-        const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/config/snowflake');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.config) {
-            setSnowflakeConfig(data.config);
-            // Save to localStorage for future use
-            localStorage.setItem('snowflakeConfig', JSON.stringify(data.config));
-          }
-        }
+        setSnowflakeConfig(JSON.parse(savedConfig));
+        return;
       } catch (error) {
-        console.error('Failed to load Snowflake config from backend:', error);
+        console.error('Failed to parse saved Snowflake config:', error);
       }
-    };
+    }
     
-    loadSnowflakeConfig();
+    // Fallback: try to load from backend if localStorage is empty
+    try {
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/config/snowflake');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.config) {
+          setSnowflakeConfig(data.config);
+          // Save to localStorage for future use
+          localStorage.setItem('snowflakeConfig', JSON.stringify(data.config));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load Snowflake config from backend:', error);
+    }
   }, []);
+
+  // Load Snowflake config on mount and when view changes to validation pages
+  React.useEffect(() => {
+    loadSnowflakeConfig();
+  }, [loadSnowflakeConfig]);
+
+  // Reload config when switching to validation views
+  React.useEffect(() => {
+    if (currentView === 'add-validation' || currentView === 'view-validations') {
+      loadSnowflakeConfig();
+    }
+  }, [currentView, loadSnowflakeConfig]);
   const menuItems = [
     { icon: Home, label: "Home", id: "home" },
     { icon: Database, label: "Migrator", id: "migrator" },
