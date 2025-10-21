@@ -90,15 +90,13 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
     checkExistingDeployments();
   }, [deploymentConfig.module]);
 
+  const [deploymentStatus, setDeploymentStatus] = useState('');
+
   const handleDeploy = async () => {
     if (!canProceed) return;
 
     setIsDeploying(true);
-    
-    toast({
-      title: "Initializing Deployment",
-      description: "Setting up AWS resources and preparing deployment...",
-    });
+    setDeploymentStatus('Uploading Docker image...');
 
     try {
       const formData = new FormData();
@@ -111,6 +109,8 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
       formData.append('awsConfig', JSON.stringify(awsConfig));
       formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
 
+      setDeploymentStatus('Initializing AWS resources...');
+      
       const response = await fetch('/api/deploy', {
         method: 'POST',
         body: formData,
@@ -119,12 +119,15 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
       const result = await response.json();
 
       if (result.success) {
-        toast({
-          title: "Deployment Started",
-          description: "Your deployment has been initiated successfully.",
-        });
+        setDeploymentStatus('Creating ECR repository...');
         
-        // Wait 15 seconds for initialization
+        // Animate through different stages
+        setTimeout(() => setDeploymentStatus('Uploading to AWS...'), 3000);
+        setTimeout(() => setDeploymentStatus('Configuring ECS cluster...'), 6000);
+        setTimeout(() => setDeploymentStatus('Setting up Step Functions...'), 9000);
+        setTimeout(() => setDeploymentStatus('Finalizing deployment...'), 12000);
+        
+        // Navigate to progress page after 15 seconds
         setTimeout(() => {
           onNext(result.deploymentId);
         }, 15000);
@@ -139,6 +142,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
         variant: "destructive",
       });
       setIsDeploying(false);
+      setDeploymentStatus('');
     }
   };
 
@@ -405,7 +409,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
                             {isDeploying ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Initializing AWS Resources...
+                                {deploymentStatus || 'Initializing...'}
                               </>
                             ) : (
                               <>
