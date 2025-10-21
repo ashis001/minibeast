@@ -1763,8 +1763,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       // Upload tar file to S3 first
       const s3 = new AWS.S3();
-      const bucketName = `${repositoryName}-docker-builds`;
-      const s3Key = `${deploymentId}/docker-image.tar`;
+      const uniqueSequence = deploymentId.substring(0, 13); // Use more chars for uniqueness
+      const bucketName = `${repositoryName}-${uniqueSequence}-builds`;
+      const s3Key = `docker-image.tar`;
       
       try {
         // Create S3 bucket for storing Docker tar files
@@ -1794,7 +1795,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         
         // Create CodeBuild project to extract and push Docker image
         const codebuild = new AWS.CodeBuild();
-        const buildProjectName = `${repositoryName}-docker-build`;
+        const buildProjectName = `${repositoryName}-${uniqueSequence}-build`;
         
         addDeploymentLog(deploymentId, 'ecr-push', '🏗️ Setting up CodeBuild project...');
         
@@ -1832,7 +1833,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         };
 
         // Create CodeBuild service role if it doesn't exist
-        const serviceRoleName = `${repositoryName}-codebuild-role`;
+        const serviceRoleName = `${repositoryName}-${uniqueSequence}-role`;
         let serviceRoleArn;
         
         try {
