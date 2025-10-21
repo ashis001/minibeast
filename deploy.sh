@@ -36,12 +36,12 @@ fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose down 2>/dev/null || echo "No existing containers to stop"
+docker compose down 2>/dev/null || echo "No existing containers to stop"
 echo ""
 
 # Build and start containers
 echo "🏗️  Building and starting containers..."
-docker-compose up -d --build
+docker compose up -d --build
 
 echo ""
 echo "⏳ Waiting for services to start..."
@@ -50,7 +50,7 @@ sleep 5
 # Check container status
 echo ""
 echo "📊 Container Status:"
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "🔍 Testing backend health..."
@@ -66,8 +66,8 @@ echo "🎉 Deployment Complete!"
 echo ""
 echo "📋 Next Steps:"
 echo "   1. Test backend: curl http://localhost"
-echo "   2. View logs: docker-compose logs -f"
-echo "   3. Stop: docker-compose down"
+echo "   2. View logs: docker compose logs -f"
+echo "   3. Stop: docker compose down"
 echo ""
 echo "📚 Full Documentation:"
 echo "   - Docker: DOCKER_DEPLOYMENT_GUIDE.md"
