@@ -1862,8 +1862,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
           
           addDeploymentLog(deploymentId, 'ecr-push', `✅ Created CodeBuild service role: ${serviceRoleArn}`);
           
-          // Wait for role propagation
-          await new Promise(resolve => setTimeout(resolve, 10000));
+          // Wait for role propagation (reduced from 10s to 3s)
+          await new Promise(resolve => setTimeout(resolve, 3000));
           
         } catch (error) {
           if (error.code === 'EntityAlreadyExistsException') {
@@ -1944,7 +1944,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         // Wait for build to complete
         let buildStatus = 'IN_PROGRESS';
         while (buildStatus === 'IN_PROGRESS') {
-          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
           
           const batchResult = await codebuild.batchGetBuilds({
             ids: [buildId]
@@ -2002,9 +2002,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'task-definition', `✅ Created execution role: ${executionRoleArn}`);
       
-      // Wait for role propagation
+      // Wait for role propagation (reduced from 10s to 2s)
       addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation...');
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
     } catch (error) {
       if (error.code === 'EntityAlreadyExistsException') {
@@ -2202,8 +2202,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'step-functions', `✅ Step Functions role created: ${stepFunctionRoleArn}`);
       
-      // Wait for role propagation
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      // Wait for role propagation (reduced from 10s to 2s)
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
     } catch (error) {
       if (error.code === 'EntityAlreadyExistsException') {
@@ -2321,8 +2321,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'api-gateway', `✅ API Gateway role created: ${apiGatewayRoleArn}`);
       
-      // Wait for role propagation
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      // Wait for role propagation (reduced from 10s to 2s)
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
     } catch (error) {
       if (error.code === 'EntityAlreadyExistsException') {
