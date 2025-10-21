@@ -2045,6 +2045,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     }
     
     // Create ECS Task Definition
+    addDeploymentLog(deploymentId, 'task-definition', '📝 Registering ECS task definition...');
+    
     const taskDefinition = {
       family: taskDefinitionFamily,
       networkMode: 'awsvpc',
@@ -2069,9 +2071,14 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       }]
     };
     
-    const taskDefResult = await ecs.registerTaskDefinition(taskDefinition).promise();
-    addDeploymentLog(deploymentId, 'task-definition', `✅ Task definition created: ${taskDefResult.taskDefinition.taskDefinitionArn}`);
-    updateDeploymentStep(deploymentId, 'task-definition', 'completed');
+    try {
+      const taskDefResult = await ecs.registerTaskDefinition(taskDefinition).promise();
+      addDeploymentLog(deploymentId, 'task-definition', `✅ Task definition created: ${taskDefResult.taskDefinition.taskDefinitionArn}`);
+      updateDeploymentStep(deploymentId, 'task-definition', 'completed');
+    } catch (error) {
+      addDeploymentLog(deploymentId, 'task-definition', `❌ Task definition error: ${error.code} - ${error.message}`);
+      throw error;
+    }
     
     // Step 4: Create ECS Cluster and Service
     updateDeploymentStep(deploymentId, 'ecs-service', 'running');
