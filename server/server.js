@@ -2641,6 +2641,40 @@ function addDeploymentLog(deploymentId, stepId, logMessage) {
   }
 }
 
+app.get('/api/config/snowflake', (req, res) => {
+  try {
+    const configPath = path.join(__dirname, 'config', 'snowflake.json');
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      res.json({ success: true, config });
+    } else {
+      res.json({ success: false, message: 'No Snowflake config found' });
+    }
+  } catch (error) {
+    console.error('Error reading Snowflake config:', error);
+    res.status(500).json({ success: false, message: 'Failed to read config' });
+  }
+});
+
+app.post('/api/config/snowflake', (req, res) => {
+  try {
+    const configDir = path.join(__dirname, 'config');
+    const configPath = path.join(configDir, 'snowflake.json');
+    
+    // Create config directory if it doesn't exist
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    // Save config
+    fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2));
+    res.json({ success: true, message: 'Snowflake config saved' });
+  } catch (error) {
+    console.error('Error saving Snowflake config:', error);
+    res.status(500).json({ success: false, message: 'Failed to save config' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });

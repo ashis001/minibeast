@@ -50,9 +50,7 @@ next-env.d.ts
 /server/uploads
 
 # deployments folder - contains sensitive AWS credentials
-/server/deployments
-server/deployments/
-/deployments
+
 
 # server node_modules
 /server/node_modules

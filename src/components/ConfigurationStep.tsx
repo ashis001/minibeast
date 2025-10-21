@@ -97,6 +97,17 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
         setSnowflakeStatus('success');
         setSnowflakeConfigSaved(true);
         localStorage.setItem('snowflakeConfig', JSON.stringify(snowflakeConfig));
+        
+        // Also save to backend for persistence across deployments
+        try {
+          await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/config/snowflake', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(snowflakeConfig),
+          });
+        } catch (error) {
+          console.error('Failed to save config to backend:', error);
+        }
         toast({
           title: "Snowflake Connection Successful",
           description: "Configuration saved successfully",
