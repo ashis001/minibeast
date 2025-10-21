@@ -1757,8 +1757,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     addDeploymentLog(deploymentId, 'ecr-push', '📦 Processing uploaded Docker tar file...');
     
     // Get the uploaded Docker tar file
-    if (originalDeployment.files && originalDeployment.files.dockerImage) {
-      const dockerFile = originalDeployment.files.dockerImage[0];
+    if (originalDeployment.files && originalDeployment.files.length > 0) {
+      const dockerFile = originalDeployment.files[0];
       addDeploymentLog(deploymentId, 'ecr-push', `Processing: ${dockerFile.originalname} (${(dockerFile.size / 1024 / 1024).toFixed(1)} MB)`);
       
       // Upload tar file to S3 first
