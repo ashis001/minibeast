@@ -1867,6 +1867,31 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
             const getRoleResult = await iam.getRole({ RoleName: serviceRoleName }).promise();
             serviceRoleArn = getRoleResult.Role.Arn;
             addDeploymentLog(deploymentId, 'ecr-push', `⚠️ Using existing CodeBuild role: ${serviceRoleArn}`);
+            
+            // Ensure policies are attached even if role exists
+            try {
+              await iam.attachRolePolicy({
+                RoleName: serviceRoleName,
+                PolicyArn: 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser'
+              }).promise();
+              
+              await iam.attachRolePolicy({
+                RoleName: serviceRoleName,
+                PolicyArn: 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+              }).promise();
+              
+              await iam.attachRolePolicy({
+                RoleName: serviceRoleName,
+                PolicyArn: 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
+              }).promise();
+              
+              addDeploymentLog(deploymentId, 'ecr-push', '✅ Verified policies attached to existing role');
+            } catch (policyError) {
+              // Ignore if policies already attached
+              if (policyError.code !== 'LimitExceededException') {
+                addDeploymentLog(deploymentId, 'ecr-push', `⚠️ Policy attachment: ${policyError.message}`);
+              }
+            }
           } else {
             throw error;
           }
