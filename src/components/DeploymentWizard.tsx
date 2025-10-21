@@ -223,11 +223,8 @@ const DeploymentWizard = () => {
                 <div className="space-y-2 text-sm">
                   <p className="text-slate-300"><strong className="text-white">Status:</strong> <span className="text-green-400">{existingDeployment.status}</span></p>
                   <p className="text-slate-300"><strong className="text-white">Completed:</strong> {new Date(existingDeployment.completedAt).toLocaleString()}</p>
-                  <p className="text-slate-300"><strong className="text-white">Step Function:</strong> <code className="bg-slate-600 text-slate-200 px-2 py-1 rounded text-xs">{existingDeployment.stepFunctionArn}</code></p>
                   <p className="text-slate-300"><strong className="text-white">Region:</strong> {existingDeployment.region}</p>
-                  {existingDeployment.apiEndpoint && (
-                    <p className="text-slate-300"><strong className="text-white">API Endpoint:</strong> <code className="bg-slate-600 text-slate-200 px-2 py-1 rounded text-xs">{existingDeployment.apiEndpoint}</code></p>
-                  )}
+                  <p className="text-slate-300"><strong className="text-white">Module:</strong> {selectedModule}</p>
                 </div>
               </div>
               
