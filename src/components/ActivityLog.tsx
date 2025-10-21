@@ -75,7 +75,7 @@ const ActivityLog = () => {
   // Fetch executions and logs
   const fetchExecutions = async () => {
     try {
-      const response = await fetch('http://64.227.183.35/api/activity/executions');
+      const response = await fetch('https://goat-attach-grid-adaptive.trycloudflare.com/api/activity/executions');
       const data = await response.json();
       
       if (data.success) {
@@ -94,7 +94,7 @@ const ActivityLog = () => {
   // Fetch logs for specific execution
   const fetchLogs = async (executionArn: string, isInitialLoad = false) => {
     try {
-      let url = `http://64.227.183.35/api/activity/logs/${encodeURIComponent(executionArn)}`;
+      let url = `https://goat-attach-grid-adaptive.trycloudflare.com/api/activity/logs/${encodeURIComponent(executionArn)}`;
       
       if (!isInitialLoad && lastLogTimestamp) {
         // For incremental load, send the last timestamp

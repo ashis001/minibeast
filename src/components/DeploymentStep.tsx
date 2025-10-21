@@ -75,7 +75,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
   useEffect(() => {
     const checkExistingDeployments = async () => {
       try {
-        const response = await fetch(`http://64.227.183.35/api/deployments/check/${deploymentConfig.module}`);
+        const response = await fetch(`https://goat-attach-grid-adaptive.trycloudflare.com/api/deployments/check/${deploymentConfig.module}`);
         const data = await response.json();
         
         if (response.ok && data.success) {
@@ -107,7 +107,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
     formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
 
     try {
-      const response = await fetch('http://64.227.183.35/api/deploy', {
+      const response = await fetch('https://goat-attach-grid-adaptive.trycloudflare.com/api/deploy', {
         method: 'POST',
         body: formData,
       });
