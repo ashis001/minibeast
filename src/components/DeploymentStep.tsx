@@ -93,49 +93,35 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
   const handleDeploy = async () => {
     if (!canProceed) return;
 
-    setIsDeploying(true);
+    // Navigate immediately - don't wait for server response
+    toast({
+      title: "Deployment Started",
+      description: "Your deployment has been initiated successfully.",
+    });
+    
+    // Generate temporary deployment ID and navigate instantly
+    const tempDeploymentId = 'deploy-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    onNext(tempDeploymentId);
 
+    // Start actual deployment in background
     const formData = new FormData();
     if (files.length > 0) {
       formData.append('dockerImage', files[0].file);
     }
-    // Auto-generate image name based on module
     const autoImageName = `minibeat-${deploymentConfig.module}:latest`;
     formData.append('imageName', autoImageName);
     formData.append('envVariables', JSON.stringify(envVariables));
     formData.append('awsConfig', JSON.stringify(awsConfig));
     formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
+    formData.append('tempDeploymentId', tempDeploymentId); // Send temp ID to server
 
-    try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/deploy', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        toast({
-          title: "Deployment Started",
-          description: "Your deployment has been initiated successfully.",
-        });
-        onNext(data.deploymentId);
-      } else {
-        toast({
-          title: "Deployment Failed",
-          description: data.message || "An unknown error occurred.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Deployment Failed",
-        description: "Could not connect to the server. Is it running?",
-        variant: "destructive",
-      });
-    }
-
-    setIsDeploying(false);
+    // Fire and forget - deployment happens in background
+    fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/deploy', {
+      method: 'POST',
+      body: formData,
+    }).catch((error) => {
+      console.error('Deployment request failed:', error);
+    });
   };
 
   const handleFileUpload = (fileList: FileList | null) => {

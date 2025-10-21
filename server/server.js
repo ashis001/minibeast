@@ -340,17 +340,13 @@ app.post('/api/test-snowflake', (req, res) => {
   });
 });
 
-app.post('/api/deploy', upload.fields([
-  { name: 'dockerImage', maxCount: 1 }
-]), async (req, res) => {
-  const { imageName, envVariables, awsConfig, deploymentConfig } = req.body;
-  const files = req.files;
-  const deploymentId = crypto.randomUUID();
+app.post('/api/deploy', upload.single('dockerImage'), async (req, res) => {
+  try {
+    const { imageName, envVariables, awsConfig, deploymentConfig, tempDeploymentId } = req.body;
+    const dockerFile = req.file;
 
-  console.log('Deployment request received.');
-  console.log('AWS Config:', JSON.parse(awsConfig));
-  console.log('Deployment Config:', JSON.parse(deploymentConfig));
-  console.log('Environment Variables:', JSON.parse(envVariables));
+    // Use temp deployment ID from frontend if provided, otherwise generate new one
+    const deploymentId = tempDeploymentId || ('deploy-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));
   console.log('Uploaded Files:', files);
 
   // Parse deployment configuration
