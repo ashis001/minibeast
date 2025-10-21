@@ -43,7 +43,39 @@ A powerful deployment platform that enables seamless deployment of locally-built
 - **Cloud**: AWS (ECS, ECR, CodeBuild, S3, Step Functions, API Gateway, IAM, VPC)
 - **Database**: Snowflake integration
 
-## 🛠️ Setup Instructions
+## 🚀 Quick Start - Deployment
+
+### **Option 1: Docker Deployment (Recommended)**
+```bash
+# Clone and deploy backend
+git clone <your-repo>
+cd data-deployer-main
+./deploy.sh
+```
+
+### **Option 2: Manual Deployment**
+Choose your deployment guide:
+
+| Guide | Description | Best For |
+|-------|-------------|----------|
+| [📦 Complete Deployment Guide](COMPLETE_DEPLOYMENT_GUIDE.md) | **Frontend + Backend** end-to-end deployment | Production deployment |
+| [🐳 Docker Deployment](DOCKER_DEPLOYMENT_GUIDE.md) | Backend with Docker (any cloud) | Quick deployment |
+| [☁️ DigitalOcean Guide](DIGITALOCEAN_DEPLOYMENT_GUIDE.md) | Manual deployment on DigitalOcean | Traditional VPS setup |
+
+### **Quick Commands**
+```bash
+# Backend (Docker)
+docker-compose up -d        # Start
+docker-compose logs -f      # View logs
+docker-compose down         # Stop
+
+# Frontend (Vercel)
+git push origin main        # Auto-deploys to Vercel
+```
+
+---
+
+## 🛠️ Local Development Setup
 
 ### **Prerequisites**
 - **Docker Desktop** - Install from [docker.com](https://www.docker.com/products/docker-desktop)

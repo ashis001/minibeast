@@ -1,0 +1,67 @@
+# Node modules
+node_modules
+server/node_modules
+npm-debug.log
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+build
+dist
+out
+.next
+
+# Logs
+logs
+*.log
+
+# Uploads and deployment data (will be mounted as volumes)
+uploads
+server/uploads
+deployments
+server/deployments
+
+# Documentation
+README.md
+*.md
+docs
+
+# Test files
+test
+tests
+*.test.js
+*.spec.js
+coverage
+
+# TypeScript
+*.tsbuildinfo
+
+# Vercel
+.vercel
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -980,6 +980,102 @@ app.post('/api/snowflake/update-validations', async (req, res) => {
   }
 });
 
+app.post('/api/snowflake/update-validation', async (req, res) => {
+  let connection;
+  try {
+    console.log('📝 Update validation endpoint called');
+    const { snowflakeConfig, validation } = req.body;
+    console.log('📋 Validation data:', validation?.ID, validation?.VALIDATION_DESCRIPTION?.substring(0, 50));
+    
+    if (!snowflakeConfig) {
+      console.log('❌ No snowflake config provided');
+      return res.status(400).json({ success: false, message: 'Snowflake configuration is required' });
+    }
+    
+    if (!validation || !validation.ID) {
+      console.log('❌ No validation data or ID provided');
+      return res.status(400).json({ success: false, message: 'Validation data with ID is required' });
+    }
+    
+    const { account, username, password, database, schema, warehouse, role } = snowflakeConfig;
+    
+    connection = snowflake.createConnection({
+      account, username, password,
+      database: database || 'DEMO_DB',
+      schema: schema || 'PUBLIC',
+      warehouse: warehouse || 'COMPUTE_WH',
+      role: role || 'SYSADMIN'
+    });
+
+    console.log('🔌 Attempting to connect to Snowflake...');
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => {
+        if (err) {
+          console.log('❌ Snowflake connection failed:', err.message);
+          reject(err);
+        } else {
+          console.log('✅ Snowflake connection successful');
+          resolve(conn);
+        }
+      });
+    });
+
+    // Update the validation rule
+    console.log('📝 Executing update query for ID:', validation.ID);
+    await new Promise((resolve, reject) => {
+      connection.execute({
+        sqlText: `UPDATE TBL_VALIDATING_TEST_CASES SET 
+          VALIDATION_DESCRIPTION = ?,
+          VALIDATION_QUERY = ?,
+          OPERATOR = ?,
+          EXPECTED_OUTCOME = ?,
+          VALIDATED_BY = ?,
+          ENTITY = ?,
+          ITERATION = ?,
+          IS_ACTIVE = ?,
+          TEAM = ?,
+          METRIC_INDEX = ?,
+          UPDATED_DATE = CURRENT_TIMESTAMP()
+          WHERE ID = ?`,
+        binds: [
+          validation.VALIDATION_DESCRIPTION,
+          validation.VALIDATION_QUERY,
+          validation.OPERATOR,
+          validation.EXPECTED_OUTCOME,
+          validation.VALIDATED_BY,
+          validation.ENTITY,
+          validation.ITERATION,
+          validation.IS_ACTIVE,
+          validation.TEAM,
+          validation.METRIC_INDEX,
+          validation.ID
+        ],
+        complete: (err, stmt, rows) => {
+          if (err) {
+            console.log('❌ Query execution failed:', err.message);
+            reject(err);
+          } else {
+            console.log('✅ Query executed successfully, affected rows:', stmt.getNumUpdatedRows());
+            resolve(rows);
+          }
+        }
+      });
+    });
+    
+    res.json({
+      success: true,
+      message: 'Validation rule updated successfully'
+    });
+    
+  } catch (error) {
+    console.log('❌ Update validation error:', error.message);
+    console.log('📋 Error details:', error);
+    res.status(500).json({ success: false, message: `Failed to update validation: ${error.message}` });
+  } finally {
+    if (connection) connection.destroy();
+  }
+});
+
 // Check deployment status for a module
 app.get('/api/deployment/status/:module', async (req, res) => {
   try {
@@ -1211,6 +1307,263 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     res.status(500).json({
       success: false,
       message: `Step Function execution failed: ${error.message}`
+    });
+  }
+});
+
+// Activity Log API endpoints
+app.get('/api/activity/executions', async (req, res) => {
+  try {
+    console.log('📊 Fetching Step Function executions...');
+    
+    const fs = require('fs');
+    const path = require('path');
+    
+    const resourcesFile = path.join(__dirname, 'deployments', 'modules', 'validator', 'aws-resources.json');
+    const deploymentFile = path.join(__dirname, 'deployments', 'modules', 'validator', 'deployment.json');
+    
+    if (!fs.existsSync(resourcesFile) || !fs.existsSync(deploymentFile)) {
+      return res.json({
+        success: true,
+        executions: []
+      });
+    }
+    
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const stepFunctionArn = resourcesData.stepFunctionArn;
+    const awsConfig = deploymentData.awsConfig;
+    
+    console.log('📋 AWS Resources loaded:', {
+      stepFunctionArn: stepFunctionArn,
+      logGroups: resourcesData.logGroups,
+      region: awsConfig?.region
+    });
+    
+    if (!stepFunctionArn || !awsConfig) {
+      console.log('⚠️ Missing Step Function ARN or AWS config');
+      return res.json({
+        success: true,
+        executions: []
+      });
+    }
+    
+    const AWS = require('aws-sdk');
+    const stepfunctions = new AWS.StepFunctions({
+      accessKeyId: awsConfig.accessKey,
+      secretAccessKey: awsConfig.secretKey,
+      region: awsConfig.region
+    });
+    
+    // List recent executions
+    console.log('🔍 Listing executions for Step Function:', stepFunctionArn);
+    const executions = await stepfunctions.listExecutions({
+      stateMachineArn: stepFunctionArn,
+      maxResults: 10
+    }).promise();
+    
+    console.log(`✅ Found ${executions.executions.length} executions`);
+    
+    const formattedExecutions = executions.executions.map(exec => ({
+      executionArn: exec.executionArn,
+      status: exec.status,
+      startTime: exec.startDate.toISOString(),
+      endTime: exec.stopDate ? exec.stopDate.toISOString() : null,
+      logs: [] // Will be populated by separate endpoint
+    }));
+    
+    res.json({
+      success: true,
+      executions: formattedExecutions
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching executions:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to fetch executions: ${error.message}`
+    });
+  }
+});
+
+app.get('/api/activity/logs/:executionArn', async (req, res) => {
+  try {
+    const executionArn = decodeURIComponent(req.params.executionArn);
+    const startTime = req.query.startTime; // Optional: timestamp to fetch logs after
+    const isIncremental = req.query.incremental === 'true';
+    
+    console.log('📋 Fetching logs for execution:', executionArn);
+    if (isIncremental && startTime) {
+      console.log('🔄 Incremental fetch from:', new Date(parseInt(startTime)).toISOString());
+    }
+    
+    const fs = require('fs');
+    const path = require('path');
+    
+    const resourcesFile = path.join(__dirname, 'deployments', 'modules', 'validator', 'aws-resources.json');
+    const deploymentFile = path.join(__dirname, 'deployments', 'modules', 'validator', 'deployment.json');
+    
+    if (!fs.existsSync(resourcesFile) || !fs.existsSync(deploymentFile)) {
+      return res.json({
+        success: true,
+        logs: [],
+        taskArn: null
+      });
+    }
+    
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const awsConfig = deploymentData.awsConfig;
+    
+    const AWS = require('aws-sdk');
+    const stepfunctions = new AWS.StepFunctions({
+      accessKeyId: awsConfig.accessKey,
+      secretAccessKey: awsConfig.secretKey,
+      region: awsConfig.region
+    });
+    
+    const cloudwatchLogs = new AWS.CloudWatchLogs({
+      accessKeyId: awsConfig.accessKey,
+      secretAccessKey: awsConfig.secretKey,
+      region: awsConfig.region
+    });
+    
+    // Get execution details
+    const execution = await stepfunctions.describeExecution({
+      executionArn: executionArn
+    }).promise();
+    
+    let logs = [];
+    let taskArn = null;
+    
+    try {
+      // Try to get ECS task logs using the actual log group from aws-resources.json
+      const possibleLogGroups = resourcesData.logGroups?.possibleEcsLogs || [
+        resourcesData.logGroups?.ecsTask,
+        resourcesData.logGroups?.ecsTaskAlt,
+        `/ecs/minibeat-validator-task`
+      ];
+      
+      console.log('🔍 Trying log groups for execution:', executionArn.split(':').pop());
+      console.log('📋 Available log groups:', possibleLogGroups);
+      
+      // Extract execution time to find the right log stream
+      const executionStartTime = new Date(execution.startDate);
+      const executionEndTime = execution.stopDate ? new Date(execution.stopDate) : new Date();
+      
+      console.log(`🕐 Execution time range: ${executionStartTime.toISOString()} - ${executionEndTime.toISOString()}`);
+      
+      // Try each possible log group until we find one with logs
+      for (const logGroupName of possibleLogGroups.filter(Boolean)) {
+        try {
+          console.log(`📋 Checking log group: ${logGroupName}`);
+          
+          // Get log streams that overlap with the execution time
+          const streams = await cloudwatchLogs.describeLogStreams({
+            logGroupName: logGroupName,
+            orderBy: 'LastEventTime',
+            descending: true,
+            limit: 20 // Check more streams to find the right one
+          }).promise();
+          
+          console.log(`✅ Found ${streams.logStreams.length} streams in ${logGroupName}`);
+          
+          // Find the stream that was active during this execution
+          let targetStream = null;
+          for (const stream of streams.logStreams) {
+            const streamStart = new Date(stream.firstEventTime || stream.creationTime);
+            const streamEnd = new Date(stream.lastEventTime || Date.now());
+            
+            // Check if this stream overlaps with the execution time
+            if (streamStart <= executionEndTime && streamEnd >= executionStartTime) {
+              targetStream = stream;
+              console.log(`🎯 Found matching stream: ${stream.logStreamName} (${streamStart.toISOString()} - ${streamEnd.toISOString()})`);
+              break;
+            }
+          }
+          
+          // If no specific stream found, use the most recent one
+          if (!targetStream && streams.logStreams.length > 0) {
+            targetStream = streams.logStreams[0];
+            console.log(`📋 Using most recent stream: ${targetStream.logStreamName}`);
+          }
+          
+          if (targetStream) {
+            taskArn = targetStream.logStreamName;
+            
+            let logParams = {
+              logGroupName: logGroupName,
+              logStreamName: targetStream.logStreamName,
+              limit: 100,
+              startFromHead: !isIncremental
+            };
+            
+            if (isIncremental && startTime) {
+              // For incremental, only get logs after the specified timestamp
+              logParams.startTime = parseInt(startTime) + 1; // +1ms to avoid duplicates
+              logParams.startFromHead = false;
+            } else {
+              // For initial load, get logs within execution timeframe
+              logParams.startTime = Math.max(executionStartTime.getTime() - 60000, 0);
+              logParams.endTime = executionEndTime.getTime() + 60000;
+            }
+            
+            const logEvents = await cloudwatchLogs.getLogEvents(logParams).promise();
+            
+            logs = logEvents.events.map(event => ({
+              timestamp: new Date(event.timestamp).toISOString(),
+              message: event.message.trim(),
+              level: event.message.includes('ERROR') ? 'ERROR' : 
+                     event.message.includes('WARN') ? 'WARN' : 
+                     event.message.includes('INFO') ? 'INFO' : 'DEBUG',
+              source: 'ECS'
+            }));
+            
+            console.log(`✅ Retrieved ${logs.length} log entries from ${logGroupName} for execution ${executionArn.split(':').pop()}`);
+            break; // Found logs, stop trying other groups
+          }
+        } catch (groupError) {
+          console.log(`⚠️ Log group ${logGroupName} not accessible:`, groupError.message);
+          continue; // Try next log group
+        }
+      }
+      
+      // If we get here, no logs were found in any log group
+      if (logs.length === 0) {
+        console.log('⚠️ No logs found in any ECS log group, falling back to Step Function history');
+      }
+      
+    } catch (logError) {
+      console.log('⚠️ Could not fetch ECS logs:', logError.message);
+      
+      // Fallback to Step Function execution history
+      const history = await stepfunctions.getExecutionHistory({
+        executionArn: executionArn,
+        maxResults: 50,
+        reverseOrder: false
+      }).promise();
+      
+      logs = history.events.map(event => ({
+        timestamp: event.timestamp.toISOString(),
+        message: `${event.type}: ${JSON.stringify(event, null, 2)}`,
+        level: event.type.includes('Failed') ? 'ERROR' : 'INFO',
+        source: 'StepFunction'
+      }));
+    }
+    
+    res.json({
+      success: true,
+      logs: logs,
+      taskArn: taskArn
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching logs:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to fetch logs: ${error.message}`,
+      logs: [],
+      taskArn: null
     });
   }
 });

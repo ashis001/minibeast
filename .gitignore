@@ -22,7 +22,13 @@ yarn-error.log*
 
 # misc
 .DS_Store
+**/.DS_Store
 *.pem
+
+# Log files
+*.log
+snowflake.log
+server/snowflake.log
 
 # debug
 npm-debug.log*
@@ -45,13 +51,12 @@ next-env.d.ts
 
 # deployments folder - contains sensitive AWS credentials
 /server/deployments
+server/deployments/
+/deployments
 
 # server node_modules
 /server/node_modules
 
-# Docker files (obsolete - using pre-built images now)
-Dockerfile
-.dockerignore
 .vscode/*
 !.vscode/extensions.json
 .idea
