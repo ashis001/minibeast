@@ -73,7 +73,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     
     setIsLoadingTables(true);
     try {
-      const response = await fetch('http://134.209.148.250/api/snowflake/tables', {
+      const response = await fetch('http://64.227.183.35/api/snowflake/tables', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     
     setIsCreatingConfigTable(true);
     try {
-      const response = await fetch('http://134.209.148.250/api/snowflake/create-config-table', {
+      const response = await fetch('http://64.227.183.35/api/snowflake/create-config-table', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
 
     setIsSubmittingValidation(true);
     try {
-      const response = await fetch('http://134.209.148.250/api/snowflake/insert-validation', {
+      const response = await fetch('http://64.227.183.35/api/snowflake/insert-validation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
