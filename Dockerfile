@@ -1,5 +1,23 @@
-# Data Deployer - Single Container with Nginx + Node.js
-# Base image with Node.js
+# Data Deployer - Full Stack Container with React + Node.js + Nginx
+# Multi-stage build for optimized production image
+FROM node:18-alpine AS frontend-builder
+
+# Build React frontend
+WORKDIR /app/frontend
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY vite.config.ts ./
+COPY tailwind.config.ts ./
+COPY postcss.config.js ./
+COPY components.json ./
+COPY index.html ./
+COPY src/ ./src/
+COPY public/ ./public/
+
+# Install dependencies and build
+RUN npm ci && npm run build
+
+# Production stage
 FROM node:18-alpine
 
 # Install Nginx and Supervisor (to manage multiple processes)
@@ -16,6 +34,9 @@ RUN cd server && npm ci --only=production
 
 # Copy server code
 COPY server/ ./server/
+
+# Copy built frontend from builder stage
+COPY --from=frontend-builder /app/frontend/dist ./public/
 
 # Copy Nginx configuration
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf

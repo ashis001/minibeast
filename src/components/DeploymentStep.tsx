@@ -111,7 +111,7 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
       formData.append('awsConfig', JSON.stringify(awsConfig));
       formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
 
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/deploy', {
+      const response = await fetch('/api/deploy', {
         method: 'POST',
         body: formData,
       });

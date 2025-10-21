@@ -80,7 +80,7 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
 
     const pollDeploymentStatus = async () => {
       try {
-        const response = await fetch(`https://trading-cons-brochures-switching.trycloudflare.com/api/deployment/${deploymentId}/status`);
+        const response = await fetch(`/api/deployment/${deploymentId}/status`);
         const data = await response.json();
         
         if (response.ok && data.success) {

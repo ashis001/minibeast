@@ -55,7 +55,7 @@ const Dashboard = () => {
     
     // Fallback: try to load from backend if localStorage is empty
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/config/snowflake');
+      const response = await fetch('/api/config/snowflake');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.config) {

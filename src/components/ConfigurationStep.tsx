@@ -46,7 +46,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setAwsStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/test-aws', {
+      const response = await fetch('/api/test-aws', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setSnowflakeStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/test-snowflake', {
+      const response = await fetch('/api/test-snowflake', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
         
         // Also save to backend for persistence across deployments
         try {
-          await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/config/snowflake', {
+          const response = await fetch('/api/config/snowflake', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(snowflakeConfig),
