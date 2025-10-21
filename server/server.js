@@ -2194,7 +2194,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
               'events:PutRule',
               'events:DescribeRule',
               'events:DeleteRule',
-              'events:RemoveTargets'
+              'events:RemoveTargets',
+              'events:TagResource'
             ],
             Resource: '*'
           },
@@ -2206,6 +2207,13 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
               'logs:PutLogEvents',
               'logs:DescribeLogGroups',
               'logs:DescribeLogStreams'
+            ],
+            Resource: '*'
+          },
+          {
+            Effect: 'Allow',
+            Action: [
+              'states:*'
             ],
             Resource: '*'
           }
