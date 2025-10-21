@@ -74,12 +74,6 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
       status: 'pending'
     },
     {
-      id: 'api-gateway',
-      title: 'Setting up API Gateway',
-      description: 'Creating API endpoint for your service',
-      status: 'pending'
-    },
-    {
       id: 'final-setup',
       title: 'Final Configuration',
       description: 'Completing deployment and generating endpoint',

@@ -467,7 +467,6 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
                   <div>• ECS Cluster: minibeat_{deploymentConfig.module}_cluster_[id]</div>
                   <div>• Task Definition: minibeat_{deploymentConfig.module}_task_[id]</div>
                   <div>• Step Function: minibeat_{deploymentConfig.module}_workflow_[id]</div>
-                  <div>• API Gateway: minibeat_{deploymentConfig.module}_api_[id]</div>
                 </div>
               </div>
             </div>
