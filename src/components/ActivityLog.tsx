@@ -75,7 +75,7 @@ const ActivityLog = () => {
   // Fetch executions and logs
   const fetchExecutions = async () => {
     try {
-      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/activity/executions');
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/activity/executions');
       const data = await response.json();
       
       if (data.success) {
@@ -94,7 +94,7 @@ const ActivityLog = () => {
   // Fetch logs for specific execution
   const fetchLogs = async (executionArn: string, isInitialLoad = false) => {
     try {
-      let url = `https://florida-alexander-geological-signs.trycloudflare.com/api/activity/logs/${encodeURIComponent(executionArn)}`;
+      let url = `https://trading-cons-brochures-switching.trycloudflare.com/api/activity/logs/${encodeURIComponent(executionArn)}`;
       
       if (!isInitialLoad && lastLogTimestamp) {
         // For incremental load, send the last timestamp

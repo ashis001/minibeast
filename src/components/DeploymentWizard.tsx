@@ -67,7 +67,7 @@ const DeploymentWizard = () => {
     
     // Check deployment status immediately
     try {
-      const response = await fetch(`https://florida-alexander-geological-signs.trycloudflare.com/api/deployment/status/${moduleId}`);
+      const response = await fetch(`https://trading-cons-brochures-switching.trycloudflare.com/api/deployment/status/${moduleId}`);
       const data = await response.json();
       
       if (data.success && data.isDeployed) {
@@ -93,7 +93,7 @@ const DeploymentWizard = () => {
   const handleRedeploy = async () => {
     setIsClearing(true);
     try {
-      const response = await fetch(`https://florida-alexander-geological-signs.trycloudflare.com/api/deployment/clear/${selectedModule}`, {
+      const response = await fetch(`https://trading-cons-brochures-switching.trycloudflare.com/api/deployment/clear/${selectedModule}`, {
         method: 'DELETE'
       });
       const data = await response.json();

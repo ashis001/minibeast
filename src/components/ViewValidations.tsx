@@ -286,7 +286,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const loadEntities = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/snowflake/entities', {
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/entities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -318,7 +318,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const loadDescriptions = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/snowflake/descriptions', {
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/descriptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +354,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const loadValidations = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/snowflake/validations-filtered', {
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/validations-filtered', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -389,7 +389,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const saveActivationChanges = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/snowflake/update-validations', {
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/update-validations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -428,7 +428,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const updateValidation = async (updatedValidation: ValidationRule) => {
     setIsUpdating(true);
     try {
-      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/snowflake/update-validation', {
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/snowflake/update-validation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -474,7 +474,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
     setIsRunning(true);
     try {
       // Execute Step Function using saved deployment details
-      const validationResponse = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/stepfunction/execute', {
+      const validationResponse = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/stepfunction/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
