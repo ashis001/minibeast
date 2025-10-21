@@ -1711,6 +1711,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
   const originalDeployment = deploymentConfigs.get(deploymentId);
   const { awsConfig, envVariables } = originalDeployment;
   
+  // Extract timestamp for unique resource naming
+  const timestamp = deploymentId.split('-')[1];
+  
   // Configure AWS SDK with user credentials
   AWS.config.update({
     accessKeyId: awsConfig.accessKey,
@@ -1763,8 +1766,6 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       // Upload tar file to S3 first
       const s3 = new AWS.S3();
-      // Extract timestamp from deploymentId for true uniqueness
-      const timestamp = deploymentId.split('-')[1]; // Get the timestamp part
       const bucketName = `minibeat-builds-${timestamp}`;
       const s3Key = `docker-image.tar`;
       
@@ -1990,10 +1991,11 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     updateDeploymentStep(deploymentId, 'task-definition', 'running');
     addDeploymentLog(deploymentId, 'task-definition', '🔐 Creating IAM execution role...');
     
-    const executionRoleName = `${repositoryName}-execution-role`;
+    const executionRoleName = `minibeat-ecs-exec-${timestamp}`;
     let executionRoleArn;
     
     try {
+      addDeploymentLog(deploymentId, 'task-definition', `Creating role: ${executionRoleName}...`);
       const roleResult = await iam.createRole({
         RoleName: executionRoleName,
         AssumeRolePolicyDocument: JSON.stringify({
@@ -2015,16 +2017,18 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'task-definition', `✅ Created execution role: ${executionRoleArn}`);
       
-      // Wait for role propagation (reduced from 10s to 2s)
-      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for role propagation
+      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation (5 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
       
     } catch (error) {
+      addDeploymentLog(deploymentId, 'task-definition', `❌ IAM role creation error: ${error.code} - ${error.message}`);
       if (error.code === 'EntityAlreadyExistsException') {
         const getRoleResult = await iam.getRole({ RoleName: executionRoleName }).promise();
         executionRoleArn = getRoleResult.Role.Arn;
         addDeploymentLog(deploymentId, 'task-definition', `⚠️ Using existing role: ${executionRoleArn}`);
       } else {
+        addDeploymentLog(deploymentId, 'task-definition', `❌ Failed to create IAM role: ${error.message}`);
         throw error;
       }
     }
@@ -2142,7 +2146,6 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     let stepFunctionArn;
     
     // Create Step Functions execution role
-    const timestamp = deploymentId.split('-')[1]; // Get timestamp for uniqueness
     const stepFunctionRoleName = `minibeat-stepfunc-${timestamp}`;
     let stepFunctionRoleArn;
     
