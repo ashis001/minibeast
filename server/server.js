@@ -1763,8 +1763,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       // Upload tar file to S3 first
       const s3 = new AWS.S3();
-      const uniqueSequence = deploymentId.substring(0, 13); // Use more chars for uniqueness
-      const bucketName = `${repositoryName}-${uniqueSequence}-builds`;
+      // Extract timestamp from deploymentId for true uniqueness
+      const timestamp = deploymentId.split('-')[1]; // Get the timestamp part
+      const bucketName = `minibeat-builds-${timestamp}`;
       const s3Key = `docker-image.tar`;
       
       try {
@@ -1795,7 +1796,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         
         // Create CodeBuild project to extract and push Docker image
         const codebuild = new AWS.CodeBuild();
-        const buildProjectName = `${repositoryName}-${uniqueSequence}-build`;
+        const buildProjectName = `minibeat-build-${timestamp}`;
         
         addDeploymentLog(deploymentId, 'ecr-push', '🏗️ Setting up CodeBuild project...');
         
@@ -1833,7 +1834,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         };
 
         // Create CodeBuild service role if it doesn't exist
-        const serviceRoleName = `${repositoryName}-${uniqueSequence}-role`;
+        const serviceRoleName = `minibeat-codebuild-${timestamp}`;
         let serviceRoleArn;
         
         try {
@@ -2141,8 +2142,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     let stepFunctionArn;
     
     // Create Step Functions execution role
-    const uniqueSequence = deploymentId.substring(0, 13);
-    const stepFunctionRoleName = `${repositoryName}-${uniqueSequence}-sf-role`;
+    const timestamp = deploymentId.split('-')[1]; // Get timestamp for uniqueness
+    const stepFunctionRoleName = `minibeat-stepfunc-${timestamp}`;
     let stepFunctionRoleArn;
     
     try {
@@ -2202,7 +2203,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       };
       
       await iam.createPolicy({
-        PolicyName: `${repositoryName}-${uniqueSequence}-sf-policy`,
+        PolicyName: `minibeat-sf-policy-${timestamp}`,
         PolicyDocument: JSON.stringify(policyDocument)
       }).promise();
       
@@ -2210,7 +2211,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       const accountId = userResult.User.Arn.split(':')[4];
       await iam.attachRolePolicy({
         RoleName: stepFunctionRoleName,
-        PolicyArn: `arn:aws:iam::${accountId}:policy/${repositoryName}-${uniqueSequence}-sf-policy`
+        PolicyArn: `arn:aws:iam::${accountId}:policy/minibeat-sf-policy-${timestamp}`
       }).promise();
       
       addDeploymentLog(deploymentId, 'step-functions', `✅ Step Functions role created: ${stepFunctionRoleArn}`);
