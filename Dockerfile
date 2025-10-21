@@ -30,11 +30,11 @@ RUN mkdir -p /app/server/uploads \
     /var/log/nginx \
     /var/log/supervisor \
     /run/nginx \
-    && chmod -R 777 /app/server/uploads \
-    && chmod -R 777 /app/server/deployments \
     && chown -R node:node /app \
     && chown -R node:node /var/log/nginx \
-    && chown -R node:node /run/nginx
+    && chown -R node:node /run/nginx \
+    && chmod -R 777 /app/server/uploads \
+    && chmod -R 777 /app/server/deployments
 
 # Expose port 80 (Nginx)
 EXPOSE 80
