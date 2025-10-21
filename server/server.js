@@ -1841,21 +1841,26 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
           }).promise();
           serviceRoleArn = roleResult.Role.Arn;
           
-          // Attach required policies
+          // Attach required policies with logging
+          addDeploymentLog(deploymentId, 'ecr-push', '🔐 Attaching IAM policies to CodeBuild role...');
+          
           await iam.attachRolePolicy({
             RoleName: serviceRoleName,
             PolicyArn: 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser'
           }).promise();
+          addDeploymentLog(deploymentId, 'ecr-push', '✅ ECR PowerUser policy attached');
           
           await iam.attachRolePolicy({
             RoleName: serviceRoleName,
             PolicyArn: 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
           }).promise();
+          addDeploymentLog(deploymentId, 'ecr-push', '✅ S3 ReadOnly policy attached');
           
           await iam.attachRolePolicy({
             RoleName: serviceRoleName,
             PolicyArn: 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
           }).promise();
+          addDeploymentLog(deploymentId, 'ecr-push', '✅ CloudWatch Logs policy attached');
           
           addDeploymentLog(deploymentId, 'ecr-push', `✅ Created CodeBuild service role: ${serviceRoleArn}`);
           
