@@ -1872,8 +1872,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
           
           addDeploymentLog(deploymentId, 'ecr-push', `✅ Created CodeBuild service role: ${serviceRoleArn}`);
           
-          // Wait for role propagation (reduced from 10s to 3s)
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // Wait for IAM role propagation across AWS
+          addDeploymentLog(deploymentId, 'ecr-push', '⏳ Waiting for IAM role propagation (10 seconds)...');
+          await new Promise(resolve => setTimeout(resolve, 10000));
           
         } catch (error) {
           if (error.code === 'EntityAlreadyExistsException') {
