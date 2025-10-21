@@ -23,16 +23,16 @@ COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 # Copy supervisor configuration
 COPY docker/supervisord.conf /etc/supervisord.conf
 
-# Create required directories
+# Create required directories with proper permissions
 RUN mkdir -p /app/server/uploads \
     /app/server/deployments/modules \
     /app/server/logs \
     /var/log/nginx \
     /var/log/supervisor \
-    /run/nginx
-
-# Set permissions
-RUN chown -R node:node /app \
+    /run/nginx \
+    && chmod -R 777 /app/server/uploads \
+    && chmod -R 777 /app/server/deployments \
+    && chown -R node:node /app \
     && chown -R node:node /var/log/nginx \
     && chown -R node:node /run/nginx
 
