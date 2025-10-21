@@ -2141,7 +2141,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     let stepFunctionArn;
     
     // Create Step Functions execution role
-    const stepFunctionRoleName = `${repositoryName}-stepfunctions-role`;
+    const uniqueSequence = deploymentId.substring(0, 13);
+    const stepFunctionRoleName = `${repositoryName}-${uniqueSequence}-sf-role`;
     let stepFunctionRoleArn;
     
     try {
@@ -2201,7 +2202,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       };
       
       await iam.createPolicy({
-        PolicyName: `${repositoryName}-stepfunctions-policy`,
+        PolicyName: `${repositoryName}-${uniqueSequence}-sf-policy`,
         PolicyDocument: JSON.stringify(policyDocument)
       }).promise();
       
@@ -2209,13 +2210,14 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       const accountId = userResult.User.Arn.split(':')[4];
       await iam.attachRolePolicy({
         RoleName: stepFunctionRoleName,
-        PolicyArn: `arn:aws:iam::${accountId}:policy/${repositoryName}-stepfunctions-policy`
+        PolicyArn: `arn:aws:iam::${accountId}:policy/${repositoryName}-${uniqueSequence}-sf-policy`
       }).promise();
       
       addDeploymentLog(deploymentId, 'step-functions', `✅ Step Functions role created: ${stepFunctionRoleArn}`);
       
-      // Wait for role propagation (reduced from 10s to 2s)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for IAM role propagation across AWS
+      addDeploymentLog(deploymentId, 'step-functions', '⏳ Waiting for IAM role propagation (10 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 10000));
       
     } catch (error) {
       if (error.code === 'EntityAlreadyExistsException') {
