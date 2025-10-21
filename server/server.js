@@ -345,8 +345,8 @@ app.post('/api/deploy', upload.single('dockerImage'), async (req, res) => {
     const { imageName, envVariables, awsConfig, deploymentConfig, tempDeploymentId } = req.body;
     const dockerFile = req.file;
 
-    // Use temp deployment ID from frontend if provided, otherwise generate new one
-    const deploymentId = tempDeploymentId || ('deploy-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));
+    // Generate deployment ID on backend
+    const deploymentId = 'deploy-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     console.log('Deployment ID:', deploymentId);
     console.log('Uploaded Files:', req.file);
 

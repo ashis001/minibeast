@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Upload, X, Plus, Trash2, Container, Settings, Cloud, CheckCircle, RefreshCw, ExternalLink } from "lucide-react";
+import { CheckCircle, Upload, Container, Cloud, AlertTriangle, X, Rocket, Loader2, ExternalLink, RefreshCw, Settings, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -93,35 +93,53 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
   const handleDeploy = async () => {
     if (!canProceed) return;
 
-    // Navigate immediately - don't wait for server response
-    toast({
-      title: "Deployment Started",
-      description: "Your deployment has been initiated successfully.",
-    });
+    setIsDeploying(true);
     
-    // Generate temporary deployment ID and navigate instantly
-    const tempDeploymentId = 'deploy-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    onNext(tempDeploymentId);
-
-    // Start actual deployment in background
-    const formData = new FormData();
-    if (files.length > 0) {
-      formData.append('dockerImage', files[0].file);
-    }
-    const autoImageName = `minibeat-${deploymentConfig.module}:latest`;
-    formData.append('imageName', autoImageName);
-    formData.append('envVariables', JSON.stringify(envVariables));
-    formData.append('awsConfig', JSON.stringify(awsConfig));
-    formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
-    formData.append('tempDeploymentId', tempDeploymentId); // Send temp ID to server
-
-    // Fire and forget - deployment happens in background
-    fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/deploy', {
-      method: 'POST',
-      body: formData,
-    }).catch((error) => {
-      console.error('Deployment request failed:', error);
+    toast({
+      title: "Initializing Deployment",
+      description: "Setting up AWS resources and preparing deployment...",
     });
+
+    try {
+      const formData = new FormData();
+      if (files.length > 0) {
+        formData.append('dockerImage', files[0].file);
+      }
+      const autoImageName = `minibeat-${deploymentConfig.module}:latest`;
+      formData.append('imageName', autoImageName);
+      formData.append('envVariables', JSON.stringify(envVariables));
+      formData.append('awsConfig', JSON.stringify(awsConfig));
+      formData.append('deploymentConfig', JSON.stringify(deploymentConfig));
+
+      const response = await fetch('https://trading-cons-brochures-switching.trycloudflare.com/api/deploy', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Deployment Started",
+          description: "Your deployment has been initiated successfully.",
+        });
+        
+        // Wait 15 seconds for initialization
+        setTimeout(() => {
+          onNext(result.deploymentId);
+        }, 15000);
+      } else {
+        throw new Error(result.message || 'Deployment failed to start');
+      }
+    } catch (error) {
+      console.error('Deployment failed:', error);
+      toast({
+        title: "Deployment Failed",
+        description: error.message || "Failed to start deployment. Please try again.",
+        variant: "destructive",
+      });
+      setIsDeploying(false);
+    }
   };
 
   const handleFileUpload = (fileList: FileList | null) => {
@@ -379,13 +397,23 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDeploy}
+                          <Button 
+                            onClick={handleDeploy} 
                             disabled={!canProceed || isDeploying}
-                            className="bg-amber-600 hover:bg-amber-700"
+                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                           >
-                            {isDeploying ? 'Re-deploying...' : 'Yes, Re-deploy'}
-                          </AlertDialogAction>
+                            {isDeploying ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Initializing AWS Resources...
+                              </>
+                            ) : (
+                              <>
+                                <Rocket className="mr-2 h-4 w-4" />
+                                Start Deployment
+                              </>
+                            )}
+                          </Button>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
