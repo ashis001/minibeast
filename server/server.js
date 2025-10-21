@@ -394,9 +394,7 @@ app.post('/api/deploy', upload.fields([
       'ecr-push': { status: 'pending' },
       'task-definition': { status: 'pending' },
       'ecs-service': { status: 'pending' },
-      'step-functions': { status: 'pending' },
-      'api-gateway': { status: 'pending' },
-      'final-setup': { status: 'pending' }
+      'step-functions': { status: 'pending' }
     },
     apiEndpoint: null,
     error: null
@@ -1656,7 +1654,7 @@ async function deployApplication(deploymentId, awsConfig, envVariables, files, i
   addDeploymentLog(deploymentId, 'ecr-repo', '🌐 Web-based deployment - no local Docker required');
   
   // Determine which step to start from (for retry functionality)
-  const stepIds = ['ecr-repo', 'ecr-push', 'task-definition', 'ecs-service', 'step-functions', 'api-gateway', 'final-setup'];
+  const stepIds = ['ecr-repo', 'ecr-push', 'task-definition', 'ecs-service', 'step-functions'];
   let startFromStep = 0;
   
   // Find the first non-completed step
@@ -2259,8 +2257,24 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     
     updateDeploymentStep(deploymentId, 'step-functions', 'completed');
     
-    // Step 6: Create API Gateway to trigger Step Functions
-    updateDeploymentStep(deploymentId, 'api-gateway', 'running');
+    // Mark deployment as completed after Step Functions
+    const deployStatus = deploymentStatus.get(deploymentId);
+    if (deployStatus) {
+      deployStatus.status = 'completed';
+      deployStatus.completedAt = new Date().toISOString();
+      deployStatus.stepFunctionArn = stepFunctionArn;
+      deployStatus.region = region;
+      deploymentStatus.set(deploymentId, deployStatus);
+    }
+    
+    addDeploymentLog(deploymentId, 'step-functions', '🎉 Deployment completed successfully!');
+    addDeploymentLog(deploymentId, 'step-functions', `✅ Step Function: ${stepFunctionArn}`);
+    addDeploymentLog(deploymentId, 'step-functions', '🚀 Workflow orchestration is ready');
+    
+    // Auto-cleanup uploads folder after deployment
+    await cleanupAfterDeployment(deploymentId, awsConfig);
+    
+    return;
     addDeploymentLog(deploymentId, 'api-gateway', '🌐 Creating API Gateway to trigger Step Functions...');
     
     // Create API Gateway execution role

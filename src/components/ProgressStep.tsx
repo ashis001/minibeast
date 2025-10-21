@@ -73,12 +73,6 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
       description: 'Setting up workflow orchestration',
       status: 'pending'
     },
-    {
-      id: 'final-setup',
-      title: 'Final Configuration',
-      description: 'Completing deployment and generating endpoint',
-      status: 'pending'
-    }
   ]);
 
   useEffect(() => {
