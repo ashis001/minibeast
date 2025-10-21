@@ -46,7 +46,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setAwsStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('https://goat-attach-grid-adaptive.trycloudflare.com/api/test-aws', {
+      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/test-aws', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
     setSnowflakeStatus('testing');
     setTesting(true);
     try {
-      const response = await fetch('https://goat-attach-grid-adaptive.trycloudflare.com/api/test-snowflake', {
+      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/test-snowflake', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
 
     setSettingUpPermissions(true);
     try {
-      const response = await fetch('https://goat-attach-grid-adaptive.trycloudflare.com/api/setup-permissions', {
+      const response = await fetch('https://florida-alexander-geological-signs.trycloudflare.com/api/setup-permissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
