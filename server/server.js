@@ -2265,6 +2265,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     const deployStatus = deploymentStatus.get(deploymentId);
     if (deployStatus) {
       deployStatus.status = 'completed';
+      deployStatus.currentStep = 'step-functions';
       deployStatus.completedAt = new Date().toISOString();
       deployStatus.stepFunctionArn = stepFunctionArn;
       deployStatus.region = region;
@@ -2272,14 +2273,12 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     }
     
     addDeploymentLog(deploymentId, 'step-functions', '🎉 Deployment completed successfully!');
-    addDeploymentLog(deploymentId, 'step-functions', `✅ Step Function: ${stepFunctionArn}`);
-    addDeploymentLog(deploymentId, 'step-functions', '🚀 Workflow orchestration is ready');
     
     // Auto-cleanup uploads folder after deployment
     await cleanupAfterDeployment(deploymentId, awsConfig);
     
+    // Skip API Gateway and Final Setup - deployment is complete
     return;
-    addDeploymentLog(deploymentId, 'api-gateway', '🌐 Creating API Gateway to trigger Step Functions...');
     
     // Create API Gateway execution role
     const apiGatewayRoleName = `${repositoryName}-apigateway-role`;
