@@ -579,7 +579,14 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
               variant="outline"
               className="border-amber-300 text-amber-700 hover:bg-amber-50"
             >
-              {isDeploying ? 'Re-deploying...' : 'Deploy New Instance →'}
+              {isDeploying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {deploymentStatus || 'Re-deploying...'}
+                </>
+              ) : (
+                'Deploy New Instance →'
+              )}
             </Button>
           </div>
         ) : (
@@ -589,7 +596,17 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
             size="lg"
             className="bg-gradient-primary hover:opacity-90"
           >
-            {isDeploying ? 'Starting Deployment...' : 'Start Deployment →'}
+            {isDeploying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {deploymentStatus || 'Initializing...'}
+              </>
+            ) : (
+              <>
+                <Rocket className="mr-2 h-4 w-4" />
+                Start Deployment →
+              </>
+            )}
           </Button>
         )}
       </div>
