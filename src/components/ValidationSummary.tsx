@@ -243,39 +243,6 @@ const ValidationSummary = () => {
           </div>
         </div>
 
-        {/* Filters Section */}
-        <Card className="bg-slate-800 border-slate-700 mb-6 animate-fadeIn" style={{ animationDelay: '400ms' }}>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search validations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                />
-              </div>
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
-                >
-                  <option value="all">All Status</option>
-                  <option value="PASSED">Passed Only</option>
-                  <option value="FAILED">Failed Only</option>
-                </select>
-              </div>
-              <div className="flex items-center text-slate-400">
-                <Calendar className="h-5 w-5 mr-2" />
-                <span>Showing {filteredResults.length} of {results.length} results</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Results Table */}
         <Card className="bg-slate-800 border-slate-700 animate-fadeIn" style={{ animationDelay: '500ms' }}>
