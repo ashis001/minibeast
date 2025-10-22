@@ -639,35 +639,41 @@ const Dashboard = () => {
                           <item.icon className="h-4 w-4" />
                           <span>{item.label}</span>
                           {item.children && (
-                            <span className="ml-auto">
-                              {expandedMenus.includes(item.id) ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
+                            <span className="ml-auto transition-transform duration-300">
+                              <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${
+                                expandedMenus.includes(item.id) ? 'rotate-90' : 'rotate-0'
+                              }`} />
                             </span>
                           )}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       
-                      {/* Child menu items */}
-                      {item.children && expandedMenus.includes(item.id) && (
-                        <div className="ml-6 mt-1 space-y-1">
-                          {item.children.map((child, childIndex) => (
-                            <SidebarMenuItem key={childIndex}>
-                              <SidebarMenuButton
-                                onClick={() => handleMenuClick(child.id)}
-                                className={`w-full justify-start cursor-pointer ${
-                                  currentView === child.id
-                                    ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                                    : "text-slate-300 hover:text-white hover:bg-slate-800"
-                                }`}
-                              >
-                                <child.icon className="h-4 w-4" />
-                                <span>{child.label}</span>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
+                      {/* Child menu items with smooth animation */}
+                      {item.children && (
+                        <div 
+                          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                            expandedMenus.includes(item.id) 
+                              ? 'max-h-96 opacity-100' 
+                              : 'max-h-0 opacity-0'
+                          }`}
+                        >
+                          <div className="ml-6 mt-1 space-y-1">
+                            {item.children.map((child, childIndex) => (
+                              <SidebarMenuItem key={childIndex}>
+                                <SidebarMenuButton
+                                  onClick={() => handleMenuClick(child.id)}
+                                  className={`w-full justify-start cursor-pointer transition-all duration-200 ${
+                                    currentView === child.id
+                                      ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                                      : "text-slate-300 hover:text-white hover:bg-slate-800"
+                                  }`}
+                                >
+                                  <child.icon className="h-4 w-4" />
+                                  <span>{child.label}</span>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </React.Fragment>
