@@ -2333,6 +2333,62 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     
     addDeploymentLog(deploymentId, 'step-functions', '🎉 Deployment completed successfully!');
     
+    // Save deployment data to persistent storage
+    try {
+      const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
+      const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
+      const module = config?.deploymentConfig?.module || 'validator';
+      const moduleDir = path.join(MODULES_DIR, module);
+      
+      // Ensure directories exist
+      if (!fs.existsSync(DEPLOYMENTS_DIR)) fs.mkdirSync(DEPLOYMENTS_DIR, { recursive: true });
+      if (!fs.existsSync(MODULES_DIR)) fs.mkdirSync(MODULES_DIR, { recursive: true });
+      if (!fs.existsSync(moduleDir)) fs.mkdirSync(moduleDir, { recursive: true });
+      
+      // Build AWS resources object
+      const awsResources = {
+        stepFunctionArn,
+        ecsCluster: clusterName,
+        ecsService: null, // On-demand deployment
+        taskDefinition: taskDefArn,
+        taskDefinitionFamily: repositoryName,
+        executionRoleArn: executionRoleArn,
+        taskRoleArn: taskRoleArn,
+        ecrRepository: repositoryUri,
+        region: region,
+        logGroups: {
+          possibleEcsLogs: [`/ecs/${repositoryName}`]
+        }
+      };
+      
+      // Save deployment details
+      const deploymentFile = path.join(moduleDir, 'deployment.json');
+      const dataToSave = {
+        id: deploymentId,
+        status: 'completed',
+        module: module,
+        awsConfig: awsConfig,
+        envVariables: envVariables,
+        imageName: config?.imageName,
+        completedAt: new Date().toISOString(),
+        savedAt: new Date().toISOString(),
+        awsResources: awsResources
+      };
+      
+      fs.writeFileSync(deploymentFile, JSON.stringify(dataToSave, null, 2));
+      addDeploymentLog(deploymentId, 'step-functions', `💾 Deployment saved: ${deploymentFile}`);
+      
+      // Save AWS resources separately
+      const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+      fs.writeFileSync(resourcesFile, JSON.stringify(awsResources, null, 2));
+      addDeploymentLog(deploymentId, 'step-functions', `📋 AWS Resources saved: ${resourcesFile}`);
+      
+      console.log(`✅ Deployment ${deploymentId} saved to ${moduleDir}`);
+    } catch (error) {
+      console.error(`Error saving deployment files: ${error.message}`);
+      addDeploymentLog(deploymentId, 'step-functions', `⚠️ Warning: Could not save deployment files: ${error.message}`);
+    }
+    
     // Auto-cleanup uploads folder after deployment
     await cleanupAfterDeployment(deploymentId, awsConfig);
     
