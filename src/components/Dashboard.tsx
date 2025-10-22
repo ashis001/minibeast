@@ -28,6 +28,8 @@ import {
   Gauge,
   Globe,
   Cog,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import DeploymentWizard from "./DeploymentWizard";
 import ValidationStep from "./ValidationStep";
@@ -37,6 +39,7 @@ import ActivityLog from "./ActivityLog";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('home');
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   
   // Real-time data states
   const [deploymentStats, setDeploymentStats] = useState({
@@ -148,16 +151,31 @@ const Dashboard = () => {
     { icon: Home, label: "Home", id: "home" },
     { icon: Database, label: "Migrator", id: "migrator" },
     { icon: GitBranch, label: "Reconciliator", id: "reconciliator" },
-    { icon: Shield, label: "Validator", id: "validator" },
-    { icon: Zap, label: "Add Validation", id: "add-validation" },
-    { icon: Eye, label: "View Validations", id: "view-validations" },
-    { icon: Activity, label: "Activity Logs", id: "activity-logs" },
+    { 
+      icon: Shield, 
+      label: "Validator", 
+      id: "validator",
+      children: [
+        { icon: Zap, label: "Add Validation", id: "add-validation" },
+        { icon: Eye, label: "View Validations", id: "view-validations" },
+        { icon: Activity, label: "Activity Logs", id: "activity-logs" },
+      ]
+    },
     { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
     { icon: Settings, label: "Config", id: "config" },
   ];
 
-  const handleMenuClick = (id: string) => {
-    setCurrentView(id);
+  const handleMenuClick = (id: string, hasChildren?: boolean) => {
+    if (hasChildren) {
+      // Toggle expand/collapse
+      setExpandedMenus(prev => 
+        prev.includes(id) 
+          ? prev.filter(item => item !== id)
+          : [...prev, id]
+      );
+    } else {
+      setCurrentView(id);
+    }
   };
 
   const stats = [
@@ -608,19 +626,51 @@ const Dashboard = () => {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {menuItems.map((item, index) => (
-                    <SidebarMenuItem key={index}>
-                      <SidebarMenuButton
-                        onClick={() => handleMenuClick(item.id)}
-                        className={`w-full justify-start cursor-pointer ${
-                          currentView === item.id
-                            ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                            : "text-slate-300 hover:text-white hover:bg-slate-800"
-                        }`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    <React.Fragment key={index}>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleMenuClick(item.id, !!item.children)}
+                          className={`w-full justify-start cursor-pointer ${
+                            currentView === item.id
+                              ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                              : "text-slate-300 hover:text-white hover:bg-slate-800"
+                          }`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                          {item.children && (
+                            <span className="ml-auto">
+                              {expandedMenus.includes(item.id) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </span>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
+                      {/* Child menu items */}
+                      {item.children && expandedMenus.includes(item.id) && (
+                        <div className="ml-6 mt-1 space-y-1">
+                          {item.children.map((child, childIndex) => (
+                            <SidebarMenuItem key={childIndex}>
+                              <SidebarMenuButton
+                                onClick={() => handleMenuClick(child.id)}
+                                className={`w-full justify-start cursor-pointer ${
+                                  currentView === child.id
+                                    ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                                    : "text-slate-300 hover:text-white hover:bg-slate-800"
+                                }`}
+                              >
+                                <child.icon className="h-4 w-4" />
+                                <span>{child.label}</span>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          ))}
+                        </div>
+                      )}
+                    </React.Fragment>
                   ))}
                 </SidebarMenu>
               </SidebarGroupContent>
