@@ -69,7 +69,10 @@ const ValidationSummary = () => {
 
   const calculateStats = (data: ValidationResult[]) => {
     const total = data.length;
-    const passed = data.filter(r => r.STATUS === 'PASSED' || r.status === 'PASSED').length;
+    const passed = data.filter(r => {
+      const status = (r.STATUS || r.status || r.Status)?.toString().toUpperCase();
+      return status === 'PASSED' || status === 'PASS' || status === 'SUCCESS';
+    }).length;
     const failed = total - passed;
     const successRate = total > 0 ? Math.round((passed / total) * 100) : 0;
 
@@ -94,9 +97,11 @@ const ValidationSummary = () => {
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(r => 
-        (r.STATUS || r.status)?.toUpperCase() === statusFilter.toUpperCase()
-      );
+      filtered = filtered.filter(r => {
+        const status = (r.STATUS || r.status || r.Status)?.toString().toUpperCase();
+        return status === statusFilter.toUpperCase() || 
+               (statusFilter === 'PASSED' && (status === 'PASS' || status === 'SUCCESS'));
+      });
     }
 
     setFilteredResults(filtered);
@@ -104,10 +109,10 @@ const ValidationSummary = () => {
   }, [searchTerm, statusFilter, results]);
 
   const getStatusBadge = (status: string) => {
-    const normalizedStatus = status?.toUpperCase();
-    if (normalizedStatus === 'PASSED') {
+    const normalizedStatus = status?.toString().toUpperCase();
+    if (normalizedStatus === 'PASSED' || normalizedStatus === 'PASS' || normalizedStatus === 'SUCCESS') {
       return <Badge className="bg-green-500 text-white"><CheckCircle className="h-3 w-3 mr-1" />Passed</Badge>;
-    } else if (normalizedStatus === 'FAILED') {
+    } else if (normalizedStatus === 'FAILED' || normalizedStatus === 'FAIL' || normalizedStatus === 'ERROR') {
       return <Badge className="bg-red-500 text-white"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
     } else {
       return <Badge className="bg-yellow-500 text-white"><Clock className="h-3 w-3 mr-1" />{status}</Badge>;

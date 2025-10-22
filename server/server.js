@@ -2993,7 +2993,24 @@ app.get('/api/validation-summary', async (req, res) => {
       
       console.log('✅ Connected to Snowflake, executing query...');
       
-      const query = "SELECT * FROM WARNER_MONITORING.VALIDATOR.TBL_VALIDATION_RESULTS WHERE execution_type='L'";
+      const query = `
+        WITH latest AS (
+            SELECT *
+            FROM WARNER_MONITORING.VALIDATOR.TBL_VALIDATION_RESULTS
+            WHERE execution_type = 'L'
+        )
+        SELECT 
+            cfg.entity                          AS Application,
+            cfg.validation_description           AS Description,
+            res.validation_status                AS Status,
+            res.comment                          AS Comment
+        FROM latest res
+        JOIN tbl_validating_test_cases cfg 
+              ON cfg.id = res.validation_id
+        ORDER BY 
+            cfg.entity, 
+            cfg.validation_description
+      `;
       
       conn.execute({
         sqlText: query,
