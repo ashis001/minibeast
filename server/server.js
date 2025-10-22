@@ -2812,6 +2812,8 @@ function addDeploymentLog(deploymentId, stepId, logMessage) {
       timestamp,
       message: logMessage
     });
+    // Save deployment back to Map so logs are available to API
+    deploymentStatus.set(deploymentId, deployment);
     console.log(`[${deploymentId}/${stepId}] ${logMessage}`);
   }
 }
