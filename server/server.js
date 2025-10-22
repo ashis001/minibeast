@@ -1875,9 +1875,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
           
           addDeploymentLog(deploymentId, 'ecr-push', `✅ Created CodeBuild service role: ${serviceRoleArn}`);
           
-          // Wait for IAM role propagation across AWS
-          addDeploymentLog(deploymentId, 'ecr-push', '⏳ Waiting for IAM role propagation (10 seconds)...');
-          await new Promise(resolve => setTimeout(resolve, 10000));
+          // Wait for IAM role propagation across AWS (increased from 10s to 30s)
+          addDeploymentLog(deploymentId, 'ecr-push', '⏳ Waiting for IAM role propagation (30 seconds)...');
+          await new Promise(resolve => setTimeout(resolve, 30000));
           
         } catch (error) {
           if (error.code === 'EntityAlreadyExistsException') {
@@ -2017,9 +2017,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'task-definition', `✅ Created execution role: ${executionRoleArn}`);
       
-      // Wait for role propagation
-      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation (5 seconds)...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Wait for role propagation (increased from 5s to 15s)
+      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation (15 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 15000));
       
     } catch (error) {
       addDeploymentLog(deploymentId, 'task-definition', `❌ IAM role creation error: ${error.code} - ${error.message}`);
@@ -2234,9 +2234,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'step-functions', `✅ Step Functions role created: ${stepFunctionRoleArn}`);
       
-      // Wait for IAM role propagation across AWS
-      addDeploymentLog(deploymentId, 'step-functions', '⏳ Waiting for IAM role propagation (10 seconds)...');
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      // Wait for IAM role propagation across AWS (increased from 10s to 30s)
+      addDeploymentLog(deploymentId, 'step-functions', '⏳ Waiting for IAM role propagation (30 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 30000));
       
     } catch (error) {
       if (error.code === 'EntityAlreadyExistsException') {
