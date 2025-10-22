@@ -336,14 +336,14 @@ app.post('/api/test-snowflake', (req, res) => {
       return res.status(500).json({ success: false, message: err.message });
     }
     
-    // Save config immediately after successful test
+    // Save config immediately after successful test to deployments folder (in Docker volume)
     try {
-      const configDir = path.join(__dirname, 'config');
-      const configPath = path.join(configDir, 'snowflake.json');
+      const deploymentsDir = path.join(__dirname, 'deployments');
+      const configPath = path.join(deploymentsDir, 'snowflake-config.json');
       
-      // Create config directory if it doesn't exist
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
+      // Create deployments directory if it doesn't exist
+      if (!fs.existsSync(deploymentsDir)) {
+        fs.mkdirSync(deploymentsDir, { recursive: true });
       }
       
       // Save full Snowflake config
@@ -359,7 +359,7 @@ app.post('/api/test-snowflake', (req, res) => {
       };
       
       fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
-      console.log('✅ Snowflake config saved after successful test');
+      console.log('✅ Snowflake config saved to deployments folder (persisted in Docker volume)');
     } catch (saveError) {
       console.error('Error saving Snowflake config:', saveError.message);
       // Don't fail the response if save fails
@@ -2814,7 +2814,8 @@ app.get('/api/dashboard/metrics', (req, res) => {
 
 app.get('/api/config/snowflake', (req, res) => {
   try {
-    const configPath = path.join(__dirname, 'config', 'snowflake.json');
+    // Read from deployments folder (in Docker volume)
+    const configPath = path.join(__dirname, 'deployments', 'snowflake-config.json');
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       res.json({ success: true, config });
@@ -2829,16 +2830,18 @@ app.get('/api/config/snowflake', (req, res) => {
 
 app.post('/api/config/snowflake', (req, res) => {
   try {
-    const configDir = path.join(__dirname, 'config');
-    const configPath = path.join(configDir, 'snowflake.json');
+    // Save to deployments folder (in Docker volume)
+    const deploymentsDir = path.join(__dirname, 'deployments');
+    const configPath = path.join(deploymentsDir, 'snowflake-config.json');
     
-    // Create config directory if it doesn't exist
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
+    // Create deployments directory if it doesn't exist
+    if (!fs.existsSync(deploymentsDir)) {
+      fs.mkdirSync(deploymentsDir, { recursive: true });
     }
     
     // Save config
     fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2));
+    console.log('✅ Snowflake config saved to deployments folder (persisted in Docker volume)');
     res.json({ success: true, message: 'Snowflake config saved' });
   } catch (error) {
     console.error('Error saving Snowflake config:', error);
