@@ -2125,7 +2125,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         deployStatus.taskDefinition = taskDefResult.taskDefinition.taskDefinitionArn;
         deployStatus.taskDefinitionFamily = taskDefinitionFamily;
         deployStatus.executionRoleArn = executionRoleArn;
-        deployStatus.taskRoleArn = taskRoleArn;
+        deployStatus.taskRoleArn = executionRoleArn; // Use same role for both execution and task
         deploymentStatus.set(deploymentId, deployStatus);
       }
       
