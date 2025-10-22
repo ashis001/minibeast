@@ -1772,6 +1772,13 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       repositoryUri = createRepoResult.repository.repositoryUri;
       addDeploymentLog(deploymentId, 'ecr-repo', `✅ ECR repository created: ${repositoryName}`);
       addDeploymentLog(deploymentId, 'ecr-repo', `Repository URI: ${repositoryUri}`);
+      
+      // Store ECR repository in deployStatus
+      const deployStatus = deploymentStatus.get(deploymentId);
+      if (deployStatus) {
+        deployStatus.ecrRepository = repositoryUri;
+        deploymentStatus.set(deploymentId, deployStatus);
+      }
     } catch (error) {
       if (error.code === 'RepositoryAlreadyExistsException') {
         const describeResult = await ecr.describeRepositories({
@@ -1779,6 +1786,13 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         }).promise();
         repositoryUri = describeResult.repositories[0].repositoryUri;
         addDeploymentLog(deploymentId, 'ecr-repo', `⚠️ Repository already exists, using: ${repositoryUri}`);
+        
+        // Store ECR repository even if it already exists
+        const deployStatus = deploymentStatus.get(deploymentId);
+        if (deployStatus) {
+          deployStatus.ecrRepository = repositoryUri;
+          deploymentStatus.set(deploymentId, deployStatus);
+        }
       } else {
         throw error;
       }
@@ -2104,6 +2118,17 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     try {
       const taskDefResult = await ecs.registerTaskDefinition(taskDefinition).promise();
       addDeploymentLog(deploymentId, 'task-definition', `✅ Task definition created: ${taskDefResult.taskDefinition.taskDefinitionArn}`);
+      
+      // Store task definition info in deployStatus
+      const deployStatus = deploymentStatus.get(deploymentId);
+      if (deployStatus) {
+        deployStatus.taskDefinition = taskDefResult.taskDefinition.taskDefinitionArn;
+        deployStatus.taskDefinitionFamily = taskDefinitionFamily;
+        deployStatus.executionRoleArn = executionRoleArn;
+        deployStatus.taskRoleArn = taskRoleArn;
+        deploymentStatus.set(deploymentId, deployStatus);
+      }
+      
       updateDeploymentStep(deploymentId, 'task-definition', 'completed');
     } catch (error) {
       addDeploymentLog(deploymentId, 'task-definition', `❌ Task definition error: ${error.code} - ${error.message}`);
@@ -2117,11 +2142,24 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     try {
       await ecs.createCluster({ clusterName }).promise();
       addDeploymentLog(deploymentId, 'ecs-service', `✅ ECS cluster created: ${clusterName}`);
+      
+      // Store cluster name in deployStatus
+      const deployStatus = deploymentStatus.get(deploymentId);
+      if (deployStatus) {
+        deployStatus.ecsCluster = clusterName;
+        deploymentStatus.set(deploymentId, deployStatus);
+      }
     } catch (error) {
-      if (error.code === 'ClusterAlreadyExistsException') {
-        addDeploymentLog(deploymentId, 'ecs-service', `⚠️ Using existing cluster: ${clusterName}`);
-      } else {
+      if (error.code !== 'ClusterAlreadyExistsException') {
         throw error;
+      }
+      addDeploymentLog(deploymentId, 'ecs-service', `⚠️ Using existing cluster: ${clusterName}`);
+      
+      // Store cluster name even if it already exists
+      const deployStatus = deploymentStatus.get(deploymentId);
+      if (deployStatus) {
+        deployStatus.ecsCluster = clusterName;
+        deploymentStatus.set(deploymentId, deployStatus);
       }
     }
     
@@ -2335,10 +2373,12 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     
     // Save deployment data to persistent storage
     try {
-      // Get deployment config from stored configs
+      // Get deployment config and status from stored data
       const storedConfig = deploymentConfigs.get(deploymentId);
       const module = storedConfig?.deploymentConfig?.module || 'validator';
       const imageName = storedConfig?.imageName || 'unknown';
+      const awsConfigData = storedConfig?.awsConfig || awsConfig;
+      const envVarsData = storedConfig?.envVariables || envVariables;
       
       const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
       const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
@@ -2349,19 +2389,19 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       if (!fs.existsSync(MODULES_DIR)) fs.mkdirSync(MODULES_DIR, { recursive: true });
       if (!fs.existsSync(moduleDir)) fs.mkdirSync(moduleDir, { recursive: true });
       
-      // Build AWS resources object
+      // Build AWS resources object (use deployStatus values which were stored during deployment)
       const awsResources = {
-        stepFunctionArn,
-        ecsCluster: clusterName,
+        stepFunctionArn: stepFunctionArn,
+        ecsCluster: deployStatus?.ecsCluster || 'unknown',
         ecsService: null, // On-demand deployment
-        taskDefinition: taskDefArn,
-        taskDefinitionFamily: repositoryName,
-        executionRoleArn: executionRoleArn,
-        taskRoleArn: taskRoleArn,
-        ecrRepository: repositoryUri,
+        taskDefinition: deployStatus?.taskDefinition || 'unknown',
+        taskDefinitionFamily: deployStatus?.taskDefinitionFamily || 'unknown',
+        executionRoleArn: deployStatus?.executionRoleArn || 'unknown',
+        taskRoleArn: deployStatus?.taskRoleArn || 'unknown',
+        ecrRepository: deployStatus?.ecrRepository || 'unknown',
         region: region,
         logGroups: {
-          possibleEcsLogs: [`/ecs/${repositoryName}`]
+          possibleEcsLogs: [`/ecs/${deployStatus?.taskDefinitionFamily || 'unknown'}`]
         }
       };
       
@@ -2371,8 +2411,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         id: deploymentId,
         status: 'completed',
         module: module,
-        awsConfig: awsConfig,
-        envVariables: envVariables,
+        awsConfig: awsConfigData,
+        envVariables: envVarsData,
         imageName: imageName,
         completedAt: new Date().toISOString(),
         savedAt: new Date().toISOString(),
