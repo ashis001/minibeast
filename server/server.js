@@ -2335,9 +2335,13 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     
     // Save deployment data to persistent storage
     try {
+      // Get deployment config from stored configs
+      const storedConfig = deploymentConfigs.get(deploymentId);
+      const module = storedConfig?.deploymentConfig?.module || 'validator';
+      const imageName = storedConfig?.imageName || 'unknown';
+      
       const DEPLOYMENTS_DIR = path.join(__dirname, 'deployments');
       const MODULES_DIR = path.join(DEPLOYMENTS_DIR, 'modules');
-      const module = config?.deploymentConfig?.module || 'validator';
       const moduleDir = path.join(MODULES_DIR, module);
       
       // Ensure directories exist
@@ -2369,7 +2373,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         module: module,
         awsConfig: awsConfig,
         envVariables: envVariables,
-        imageName: config?.imageName,
+        imageName: imageName,
         completedAt: new Date().toISOString(),
         savedAt: new Date().toISOString(),
         awsResources: awsResources
