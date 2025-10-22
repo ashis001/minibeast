@@ -319,7 +319,7 @@ app.post('/api/aws-resources', async (req, res) => {
 });
 
 app.post('/api/test-snowflake', (req, res) => {
-  const { account, username, password } = req.body;
+  const { account, username, password, database, schema, warehouse, role } = req.body;
 
   if (!account || !username || !password) {
     return res.status(400).json({ success: false, message: 'Missing Snowflake credentials.' });
@@ -335,6 +335,36 @@ app.post('/api/test-snowflake', (req, res) => {
     if (err) {
       return res.status(500).json({ success: false, message: err.message });
     }
+    
+    // Save config immediately after successful test
+    try {
+      const configDir = path.join(__dirname, 'config');
+      const configPath = path.join(configDir, 'snowflake.json');
+      
+      // Create config directory if it doesn't exist
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+      }
+      
+      // Save full Snowflake config
+      const configData = {
+        account,
+        username,
+        password,
+        database: database || '',
+        schema: schema || '',
+        warehouse: warehouse || '',
+        role: role || '',
+        savedAt: new Date().toISOString()
+      };
+      
+      fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+      console.log('✅ Snowflake config saved after successful test');
+    } catch (saveError) {
+      console.error('Error saving Snowflake config:', saveError.message);
+      // Don't fail the response if save fails
+    }
+    
     res.json({ success: true, message: 'Snowflake connection successful.' });
     conn.destroy(); // Close the connection
   });
