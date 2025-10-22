@@ -35,6 +35,7 @@ import DeploymentWizard from "./DeploymentWizard";
 import ValidationStep from "./ValidationStep";
 import ViewValidations from "./ViewValidations";
 import ActivityLog from "./ActivityLog";
+import ValidationSummary from "./ValidationSummary";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -578,6 +579,8 @@ const Dashboard = () => {
       />;
     } else if (currentView === 'activity-logs') {
       return <ActivityLog />;
+    } else if (currentView === 'validation-summary') {
+      return <ValidationSummary />;
     } else if (currentView === 'config') {
       return <DeploymentWizard />;
     } else {

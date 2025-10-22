@@ -2955,6 +2955,84 @@ app.post('/api/config/snowflake', (req, res) => {
   }
 });
 
+// Get validation summary from Snowflake
+app.get('/api/validation-summary', async (req, res) => {
+  try {
+    console.log('📊 Fetching validation summary from Snowflake...');
+    
+    // Load Snowflake config
+    const configPath = path.join(__dirname, 'deployments', 'snowflake-config.json');
+    if (!fs.existsSync(configPath)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Snowflake configuration not found. Please configure Snowflake first.'
+      });
+    }
+    
+    const snowflakeConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    // Create Snowflake connection
+    const connection = snowflake.createConnection({
+      account: snowflakeConfig.account,
+      username: snowflakeConfig.username,
+      password: snowflakeConfig.password,
+      warehouse: snowflakeConfig.warehouse,
+      database: snowflakeConfig.database,
+      schema: snowflakeConfig.schema
+    });
+    
+    // Connect and execute query
+    connection.connect((err, conn) => {
+      if (err) {
+        console.error('❌ Failed to connect to Snowflake:', err);
+        return res.status(500).json({
+          success: false,
+          message: `Failed to connect to Snowflake: ${err.message}`
+        });
+      }
+      
+      console.log('✅ Connected to Snowflake, executing query...');
+      
+      const query = "SELECT * FROM WARNER_MONITORING.VALIDATOR.TBL_VALIDATION_RESULTS WHERE execution_type='L'";
+      
+      conn.execute({
+        sqlText: query,
+        complete: (err, stmt, rows) => {
+          // Always destroy connection
+          conn.destroy((destroyErr) => {
+            if (destroyErr) {
+              console.error('Error destroying connection:', destroyErr);
+            }
+          });
+          
+          if (err) {
+            console.error('❌ Query execution failed:', err);
+            return res.status(500).json({
+              success: false,
+              message: `Query failed: ${err.message}`
+            });
+          }
+          
+          console.log(`✅ Query successful, ${rows.length} rows returned`);
+          
+          res.json({
+            success: true,
+            data: rows,
+            count: rows.length
+          });
+        }
+      });
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching validation summary:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to fetch validation summary: ${error.message}`
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });
