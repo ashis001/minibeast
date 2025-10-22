@@ -2390,6 +2390,10 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       if (!fs.existsSync(moduleDir)) fs.mkdirSync(moduleDir, { recursive: true });
       
       // Build AWS resources object (use deployStatus values which were stored during deployment)
+      // Extract repositoryName from ecrRepository URI for log group
+      const ecrRepo = deployStatus?.ecrRepository || 'unknown';
+      const repositoryNameFromUri = ecrRepo.includes('/') ? ecrRepo.split('/').pop() : 'unknown';
+      
       const awsResources = {
         stepFunctionArn: stepFunctionArn,
         ecsCluster: deployStatus?.ecsCluster || 'unknown',
@@ -2398,10 +2402,10 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         taskDefinitionFamily: deployStatus?.taskDefinitionFamily || 'unknown',
         executionRoleArn: deployStatus?.executionRoleArn || 'unknown',
         taskRoleArn: deployStatus?.taskRoleArn || 'unknown',
-        ecrRepository: deployStatus?.ecrRepository || 'unknown',
+        ecrRepository: ecrRepo,
         region: region,
         logGroups: {
-          possibleEcsLogs: [`/ecs/${deployStatus?.taskDefinitionFamily || 'unknown'}`]
+          possibleEcsLogs: [`/ecs/${repositoryNameFromUri}`]
         }
       };
       
