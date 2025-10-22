@@ -159,9 +159,9 @@ const Dashboard = () => {
         { icon: Zap, label: "Add Validation", id: "add-validation" },
         { icon: Eye, label: "View Validations", id: "view-validations" },
         { icon: Activity, label: "Activity Logs", id: "activity-logs" },
+        { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
       ]
     },
-    { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
     { icon: Settings, label: "Config", id: "config" },
   ];
 
