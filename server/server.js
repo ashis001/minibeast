@@ -2060,7 +2060,9 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     }
     
     // Create IAM execution role for ECS (must be <= 64 chars)
-    const executionRoleName = `${module}-exec-${crypto.randomBytes(4).toString('hex')}`;
+    // Extract short identifier from repositoryName (e.g., 'validator' from 'minibeat-validator-repo-deploy-1')
+    const moduleId = repositoryName.split('-')[1] || 'module';
+    const executionRoleName = `${moduleId}-exec-${crypto.randomBytes(4).toString('hex')}`;
     let executionRoleArn;
     
     try {
@@ -2097,7 +2099,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
     }
     
     // Create IAM Task Role with SSM Parameter Store permissions (must be <= 64 chars)
-    const taskRoleName = `${module}-task-${crypto.randomBytes(4).toString('hex')}`;
+    const taskRoleName = `${moduleId}-task-${crypto.randomBytes(4).toString('hex')}`;
     let taskRoleArn;
     
     try {
