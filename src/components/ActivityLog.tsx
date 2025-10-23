@@ -42,7 +42,7 @@ const ActivityLog = () => {
   const [noNewLogsCount, setNoNewLogsCount] = useState(0);
   const [lastLogTimestamp, setLastLogTimestamp] = useState<string | null>(null);
   const [autoRefreshStartTime, setAutoRefreshStartTime] = useState<number | null>(null);
-  const [remainingTime, setRemainingTime] = useState<number>(30);
+  const [remainingTime, setRemainingTime] = useState<number>(60);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -67,7 +67,7 @@ const ActivityLog = () => {
     const timer = setInterval(() => {
       const currentTime = Date.now();
       const elapsedTime = currentTime - autoRefreshStartTime;
-      const remaining = Math.max(0, Math.ceil((30000 - elapsedTime) / 1000));
+      const remaining = Math.max(0, Math.ceil((60000 - elapsedTime) / 1000));
       setRemainingTime(remaining);
       
       if (remaining === 0) {
@@ -214,7 +214,7 @@ const ActivityLog = () => {
       const currentTime = Date.now();
       const elapsedTime = currentTime - (autoRefreshStartTime || currentTime);
       
-      if (elapsedTime >= 30000) { // 30 seconds
+      if (elapsedTime >= 60000) { // 60 seconds
         console.log('⏰ Auto-refresh stopped - 30 second timeout reached');
         setAutoRefresh(false);
         setIsPaused(true);
@@ -222,7 +222,7 @@ const ActivityLog = () => {
         
         toast({
           title: "Auto-refresh stopped",
-          description: "Auto-refresh automatically stopped after 30 seconds. Click Resume to restart.",
+          description: "Auto-refresh automatically stopped after 60 seconds. Click Resume to restart.",
           duration: 4000,
         });
         return;
@@ -267,13 +267,13 @@ const ActivityLog = () => {
     setIsPaused(false);
     setNoNewLogsCount(0);
     setAutoRefresh(true);
-    setAutoRefreshStartTime(Date.now()); // Reset 30-second timer
-    setRemainingTime(30); // Reset countdown display
+    setAutoRefreshStartTime(Date.now()); // Reset 60-second timer
+    setRemainingTime(60); // Reset countdown display
     if (selectedExecution) {
       fetchExecutions();
       fetchLogs(selectedExecution, false); // Incremental load
     }
-    console.log('▶️ Auto-refresh resumed - new 30 second timer started');
+    console.log('▶️ Auto-refresh resumed - new 60 second timer started');
   };
 
   const selectedExecutionData = executions.find(exec => exec.executionArn === selectedExecution);
@@ -363,13 +363,13 @@ const ActivityLog = () => {
                 const newAutoRefresh = !autoRefresh;
                 setAutoRefresh(newAutoRefresh);
                 if (newAutoRefresh) {
-                  setAutoRefreshStartTime(Date.now()); // Reset 30-second timer
-                  setRemainingTime(30); // Reset countdown display
+                  setAutoRefreshStartTime(Date.now()); // Reset 60-second timer
+                  setRemainingTime(60); // Reset countdown display
                   setIsPaused(false);
-                  console.log('▶️ Auto-refresh enabled - 30 second timer started');
+                  console.log('▶️ Auto-refresh enabled - 60 second timer started');
                 } else {
                   setAutoRefreshStartTime(null);
-                  setRemainingTime(30);
+                  setRemainingTime(60);
                   console.log('⏹️ Auto-refresh disabled');
                 }
               }}
@@ -384,21 +384,6 @@ const ActivityLog = () => {
               ) : 'Auto-refresh OFF'}
             </Button>
             
-            {!autoRefresh && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  fetchExecutions();
-                  if (selectedExecution) {
-                    fetchLogs(selectedExecution, true); // Full reload for manual refresh
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Manual Refresh
-              </Button>
-            )}
             
             {selectedExecutionData && (
               <Button

@@ -43,6 +43,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
   const [isConfigTableLocked, setIsConfigTableLocked] = useState(false);
   
   // Loading states
+  const [isCheckingRequirements, setIsCheckingRequirements] = useState(true);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [isSubmittingValidation, setIsSubmittingValidation] = useState(false);
   const [isCreatingConfigTable, setIsCreatingConfigTable] = useState(false);
@@ -61,12 +62,26 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     metric_index: 1
   });
 
-  // Load available tables on component mount
+  // Auto-check requirements and create table if needed on component mount
   useEffect(() => {
     if (snowflakeConfig) {
-      loadAvailableTables();
+      checkAndCreateTable();
     }
   }, [snowflakeConfig]);
+
+  const checkAndCreateTable = async () => {
+    setIsCheckingRequirements(true);
+    
+    // First, check if table exists
+    await loadAvailableTables();
+    
+    // If table doesn't exist, create it automatically
+    if (!configTableExists) {
+      await createConfigTable();
+    }
+    
+    setIsCheckingRequirements(false);
+  };
 
   const loadAvailableTables = async () => {
     if (!snowflakeConfig) return;
@@ -89,10 +104,12 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
         const configTable = data.tables.find((table: TableInfo) => 
           table.name === 'TBL_VALIDATING_TEST_CASES'
         );
-        setConfigTableExists(configTable?.exists || false);
-        if (configTable?.exists) {
+        const tableExists = configTable?.exists || false;
+        setConfigTableExists(tableExists);
+        if (tableExists) {
           setIsConfigTableLocked(true);
         }
+        return tableExists;
       } else {
         toast({
           title: "Failed to Load Tables",
@@ -106,8 +123,10 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
         description: "Could not connect to Snowflake database",
         variant: "destructive",
       });
+      return false;
     }
     setIsLoadingTables(false);
+    return false;
   };
 
   const createConfigTable = async () => {
@@ -127,10 +146,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
       if (response.ok && data.success) {
         setConfigTableExists(true);
         setIsConfigTableLocked(true);
-        toast({
-          title: "Config Table Created",
-          description: "TBL_VALIDATING_TEST_CASES table created successfully",
-        });
+        // Silent success - no toast needed for automatic creation
       } else {
         toast({
           title: "Failed to Create Table",
@@ -148,10 +164,6 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     setIsCreatingConfigTable(false);
   };
 
-  const handleConfigTableEdit = () => {
-    setIsConfigTableLocked(false);
-    setConfigTableExists(false);
-  };
 
   const handleSubmitValidation = async () => {
     if (!snowflakeConfig || !configTableExists) return;
@@ -250,100 +262,42 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     );
   }
 
+  // Show loading animation while checking requirements
+  if (isCheckingRequirements) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
+          <CheckCircle className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-emerald-500" />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-semibold text-foreground">Checking all requirements...</h3>
+          <p className="text-muted-foreground">
+            Verifying database configuration and validating table structure
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-foreground">Validation Configuration</h2>
+        <h2 className="text-2xl font-bold text-foreground">Add Validation Case</h2>
         <p className="text-muted-foreground mt-2">
-          Set up validation test cases for your Snowflake data
+          Define validation rules for your data quality checks
         </p>
       </div>
 
-      {/* Step 1: Validation Config Table Setup */}
+      {/* Validation Case Form */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Step 1: Validation Config Table
-            {isConfigTableLocked && (
-              <div className="flex items-center gap-1 text-green-600">
-                <CheckCircle className="h-4 w-4" />
-                <Lock className="h-4 w-4" />
-              </div>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Create or verify the TBL_VALIDATING_TEST_CASES table in {snowflakeConfig.database}.{snowflakeConfig.schema}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              {configTableExists ? (
-                <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="font-medium">TBL_VALIDATING_TEST_CASES exists and is ready</span>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  onClick={createConfigTable}
-                  disabled={isCreatingConfigTable}
-                  className="w-full"
-                >
-                  {isCreatingConfigTable ? (
-                    "Creating Config Table..."
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create TBL_VALIDATING_TEST_CASES
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-            
-            {isConfigTableLocked && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Recreate Config Table?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to recreate the configuration table? This may affect existing validation cases.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfigTableEdit}>
-                      Yes, Recreate Table
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Step 2: Add Validation Cases */}
-      <Card className={cn(
-        "transition-opacity",
-        !canProceedToForm && "opacity-50 pointer-events-none"
-      )}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
-            Step 2: Add Validation Case
+            Validation Details
           </CardTitle>
           <CardDescription>
-            Define validation rules for your data quality checks
+            Enter the details for your data validation test case
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
