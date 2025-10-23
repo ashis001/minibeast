@@ -63,15 +63,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
 
-      const { access_token, refresh_token, user: userData } = response.data;
+      const { access_token, refresh_token, user: userData, license } = response.data;
 
-      // Store tokens and user data
+      // Merge license and organization data into user object
+      const enrichedUser = {
+        ...userData,
+        license,
+        organization: {
+          id: userData.organization_id,
+          name: userData.organization_name || 'Default Organization'
+        }
+      };
+
+      // Store tokens and enriched user data
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(enrichedUser));
 
       setAccessToken(access_token);
-      setUser(userData);
+      setUser(enrichedUser);
     } catch (error: any) {
       console.error('Login error:', error);
       const message = error.response?.data?.detail || 'Login failed';
