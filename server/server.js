@@ -1304,6 +1304,10 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     const savedResources = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
     const deploymentDetails = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
     
+    // Load saved resources to get container name
+    const taskDefArn = savedResources.taskDefinition;
+    const containerName = savedResources.taskDefinitionFamily || 'validator';
+    
     // Build dynamic SQL query based on selected entities
     let testCaseSQL = "SELECT id, validation_query, expected_outcome, operator, metric_index FROM tbl_validating_test_cases WHERE is_active = TRUE";
     
@@ -1313,6 +1317,7 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     }
     
     console.log('📝 Generated TEST_CASE_SQL:', testCaseSQL);
+    console.log('🐞 Container name:', containerName);
     
     // Configure AWS SDK with saved credentials
     const AWS = require('aws-sdk');
@@ -1325,7 +1330,7 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     const stepfunctions = new AWS.StepFunctions();
     const ecs = new AWS.ECS();
     
-    // Start Step Function execution with container overrides
+    // Start Step Function execution with container overrides in ECS format
     const executionParams = {
       stateMachineArn: savedResources.stepFunctionArn,
       name: `validation-run-${Date.now()}`,
@@ -1333,15 +1338,22 @@ app.post('/api/stepfunction/execute', async (req, res) => {
         action: 'run_active_validations',
         timestamp: new Date().toISOString(),
         containerOverrides: {
-          environment: [
+          ContainerOverrides: [
             {
-              name: 'TEST_CASE_SQL',
-              value: testCaseSQL
+              Name: containerName,
+              Environment: [
+                {
+                  Name: 'TEST_CASE_SQL',
+                  Value: testCaseSQL
+                }
+              ]
             }
           ]
         }
       })
     };
+    
+    console.log('🚀 Step Function input:', JSON.stringify(JSON.parse(executionParams.input), null, 2));
     
     console.log('🔄 Starting Step Function:', savedResources.stepFunctionArn);
     
@@ -2392,7 +2404,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       }
     }
     
-    // Create Step Function state machine
+    // Create Step Function state machine with container overrides support
     const stateMachineDefinition = {
       Comment: `Start Fargate task for ${repositoryName}`,
       StartAt: 'StartTask',
@@ -2404,6 +2416,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
             LaunchType: 'FARGATE',
             Cluster: clusterName,
             TaskDefinition: taskDefinitionFamily,
+            'Overrides.$': '$.containerOverrides',
             NetworkConfiguration: {
               AwsvpcConfiguration: {
                 Subnets: subnets.Subnets.slice(0, 2).map(subnet => subnet.SubnetId),
@@ -2416,6 +2429,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         }
       }
     };
+    
+    addDeploymentLog(deploymentId, 'step-functions', '💡 Step Function configured to accept container overrides (TEST_CASE_SQL)');
     
     try {
       const stateMachineResult = await stepfunctions.createStateMachine({
