@@ -200,7 +200,7 @@ const ValidationSummary = () => {
               <Button
                 onClick={downloadCSV}
                 disabled={filteredResults.length === 0}
-                className="bg-blue-500 hover:bg-blue-600 text-white transition-all duration-200 hover:scale-105"
+                className="bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:scale-105"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV

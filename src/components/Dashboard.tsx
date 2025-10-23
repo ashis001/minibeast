@@ -669,7 +669,7 @@ const Dashboard = () => {
             </SidebarGroup>
 
             <div className="mt-auto p-4">
-              <p className="text-slate-400 text-sm">© 2024 Mini Beast</p>
+              <p className="text-slate-400 text-sm">© 2025 Mini Beast</p>
             </div>
           </SidebarContent>
         </Sidebar>
