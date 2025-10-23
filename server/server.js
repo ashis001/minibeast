@@ -1314,7 +1314,8 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     let testCaseSQL = "SELECT id, validation_query, expected_outcome, operator, metric_index FROM tbl_validating_test_cases WHERE is_active = TRUE";
     
     if (validationIds && validationIds.length > 0) {
-      const idList = validationIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',');
+      // Validation IDs are numbers, so convert to string and handle SQL injection
+      const idList = validationIds.map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
       testCaseSQL += ` AND id IN (${idList})`;
     }
     
