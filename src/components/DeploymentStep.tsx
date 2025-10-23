@@ -116,7 +116,28 @@ const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
         body: formData,
       });
 
-      const result = await response.json();
+      // Check if response has content before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        throw new Error('Server returned empty response');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (parseError) {
+        console.error('Failed to parse server response:', text);
+        throw new Error('Invalid server response. Please check server logs.');
+      }
+
+      if (!response.ok) {
+        throw new Error(result.message || `Server error: ${response.status}`);
+      }
 
       if (result.success) {
         setDeploymentStatus('Creating ECR repository...');
