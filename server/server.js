@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -8,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, spawn } = require('child_process');
 const crypto = require('crypto');
+const { validateToken, requirePermission, optionalAuth } = require('./middleware/auth');
 
 // Configure file storage for Docker image uploads
 const upload = multer({ 
@@ -370,7 +372,7 @@ app.post('/api/test-snowflake', (req, res) => {
   });
 });
 
-app.post('/api/deploy', upload.single('dockerImage'), async (req, res) => {
+app.post('/api/deploy', validateToken, requirePermission('deploy'), upload.single('dockerImage'), async (req, res) => {
   try {
     const { imageName, envVariables, awsConfig, deploymentConfig, tempDeploymentId } = req.body;
     const dockerFile = req.file;
@@ -751,7 +753,7 @@ app.post('/api/snowflake/create-config-table', async (req, res) => {
   }
 });
 
-app.post('/api/snowflake/insert-validation', async (req, res) => {
+app.post('/api/snowflake/insert-validation', validateToken, requirePermission('add_validations'), async (req, res) => {
   let connection;
   try {
     const { account, username, password, database, schema, warehouse, role, validationCase } = req.body;
@@ -971,7 +973,7 @@ app.post('/api/snowflake/validations-filtered', async (req, res) => {
   }
 });
 
-app.post('/api/snowflake/update-validations', async (req, res) => {
+app.post('/api/snowflake/update-validations', validateToken, requirePermission('edit_validations'), async (req, res) => {
   let connection;
   try {
     const { snowflakeConfig, selectedValidationIds } = req.body;
@@ -1278,7 +1280,7 @@ app.delete('/api/deployment/clear/:module', async (req, res) => {
 });
 
 // Execute Step Function directly using saved deployment details
-app.post('/api/stepfunction/execute', async (req, res) => {
+app.post('/api/stepfunction/execute', validateToken, requirePermission('run_validations'), async (req, res) => {
   try {
     console.log('🚀 Executing Step Function from saved deployment...');
     
