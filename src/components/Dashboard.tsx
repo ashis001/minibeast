@@ -37,6 +37,7 @@ import ValidationStep from "./ValidationStep";
 import ViewValidations from "./ViewValidations";
 import ActivityLog from "./ActivityLog";
 import ValidationSummary from "./ValidationSummary";
+import LicenseInfo from "./LicenseInfo";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -249,6 +250,11 @@ const Dashboard = () => {
   } else if (currentView === 'home') {
       return (
         <>
+          {/* License Info */}
+          <div className="mb-6">
+            <LicenseInfo />
+          </div>
+
           {/* Hero Section */}
           <div className="mb-12">
             {/* Three Module Cards */}

@@ -1,13 +1,28 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+interface License {
+  type: string;
+  expires_at: string;
+  features: string[];
+  is_valid: boolean;
+}
+
+interface Organization {
+  name: string;
+  id: string;
+}
+
 interface User {
   id: string;
   email: string;
   full_name: string;
   role: string;
   organization_id: string;
+  organization_name?: string;
   permissions: string[];
+  license?: License;
+  organization?: Organization;
 }
 
 interface AuthContextType {
