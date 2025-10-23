@@ -2130,7 +2130,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       }).promise();
       taskRoleArn = taskRoleResult.Role.Arn;
       
-      // Create inline policy for SSM Parameter Store access
+      // Create inline policy for SSM Parameter Store and SES access
       const policyDocument = {
         Version: '2012-10-17',
         Statement: [
@@ -2147,6 +2147,14 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
             Effect: 'Allow',
             Action: [
               'kms:Decrypt'
+            ],
+            Resource: '*'
+          },
+          {
+            Effect: 'Allow',
+            Action: [
+              'ses:SendEmail',
+              'ses:SendRawEmail'
             ],
             Resource: '*'
           }
