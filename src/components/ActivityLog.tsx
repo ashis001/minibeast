@@ -131,19 +131,27 @@ const ActivityLog = () => {
               if (newLogs.length > 0) {
                 setLastLogTimestamp(newLogs[newLogs.length - 1].timestamp);
               }
+              console.log(`📥 Initial load: ${newLogs.length} logs`);
               return { ...exec, logs: newLogs, taskArn: data.taskArn };
             } else {
-              // Incremental load - append new logs (server already filtered them)
+              // Incremental load - only append truly new logs
               if (newLogs.length > 0) {
                 const existingLogs = exec.logs || [];
-                const combinedLogs = [...existingLogs, ...newLogs];
-                setLastLogTimestamp(newLogs[newLogs.length - 1].timestamp);
-                console.log(`📝 Appended ${newLogs.length} new logs`);
-                return { ...exec, logs: combinedLogs, taskArn: data.taskArn };
+                
+                // Filter out duplicates by timestamp to prevent repeats
+                const existingTimestamps = new Set(existingLogs.map(log => log.timestamp));
+                const uniqueNewLogs = newLogs.filter(log => !existingTimestamps.has(log.timestamp));
+                
+                if (uniqueNewLogs.length > 0) {
+                  const combinedLogs = [...existingLogs, ...uniqueNewLogs];
+                  setLastLogTimestamp(uniqueNewLogs[uniqueNewLogs.length - 1].timestamp);
+                  console.log(`📝 Appended ${uniqueNewLogs.length} new unique logs`);
+                  return { ...exec, logs: combinedLogs, taskArn: data.taskArn };
+                }
               }
               
-              // No new logs, return existing
-              return exec;
+              // No new logs, return existing with updated taskArn
+              return { ...exec, taskArn: data.taskArn };
             }
           }
           return exec;
@@ -341,48 +349,6 @@ const ActivityLog = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <Button
-              variant={autoRefresh ? "default" : "outline"}
-              disabled={selectedExecutionData && selectedExecutionData.status !== 'RUNNING'}
-              onClick={() => {
-                const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
-                
-                // Prevent enabling auto-refresh for non-running tasks
-                if (selectedData && selectedData.status !== 'RUNNING') {
-                  toast({
-                    title: "Cannot enable auto-refresh",
-                    description: `Task is ${selectedData.status.toLowerCase()}. Auto-refresh only works for running tasks.`,
-                    variant: "destructive",
-                    duration: 4000,
-                  });
-                  return;
-                }
-                
-                const newAutoRefresh = !autoRefresh;
-                setAutoRefresh(newAutoRefresh);
-                if (newAutoRefresh) {
-                  setAutoRefreshStartTime(Date.now()); // Reset 60-second timer
-                  setRemainingTime(60); // Reset countdown display
-                  setIsPaused(false);
-                  console.log('▶️ Auto-refresh enabled - 60 second timer started');
-                } else {
-                  setAutoRefreshStartTime(null);
-                  setRemainingTime(60);
-                  console.log('⏹️ Auto-refresh disabled');
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${autoRefresh && !isPaused ? 'animate-spin' : ''}`} />
-              {selectedExecutionData && selectedExecutionData.status !== 'RUNNING' ? (
-                `Task ${selectedExecutionData.status.toLowerCase()} - Auto-refresh disabled`
-              ) : autoRefresh ? (
-                isPaused ? 'Auto-refresh (Paused)' : 
-                `Auto-refresh ON (${remainingTime}s)`
-              ) : 'Auto-refresh OFF'}
-            </Button>
-            
-            
             {selectedExecutionData && (
               <Button
                 variant="outline"
@@ -533,19 +499,6 @@ const ActivityLog = () => {
                 ) : (
                   <div className="bg-black rounded-lg p-4 h-[456px] overflow-y-auto font-mono text-sm relative">
                     {/* CloudWatch-style pause notification */}
-                    {isPaused && (
-                      <div className="sticky top-0 bg-orange-100 border border-orange-300 rounded-md p-2 mb-4 text-center text-sm">
-                        <span className="text-orange-800">
-                          Auto retry paused.{' '}
-                          <button 
-                            onClick={handleResume}
-                            className="text-blue-600 hover:text-blue-800 underline font-medium"
-                          >
-                            Resume
-                          </button>
-                        </span>
-                      </div>
-                    )}
                     
                     {/* Always show the log container, no waiting animation */}
                     {selectedExecutionData.logs.length === 0 ? (
