@@ -251,55 +251,101 @@ const Dashboard = () => {
         <>
           {/* Hero Section */}
           <div className="mb-12">
-            <Card className="bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700">
-              <CardContent className="p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                  <div>
-                    <h2 className="text-4xl font-bold text-white mb-4">
-                      Enterprise Data Validation
-                    </h2>
-                    <p className="text-slate-300 text-lg mb-6">
-                      Deploy robust data validation pipelines with military-grade security, 
-                      real-time monitoring, and seamless AWS integration. Built for scale, 
-                      designed for reliability.
-                    </p>
-                    <div className="flex space-x-4">
-                      <button 
-                        onClick={() => handleMenuClick('config')}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                      >
-                        Start Deployment
-                      </button>
-                      <button className="border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 px-6 py-3 rounded-lg font-medium transition-colors">
-                        View Documentation
-                      </button>
+            <div className="text-center mb-8">
+              <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                Enterprise Data Operations Platform
+              </h1>
+              <p className="text-slate-400 text-xl max-w-3xl mx-auto">
+                Complete data lifecycle management with Migration, Validation, and Reconciliation
+              </p>
+            </div>
+
+            {/* Three Module Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {/* Migration Module */}
+              <Card className="bg-gradient-to-br from-blue-900/20 to-slate-900 border-blue-500/30 hover:border-blue-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <GitBranch className="h-6 w-6 text-blue-400" />
+                    </div>
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Active</Badge>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Migration</h3>
+                  <p className="text-slate-400 mb-4">Seamless data transfer between systems with zero downtime</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Schema mapping</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Bulk data transfer</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Progress tracking</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                      <Server className="h-8 w-8 text-emerald-400 mb-2" />
-                      <h3 className="text-white font-semibold mb-1">High Performance</h3>
-                      <p className="text-slate-400 text-sm">99.9% uptime guaranteed</p>
+                </CardContent>
+              </Card>
+
+              {/* Validation Module */}
+              <Card className="bg-gradient-to-br from-emerald-900/20 to-slate-900 border-emerald-500/30 hover:border-emerald-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                      <Shield className="h-6 w-6 text-emerald-400" />
                     </div>
-                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                      <Lock className="h-8 w-8 text-emerald-400 mb-2" />
-                      <h3 className="text-white font-semibold mb-1">Enterprise Security</h3>
-                      <p className="text-slate-400 text-sm">SOC2 Type II compliant</p>
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Deployed</Badge>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Validation</h3>
+                  <p className="text-slate-400 mb-4">Real-time data quality checks with automated alerting</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Custom rules engine</span>
                     </div>
-                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                      <Cloud className="h-8 w-8 text-emerald-400 mb-2" />
-                      <h3 className="text-white font-semibold mb-1">Cloud Native</h3>
-                      <p className="text-slate-400 text-sm">AWS ECS deployment</p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Email notifications</span>
                     </div>
-                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                      <Gauge className="h-8 w-8 text-emerald-400 mb-2" />
-                      <h3 className="text-white font-semibold mb-1">Real-time Monitoring</h3>
-                      <p className="text-slate-400 text-sm">Live performance metrics</p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Detailed reports</span>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Reconciliation Module */}
+              <Card className="bg-gradient-to-br from-purple-900/20 to-slate-900 border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                      <Activity className="h-6 w-6 text-purple-400" />
+                    </div>
+                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">Active</Badge>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Reconciliation</h3>
+                  <p className="text-slate-400 mb-4">Cross-system data matching and discrepancy detection</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Multi-source compare</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Anomaly detection</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm text-slate-300">Reconciliation reports</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Stats Cards */}
