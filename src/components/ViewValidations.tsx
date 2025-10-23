@@ -645,43 +645,24 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
           </DropdownMenu>
         </div>
 
-        {/* Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button 
-              onClick={saveActivationChanges} 
-              disabled={isSaving || selectedValidations.length === 0}
-              className="w-full"
-            >
-              {isSaving ? 'Saving...' : 'Activate Selected'}
-            </Button>
-            <Button 
-              onClick={runValidations} 
-              disabled={isRunning || validations.some(v => !v.IS_ACTIVE)}
-              className="w-full flex items-center gap-2"
-            >
-              {isRunning ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Running...
-                </>
-              ) : validations.some(v => !v.IS_ACTIVE) ? (
-                <>
-                  <AlertTriangle className="h-4 w-4" />
-                  Inactive Rules Found - Cannot Run
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Run Validations
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Run Validations Button */}
+        <Button 
+          onClick={runValidations} 
+          disabled={isRunning || selectedValidations.length === 0}
+          className="w-full flex items-center gap-2"
+        >
+          {isRunning ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Running...
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4" />
+              Run Validations
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Validations Table */}
