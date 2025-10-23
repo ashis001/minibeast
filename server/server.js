@@ -1305,8 +1305,9 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     const deploymentDetails = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
     
     // Load saved resources to get container name
+    // Container name in task definition is the repositoryName (e.g., 'minibeat-validator-repo-deploy-1')
     const taskDefArn = savedResources.taskDefinition;
-    const containerName = savedResources.taskDefinitionFamily || 'validator';
+    const containerName = savedResources.ecrRepository ? savedResources.ecrRepository.split('/').pop().split(':')[0] : 'validator';
     
     // Build dynamic SQL query based on selected entities
     let testCaseSQL = "SELECT id, validation_query, expected_outcome, operator, metric_index FROM tbl_validating_test_cases WHERE is_active = TRUE";
