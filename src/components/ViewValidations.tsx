@@ -646,23 +646,26 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
         </div>
 
         {/* Run Validations Button */}
-        <Button 
-          onClick={runValidations} 
-          disabled={isRunning || selectedValidations.length === 0}
-          className="w-full flex items-center gap-2"
-        >
-          {isRunning ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Running...
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4" />
-              Run Validations
-            </>
-          )}
-        </Button>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Actions</label>
+          <Button 
+            onClick={runValidations} 
+            disabled={isRunning || selectedValidations.length === 0}
+            className="w-full flex items-center gap-2"
+          >
+            {isRunning ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Run Validations
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Validations Table */}
