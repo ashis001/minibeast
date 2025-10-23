@@ -30,6 +30,7 @@ import {
   Cog,
   ChevronDown,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import DeploymentWizard from "./DeploymentWizard";
 import ValidationStep from "./ValidationStep";
@@ -260,9 +261,12 @@ const Dashboard = () => {
                   <h1 className="text-2xl font-bold text-white">
                     MINIBEAST 2.0
                   </h1>
-                  <p className="text-slate-400">
-                    POWERED BY DATACTION
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Sparkles className="h-3 w-3 text-emerald-400" />
+                    <p className="text-xs font-medium text-slate-500 tracking-wider">
+                      POWERED BY DATACTION
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -620,7 +624,10 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-white font-semibold">MINIBEAST 2.0</h1>
-                  <p className="text-slate-400 text-sm">POWERED BY DATACTION</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Sparkles className="h-2.5 w-2.5 text-emerald-400" />
+                    <p className="text-[10px] font-medium text-slate-500 tracking-wider">POWERED BY DATACTION</p>
+                  </div>
                 </div>
               </div>
             </div>

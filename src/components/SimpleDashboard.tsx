@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, Settings, Database } from "lucide-react";
+import { Zap, Settings, Database, Sparkles } from "lucide-react";
 
 const SimpleDashboard = () => {
   const navigate = useNavigate();
@@ -12,7 +12,10 @@ const SimpleDashboard = () => {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">MINIBEAST 2.0</h1>
-          <p className="text-slate-400">POWERED BY DATACTION</p>
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3 text-emerald-400" />
+            <p className="text-xs font-medium text-slate-500 tracking-wider">POWERED BY DATACTION</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
