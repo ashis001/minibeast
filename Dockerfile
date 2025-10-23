@@ -2,6 +2,10 @@
 # Multi-stage build for optimized production image
 FROM node:18-alpine AS frontend-builder
 
+# Build arguments for environment variables
+ARG VITE_API_URL=http://localhost:3002
+ARG VITE_AUTH_SERVER_URL=http://localhost:8000
+
 # Build React frontend
 WORKDIR /app/frontend
 COPY package*.json ./
@@ -14,6 +18,10 @@ COPY index.html ./
 COPY .env* ./
 COPY src/ ./src/
 COPY public/ ./public/
+
+# Set environment variables from build args
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_AUTH_SERVER_URL=$VITE_AUTH_SERVER_URL
 
 # Install dependencies and build
 RUN npm ci && npm run build
