@@ -2049,18 +2049,22 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       addDeploymentLog(deploymentId, 'ecr-push', '❌ No Docker tar file found in upload');
       throw new Error('No Docker image file uploaded');
     }
+    const logGroupName = `/ecs/${repositoryName}`;
+    try {
+      await logs.createLogGroup({ logGroupName }).promise();
+      addDeploymentLog(deploymentId, 'task-definition', `✅ Created log group: ${logGroupName}`);
+    } catch (error) {
+      if (error.code !== 'ResourceAlreadyExistsException') {
+        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Log group error: ${error.message}`);
+      }
+    }
     
-    updateDeploymentStep(deploymentId, 'ecr-push', 'completed');
-    
-    // Step 3: Create IAM Execution Role
-    updateDeploymentStep(deploymentId, 'task-definition', 'running');
-    addDeploymentLog(deploymentId, 'task-definition', '🔐 Creating IAM execution role...');
-    
-    const executionRoleName = `minibeat-ecs-exec-${timestamp}`;
+    // Create IAM execution role for ECS
+    const executionRoleName = `data-deployer-${repositoryName}-execution-role-${crypto.randomBytes(4).toString('hex')}`;
     let executionRoleArn;
     
     try {
-      addDeploymentLog(deploymentId, 'task-definition', `Creating role: ${executionRoleName}...`);
+      addDeploymentLog(deploymentId, 'task-definition', `Creating execution role: ${executionRoleName}...`);
       const roleResult = await iam.createRole({
         RoleName: executionRoleName,
         AssumeRolePolicyDocument: JSON.stringify({
@@ -2074,7 +2078,6 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       }).promise();
       executionRoleArn = roleResult.Role.Arn;
       
-      // Attach required policies
       await iam.attachRolePolicy({
         RoleName: executionRoleName,
         PolicyArn: 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
@@ -2082,30 +2085,79 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       
       addDeploymentLog(deploymentId, 'task-definition', `✅ Created execution role: ${executionRoleArn}`);
       
-      // Wait for role propagation (increased from 5s to 15s)
-      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation (15 seconds)...');
-      await new Promise(resolve => setTimeout(resolve, 15000));
-      
     } catch (error) {
-      addDeploymentLog(deploymentId, 'task-definition', `❌ IAM role creation error: ${error.code} - ${error.message}`);
       if (error.code === 'EntityAlreadyExistsException') {
         const getRoleResult = await iam.getRole({ RoleName: executionRoleName }).promise();
         executionRoleArn = getRoleResult.Role.Arn;
-        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Using existing role: ${executionRoleArn}`);
+        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Using existing execution role: ${executionRoleArn}`);
       } else {
-        addDeploymentLog(deploymentId, 'task-definition', `❌ Failed to create IAM role: ${error.message}`);
+        addDeploymentLog(deploymentId, 'task-definition', `❌ Failed to create execution role: ${error.message}`);
         throw error;
       }
     }
     
-    // Create CloudWatch log group
-    const logGroupName = `/ecs/${repositoryName}`;
+    // Create IAM Task Role with SSM Parameter Store permissions
+    const taskRoleName = `data-deployer-${repositoryName}-task-role-${crypto.randomBytes(4).toString('hex')}`;
+    let taskRoleArn;
+    
     try {
-      await logs.createLogGroup({ logGroupName }).promise();
-      addDeploymentLog(deploymentId, 'task-definition', `✅ Created log group: ${logGroupName}`);
+      addDeploymentLog(deploymentId, 'task-definition', `Creating task role: ${taskRoleName}...`);
+      const taskRoleResult = await iam.createRole({
+        RoleName: taskRoleName,
+        AssumeRolePolicyDocument: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [{
+            Effect: 'Allow',
+            Principal: { Service: 'ecs-tasks.amazonaws.com' },
+            Action: 'sts:AssumeRole'
+          }]
+        })
+      }).promise();
+      taskRoleArn = taskRoleResult.Role.Arn;
+      
+      // Create inline policy for SSM Parameter Store access
+      const policyDocument = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: [
+              'ssm:GetParameter',
+              'ssm:GetParameters',
+              'ssm:GetParametersByPath'
+            ],
+            Resource: `arn:aws:ssm:${region}:*:parameter/*`
+          },
+          {
+            Effect: 'Allow',
+            Action: [
+              'kms:Decrypt'
+            ],
+            Resource: '*'
+          }
+        ]
+      };
+      
+      await iam.putRolePolicy({
+        RoleName: taskRoleName,
+        PolicyName: 'SSMParameterStoreAccess',
+        PolicyDocument: JSON.stringify(policyDocument)
+      }).promise();
+      
+      addDeploymentLog(deploymentId, 'task-definition', `✅ Created task role with SSM permissions: ${taskRoleArn}`);
+      
+      // Wait for role propagation
+      addDeploymentLog(deploymentId, 'task-definition', '⏳ Waiting for IAM role propagation (15 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 15000));
+      
     } catch (error) {
-      if (error.code !== 'ResourceAlreadyExistsException') {
-        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Log group error: ${error.message}`);
+      if (error.code === 'EntityAlreadyExistsException') {
+        const getTaskRoleResult = await iam.getRole({ RoleName: taskRoleName }).promise();
+        taskRoleArn = getTaskRoleResult.Role.Arn;
+        addDeploymentLog(deploymentId, 'task-definition', `⚠️ Using existing task role: ${taskRoleArn}`);
+      } else {
+        addDeploymentLog(deploymentId, 'task-definition', `❌ Failed to create task role: ${error.message}`);
+        throw error;
       }
     }
     
@@ -2119,6 +2171,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       cpu: '256',
       memory: '512',
       executionRoleArn: executionRoleArn,
+      taskRoleArn: taskRoleArn,
       containerDefinitions: [{
         name: repositoryName,
         image: `${repositoryUri}:latest`,
@@ -2146,7 +2199,7 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
         deployStatus.taskDefinition = taskDefResult.taskDefinition.taskDefinitionArn;
         deployStatus.taskDefinitionFamily = taskDefinitionFamily;
         deployStatus.executionRoleArn = executionRoleArn;
-        deployStatus.taskRoleArn = executionRoleArn; // Use same role for both execution and task
+        deployStatus.taskRoleArn = taskRoleArn;
         deploymentStatus.set(deploymentId, deployStatus);
       }
       
