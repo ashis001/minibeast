@@ -213,6 +213,8 @@ const ActivityLog = () => {
       return;
     }
 
+    console.log('✅ Starting auto-refresh interval for:', selectedExecution.split(':').pop());
+
     const interval = setInterval(() => {
       // Check if 60 seconds have passed
       const currentTime = Date.now();
@@ -234,24 +236,16 @@ const ActivityLog = () => {
 
       // Always fetch latest execution status and logs during auto-refresh
       // This ensures we detect status changes (RUNNING -> SUCCEEDED/FAILED) immediately
-      console.log(`🔄 Auto-refreshing execution (${remainingTime}s remaining):`, selectedExecution.split(':').pop());
+      console.log('🔄 Auto-refreshing execution:', selectedExecution.split(':').pop());
       fetchExecutions(); // Always fetch to get latest status from AWS
       fetchLogs(selectedExecution, false); // Incremental load
-      
-      // Track log changes
-      const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
-      const currentLogCount = selectedData?.logs?.length || 0;
-      if (currentLogCount === lastLogCount) {
-        setNoNewLogsCount(prev => prev + 1);
-      } else {
-        setLastLogCount(currentLogCount);
-        setNoNewLogsCount(0);
-        setIsPaused(false);
-      }
     }, 5000); // Check every 5 seconds for faster response
 
-    return () => clearInterval(interval);
-  }, [autoRefresh, selectedExecution, executions, lastLogCount, noNewLogsCount, autoRefreshStartTime, remainingTime]);
+    return () => {
+      console.log('🛑 Clearing auto-refresh interval');
+      clearInterval(interval);
+    };
+  }, [autoRefresh, selectedExecution]);
 
   const handleResume = () => {
     const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
