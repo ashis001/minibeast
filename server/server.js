@@ -2059,8 +2059,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       }
     }
     
-    // Create IAM execution role for ECS
-    const executionRoleName = `data-deployer-${repositoryName}-execution-role-${crypto.randomBytes(4).toString('hex')}`;
+    // Create IAM execution role for ECS (must be <= 64 chars)
+    const executionRoleName = `${module}-exec-${crypto.randomBytes(4).toString('hex')}`;
     let executionRoleArn;
     
     try {
@@ -2096,8 +2096,8 @@ async function simulateWebDeployment(deploymentId, repositoryName, clusterName, 
       }
     }
     
-    // Create IAM Task Role with SSM Parameter Store permissions
-    const taskRoleName = `data-deployer-${repositoryName}-task-role-${crypto.randomBytes(4).toString('hex')}`;
+    // Create IAM Task Role with SSM Parameter Store permissions (must be <= 64 chars)
+    const taskRoleName = `${module}-task-${crypto.randomBytes(4).toString('hex')}`;
     let taskRoleArn;
     
     try {
