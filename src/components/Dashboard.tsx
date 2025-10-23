@@ -251,15 +251,6 @@ const Dashboard = () => {
         <>
           {/* Hero Section */}
           <div className="mb-12">
-            <div className="text-center mb-8">
-              <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                Enterprise Data Operations Platform
-              </h1>
-              <p className="text-slate-400 text-xl max-w-3xl mx-auto">
-                Complete data lifecycle management with Migration, Validation, and Reconciliation
-              </p>
-            </div>
-
             {/* Three Module Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {/* Migration Module */}
