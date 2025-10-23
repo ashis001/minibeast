@@ -170,7 +170,28 @@ const ActivityLog = () => {
     }
   }, [selectedExecution]);
 
-  // Smart auto-refresh - only for the latest execution with 30-second timeout
+  // Watch for execution status changes and stop auto-refresh when complete
+  useEffect(() => {
+    if (!autoRefresh || !selectedExecution) return;
+    
+    const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
+    
+    // Stop auto-refresh immediately if execution is FAILED or SUCCEEDED
+    if (selectedData && (selectedData.status === 'FAILED' || selectedData.status === 'SUCCEEDED')) {
+      console.log(`🛑 Auto-refresh stopped - execution ${selectedData.status}`);
+      setAutoRefresh(false);
+      setIsPaused(true);
+      setAutoRefreshStartTime(null);
+      
+      toast({
+        title: "Auto-refresh stopped",
+        description: `Execution ${selectedData.status.toLowerCase()}. Auto-refresh stopped automatically.`,
+        duration: 4000,
+      });
+    }
+  }, [executions, selectedExecution, autoRefresh]);
+
+  // Smart auto-refresh - only for the latest execution with 60-second timeout
   useEffect(() => {
     if (!autoRefresh || !selectedExecution || executions.length === 0) return;
 
@@ -195,27 +216,12 @@ const ActivityLog = () => {
     const interval = setInterval(() => {
       const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
       
-      // Stop auto-refresh immediately if execution is FAILED or SUCCEEDED
-      if (selectedData && (selectedData.status === 'FAILED' || selectedData.status === 'SUCCEEDED')) {
-        console.log(`🛑 Auto-refresh stopped - execution ${selectedData.status}`);
-        setAutoRefresh(false);
-        setIsPaused(true);
-        setAutoRefreshStartTime(null);
-        
-        toast({
-          title: "Auto-refresh stopped",
-          description: `Execution ${selectedData.status.toLowerCase()}. Auto-refresh stopped automatically.`,
-          duration: 4000,
-        });
-        return;
-      }
-      
-      // Check if 30 seconds have passed
+      // Check if 60 seconds have passed
       const currentTime = Date.now();
       const elapsedTime = currentTime - (autoRefreshStartTime || currentTime);
       
       if (elapsedTime >= 60000) { // 60 seconds
-        console.log('⏰ Auto-refresh stopped - 30 second timeout reached');
+        console.log('⏰ Auto-refresh stopped - 60 second timeout reached');
         setAutoRefresh(false);
         setIsPaused(true);
         setAutoRefreshStartTime(null);
@@ -247,7 +253,7 @@ const ActivityLog = () => {
     }, 5000); // Check every 5 seconds for faster response
 
     return () => clearInterval(interval);
-  }, [autoRefresh, selectedExecution, executions, lastLogCount, noNewLogsCount, autoRefreshStartTime]);
+  }, [autoRefresh, selectedExecution, executions, lastLogCount, noNewLogsCount, autoRefreshStartTime, remainingTime]);
 
   const handleResume = () => {
     const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
