@@ -51,8 +51,12 @@ const ActivityLog = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [executions]);
+    // Only scroll when logs change for the selected execution
+    const selectedExec = executions.find(exec => exec.executionArn === selectedExecution);
+    if (selectedExec?.logs && selectedExec.logs.length > 0) {
+      scrollToBottom();
+    }
+  }, [executions, selectedExecution]);
 
   // Countdown timer effect
   useEffect(() => {
@@ -79,7 +83,17 @@ const ActivityLog = () => {
       const data = await response.json();
       
       if (data.success) {
-        setExecutions(data.executions);
+        // Preserve existing logs when updating executions to prevent flickering
+        setExecutions(prev => {
+          return data.executions.map((newExec: TaskExecution) => {
+            const existingExec = prev.find(e => e.executionArn === newExec.executionArn);
+            // Keep existing logs if they exist, otherwise use new logs
+            return {
+              ...newExec,
+              logs: existingExec?.logs || newExec.logs || []
+            };
+          });
+        });
         
         // Auto-select the most recent execution if none selected
         if (!selectedExecution && data.executions.length > 0) {
