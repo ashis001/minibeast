@@ -474,13 +474,15 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const runValidations = async () => {
     setIsRunning(true);
     try {
-      // Execute Step Function using saved deployment details
+      // Execute Step Function using saved deployment details with selected entities
       const validationResponse = await fetch('/api/stepfunction/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          entities: selectedEntities
+        }),
       });
 
       const validationData = await validationResponse.json();

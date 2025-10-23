@@ -1282,6 +1282,8 @@ app.post('/api/stepfunction/execute', async (req, res) => {
   try {
     console.log('🚀 Executing Step Function from saved deployment...');
     
+    const { entities } = req.body;
+    
     // Load saved AWS resources
     const fs = require('fs');
     const path = require('path');
@@ -1302,6 +1304,16 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     const savedResources = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
     const deploymentDetails = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
     
+    // Build dynamic SQL query based on selected entities
+    let testCaseSQL = "SELECT id, validation_query, expected_outcome, operator, metric_index FROM tbl_validating_test_cases WHERE is_active = TRUE";
+    
+    if (entities && entities.length > 0) {
+      const entityList = entities.map(e => `'${e.replace(/'/g, "''")}'`).join(',');
+      testCaseSQL += ` AND entity IN (${entityList})`;
+    }
+    
+    console.log('📝 Generated TEST_CASE_SQL:', testCaseSQL);
+    
     // Configure AWS SDK with saved credentials
     const AWS = require('aws-sdk');
     AWS.config.update({
@@ -1311,14 +1323,23 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     });
     
     const stepfunctions = new AWS.StepFunctions();
+    const ecs = new AWS.ECS();
     
-    // Start Step Function execution
+    // Start Step Function execution with container overrides
     const executionParams = {
       stateMachineArn: savedResources.stepFunctionArn,
       name: `validation-run-${Date.now()}`,
       input: JSON.stringify({
         action: 'run_active_validations',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        containerOverrides: {
+          environment: [
+            {
+              name: 'TEST_CASE_SQL',
+              value: testCaseSQL
+            }
+          ]
+        }
       })
     };
     
