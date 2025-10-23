@@ -11,6 +11,7 @@ COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 COPY components.json ./
 COPY index.html ./
+COPY .env* ./
 COPY src/ ./src/
 COPY public/ ./public/
 
@@ -32,8 +33,9 @@ COPY server/package*.json ./server/
 # Install Node.js dependencies
 RUN cd server && npm ci --only=production
 
-# Copy server code
+# Copy server code and env files
 COPY server/ ./server/
+COPY server/.env* ./server/
 
 # Copy built frontend from builder stage
 COPY --from=frontend-builder /app/frontend/dist ./public/
