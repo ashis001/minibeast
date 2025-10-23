@@ -258,10 +258,10 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">
-                    Mini Beast Data Deployer
+                    MINIBEAST 2.0
                   </h1>
                   <p className="text-slate-400">
-                    Industrial-grade data validation and deployment platform
+                    POWERED BY DATACTION
                   </p>
                 </div>
               </div>
@@ -619,8 +619,8 @@ const Dashboard = () => {
                   <Database className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-white font-semibold">Mini Beast</h1>
-                  <p className="text-slate-400 text-sm">Data Deployer</p>
+                  <h1 className="text-white font-semibold">MINIBEAST 2.0</h1>
+                  <p className="text-slate-400 text-sm">POWERED BY DATACTION</p>
                 </div>
               </div>
             </div>

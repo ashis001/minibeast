@@ -16,10 +16,10 @@
     --popover: 215 25% 12%;
     --popover-foreground: 210 40% 95%;
 
-    /* Enterprise blue primary */
-    --primary: 214 95% 60%;
+    /* Primary green #47cd89 */
+    --primary: 151 55% 54%;
     --primary-foreground: 215 25% 8%;
-    --primary-glow: 214 95% 70%;
+    --primary-glow: 151 55% 64%;
 
     /* Subtle secondary */
     --secondary: 215 25% 16%;
@@ -30,7 +30,7 @@
     --muted-foreground: 215 15% 65%;
 
     /* Success and warning accents */
-    --accent: 151 75% 45%;
+    --accent: 151 55% 54%;
     --accent-foreground: 215 25% 8%;
 
     --warning: 45 95% 55%;
@@ -42,7 +42,7 @@
     /* Borders and inputs */
     --border: 215 25% 20%;
     --input: 215 25% 16%;
-    --ring: 214 95% 60%;
+    --ring: 151 55% 54%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));

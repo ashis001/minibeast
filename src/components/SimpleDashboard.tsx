@@ -11,8 +11,8 @@ const SimpleDashboard = () => {
     <div className="min-h-screen bg-slate-900 text-white p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Mini Beast Data Deployer</h1>
-          <p className="text-slate-400">Industrial-grade data validation and deployment platform</p>
+          <h1 className="text-3xl font-bold mb-2">MINIBEAST 2.0</h1>
+          <p className="text-slate-400">POWERED BY DATACTION</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
