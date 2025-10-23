@@ -214,8 +214,6 @@ const ActivityLog = () => {
     }
 
     const interval = setInterval(() => {
-      const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
-      
       // Check if 60 seconds have passed
       const currentTime = Date.now();
       const elapsedTime = currentTime - (autoRefreshStartTime || currentTime);
@@ -234,21 +232,21 @@ const ActivityLog = () => {
         return;
       }
 
-      // Only auto-refresh for RUNNING executions
-      if (selectedData?.status === 'RUNNING') {
-        console.log(`🔄 Auto-refreshing RUNNING execution (${remainingTime}s remaining):`, selectedExecution.split(':').pop());
-        fetchExecutions();
-        fetchLogs(selectedExecution, false); // Incremental load
-        
-        // Check if we got new logs
-        const currentLogCount = selectedData?.logs?.length || 0;
-        if (currentLogCount === lastLogCount) {
-          setNoNewLogsCount(prev => prev + 1);
-        } else {
-          setLastLogCount(currentLogCount);
-          setNoNewLogsCount(0);
-          setIsPaused(false);
-        }
+      // Always fetch latest execution status and logs during auto-refresh
+      // This ensures we detect status changes (RUNNING -> SUCCEEDED/FAILED) immediately
+      console.log(`🔄 Auto-refreshing execution (${remainingTime}s remaining):`, selectedExecution.split(':').pop());
+      fetchExecutions(); // Always fetch to get latest status from AWS
+      fetchLogs(selectedExecution, false); // Incremental load
+      
+      // Track log changes
+      const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
+      const currentLogCount = selectedData?.logs?.length || 0;
+      if (currentLogCount === lastLogCount) {
+        setNoNewLogsCount(prev => prev + 1);
+      } else {
+        setLastLogCount(currentLogCount);
+        setNoNewLogsCount(0);
+        setIsPaused(false);
       }
     }, 5000); // Check every 5 seconds for faster response
 
