@@ -297,7 +297,8 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
       const data = await response.json();
       if (data.success) {
         setEntities(data.entities);
-        setSelectedEntities([]); // Start with no entities selected
+        setSelectedEntities(data.entities); // Auto-select all entities
+        setEntitySelectAll(true); // Mark select all as checked
       } else {
         toast({
           title: "Error",
@@ -332,8 +333,8 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
       const data = await response.json();
       if (data.success) {
         setDescriptions(data.descriptions);
-        setSelectedDescriptions([]); // Don't auto-select descriptions
-        setDescriptionSelectAll(false); // Reset select all state
+        setSelectedDescriptions(data.descriptions); // Auto-select all descriptions
+        setDescriptionSelectAll(true); // Mark select all as checked
       } else {
         toast({
           title: "Error",
