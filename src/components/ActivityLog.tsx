@@ -46,6 +46,7 @@ const ActivityLog = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const previousLogCountRef = useRef<number>(0);
 
   // Auto-scroll to bottom when new logs arrive
   const scrollToBottom = () => {
@@ -53,11 +54,17 @@ const ActivityLog = () => {
   };
 
   useEffect(() => {
-    // Only scroll when logs change for the selected execution
+    // Only scroll when NEW logs are added, not on every refresh
     const selectedExec = executions.find(exec => exec.executionArn === selectedExecution);
-    if (selectedExec?.logs && selectedExec.logs.length > 0) {
+    const currentLogCount = selectedExec?.logs?.length || 0;
+    
+    // Only scroll if log count actually increased
+    if (currentLogCount > previousLogCountRef.current && currentLogCount > 0) {
       scrollToBottom();
     }
+    
+    // Update the reference
+    previousLogCountRef.current = currentLogCount;
   }, [executions, selectedExecution]);
 
   // Countdown timer effect
@@ -175,6 +182,7 @@ const ActivityLog = () => {
       setNoNewLogsCount(0);
       setIsPaused(false);
       setLastLogTimestamp(null);
+      previousLogCountRef.current = 0; // Reset scroll tracking
     }
   }, [selectedExecution]);
 
