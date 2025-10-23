@@ -249,29 +249,6 @@ const Dashboard = () => {
   } else if (currentView === 'home') {
       return (
         <>
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <SidebarTrigger className="text-white" />
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                  <Database className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">
-                    MINIBEAST 2.0
-                  </h1>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Sparkles className="h-3 w-3 text-emerald-400" />
-                    <p className="text-xs font-medium text-slate-500 tracking-wider">
-                      POWERED BY DATACTION
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Hero Section */}
           <div className="mb-12">
             <Card className="bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700">
