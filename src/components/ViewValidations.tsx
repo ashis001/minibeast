@@ -474,18 +474,15 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const runValidations = async () => {
     setIsRunning(true);
     try {
-      // Extract unique entities from selected validation rules
-      const selectedRules = validations.filter(v => selectedValidations.includes(v.ID));
-      const entitiesFromSelectedRules = [...new Set(selectedRules.map(v => v.ENTITY))];
-      
-      // Execute Step Function using saved deployment details with entities from selected rules
+      // Pass validation IDs instead of entities to avoid duplicate entity names
+      // This allows filtering by specific validation rules (entity + description combination)
       const validationResponse = await fetch('/api/stepfunction/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          entities: entitiesFromSelectedRules
+          validationIds: selectedValidations
         }),
       });
 

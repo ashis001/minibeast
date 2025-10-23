@@ -1282,7 +1282,7 @@ app.post('/api/stepfunction/execute', async (req, res) => {
   try {
     console.log('🚀 Executing Step Function from saved deployment...');
     
-    const { entities } = req.body;
+    const { validationIds } = req.body;
     
     // Load saved AWS resources
     const fs = require('fs');
@@ -1309,12 +1309,13 @@ app.post('/api/stepfunction/execute', async (req, res) => {
     const taskDefArn = savedResources.taskDefinition;
     const containerName = savedResources.ecrRepository ? savedResources.ecrRepository.split('/').pop().split(':')[0] : 'validator';
     
-    // Build dynamic SQL query based on selected entities
+    // Build dynamic SQL query based on selected validation IDs
+    // This ensures we run specific validation rules (entity + description combination)
     let testCaseSQL = "SELECT id, validation_query, expected_outcome, operator, metric_index FROM tbl_validating_test_cases WHERE is_active = TRUE";
     
-    if (entities && entities.length > 0) {
-      const entityList = entities.map(e => `'${e.replace(/'/g, "''")}'`).join(',');
-      testCaseSQL += ` AND entity IN (${entityList})`;
+    if (validationIds && validationIds.length > 0) {
+      const idList = validationIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',');
+      testCaseSQL += ` AND id IN (${idList})`;
     }
     
     console.log('📝 Generated TEST_CASE_SQL:', testCaseSQL);
