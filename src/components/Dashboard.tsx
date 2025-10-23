@@ -260,7 +260,10 @@ const Dashboard = () => {
                     <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
                       <GitBranch className="h-6 w-6 text-blue-400" />
                     </div>
-                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Active</Badge>
+                    <Button onClick={() => handleMenuClick('config')} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                      <Rocket className="h-3 w-3 mr-1" />
+                      Deploy
+                    </Button>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Migration</h3>
                   <p className="text-slate-400 mb-4">Seamless data transfer between systems with zero downtime</p>
@@ -281,16 +284,19 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Validation Module */}
+              {/* Validator Module */}
               <Card className="bg-gradient-to-br from-emerald-900/20 to-slate-900 border-emerald-500/30 hover:border-emerald-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/20">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
                       <Shield className="h-6 w-6 text-emerald-400" />
                     </div>
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Deployed</Badge>
+                    <Button onClick={() => handleMenuClick('config')} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                      <Rocket className="h-3 w-3 mr-1" />
+                      Deploy
+                    </Button>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Validation</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Validator</h3>
                   <p className="text-slate-400 mb-4">Real-time data quality checks with automated alerting</p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -316,7 +322,10 @@ const Dashboard = () => {
                     <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
                       <Activity className="h-6 w-6 text-purple-400" />
                     </div>
-                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">Active</Badge>
+                    <Button onClick={() => handleMenuClick('config')} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                      <Rocket className="h-3 w-3 mr-1" />
+                      Deploy
+                    </Button>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Reconciliation</h3>
                   <p className="text-slate-400 mb-4">Cross-system data matching and discrepancy detection</p>
