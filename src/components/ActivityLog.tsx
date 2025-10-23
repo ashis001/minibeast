@@ -43,6 +43,8 @@ const ActivityLog = () => {
   const [lastLogTimestamp, setLastLogTimestamp] = useState<string | null>(null);
   const [autoRefreshStartTime, setAutoRefreshStartTime] = useState<number | null>(null);
   const [remainingTime, setRemainingTime] = useState<number>(30);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new logs arrive
@@ -416,12 +418,20 @@ const ActivityLog = () => {
           <div className="lg:col-span-1">
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Recent Executions
+                <CardTitle className="text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Recent Executions
+                  </div>
+                  {executions.length > 0 && (
+                    <span className="text-xs text-slate-400">
+                      {executions.length} total
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="flex flex-col h-[520px]">
+                <div className="flex-1 overflow-y-auto space-y-3 mb-4">
                 {executions.length === 0 ? (
                   <div className="text-center py-8">
                     <Terminal className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -431,8 +441,11 @@ const ActivityLog = () => {
                     </p>
                   </div>
                 ) : (
-                  executions.map((execution, index) => {
-                    const isLatest = index === 0; // First in sorted list is latest
+                  executions
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((execution, index) => {
+                    const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                    const isLatest = globalIndex === 0; // First in sorted list is latest
                     return (
                       <div
                         key={execution.executionArn}
@@ -482,6 +495,34 @@ const ActivityLog = () => {
                     );
                   })
                 )}
+                </div>
+                
+                {/* Pagination Controls */}
+                {executions.length > itemsPerPage && (
+                  <div className="flex items-center justify-between border-t border-slate-700 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="text-white"
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-slate-400">
+                      Page {currentPage} of {Math.ceil(executions.length / itemsPerPage)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(executions.length / itemsPerPage), prev + 1))}
+                      disabled={currentPage === Math.ceil(executions.length / itemsPerPage)}
+                      className="text-white"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -507,7 +548,7 @@ const ActivityLog = () => {
                     <p className="text-slate-400 text-lg">Select an execution to view logs</p>
                   </div>
                 ) : (
-                  <div className="bg-black rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm relative">
+                  <div className="bg-black rounded-lg p-4 h-[456px] overflow-y-auto font-mono text-sm relative">
                     {/* CloudWatch-style pause notification */}
                     {isPaused && (
                       <div className="sticky top-0 bg-orange-100 border border-orange-300 rounded-md p-2 mb-4 text-center text-sm">
