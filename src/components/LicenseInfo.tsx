@@ -12,7 +12,7 @@ export default function LicenseInfo() {
   // Calculate days remaining
   const expiresAt = new Date(license.expires_at);
   const today = new Date();
-  const daysRemaining = Math.ceil((expiresAt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const daysRemaining = Math.floor((expiresAt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   
   const isExpiringSoon = daysRemaining <= 7;
   const isExpired = daysRemaining < 0;
