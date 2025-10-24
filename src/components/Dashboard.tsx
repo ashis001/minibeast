@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
   ChevronDown,
   ChevronRight,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import DeploymentWizard from "./DeploymentWizard";
 import ValidationStep from "./ValidationStep";
@@ -41,6 +43,7 @@ import LicenseInfo from "./LicenseInfo";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [currentView, setCurrentView] = useState('home');
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   
@@ -720,8 +723,31 @@ const Dashboard = () => {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <div className="mt-auto p-4">
-              <p className="text-slate-400 text-sm">© 2025 Mini Beast</p>
+            <div className="mt-auto p-4 space-y-3 border-t border-slate-800">
+              {/* User info */}
+              <div className="flex items-center gap-3 px-2 py-2 bg-slate-800/50 rounded-lg">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Users className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
+                  <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                </div>
+              </div>
+              
+              {/* Logout button */}
+              <button
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+              
+              <p className="text-slate-500 text-xs text-center">© 2025 Mini Beast</p>
             </div>
           </SidebarContent>
         </Sidebar>
