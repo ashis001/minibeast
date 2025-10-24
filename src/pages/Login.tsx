@@ -63,15 +63,15 @@ export default function Login() {
 
           {/* Tagline */}
           <h2 className="text-4xl font-bold mb-6 leading-tight">
-            Deploy Your Data
+            Your Complete
             <br />
             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Without Limits
+              Data Platform
             </span>
           </h2>
           <p className="text-lg text-slate-300 mb-12 leading-relaxed">
-            Enterprise-grade data migration, validation, and reconciliation.
-            Built for teams that move fast.
+            Validate, migrate, and reconcile your data with confidence.
+            Enterprise-grade accuracy. Lightning-fast execution.
           </p>
 
           {/* Features */}
