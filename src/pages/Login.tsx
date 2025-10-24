@@ -142,7 +142,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="h-12 px-4 bg-slate-50 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-12 px-4 bg-slate-50 border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-slate-900"
                 />
               </div>
 
@@ -162,7 +162,7 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="h-12 pl-11 pr-4 bg-slate-50 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-12 pl-11 pr-4 bg-slate-50 border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-slate-900"
                   />
                 </div>
               </div>
