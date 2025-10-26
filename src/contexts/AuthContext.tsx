@@ -61,6 +61,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // Periodic role verification - check every 30 seconds
+  useEffect(() => {
+    if (!accessToken || !user) return;
+
+    const verifyRole = async () => {
+      try {
+        // Fetch fresh user data from backend
+        const response = await axios.get(`${AUTH_SERVER_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        const currentRole = response.data.role;
+        
+        // Compare with stored user role
+        if (user.role !== currentRole) {
+          console.warn('Role changed detected - forcing logout for security');
+          alert('Your role has been updated. Please login again.');
+          logout();
+          window.location.href = '/login';
+        }
+      } catch (error: any) {
+        // If token is invalid or expired, logout
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.warn('Authentication failed - logging out');
+          logout();
+          window.location.href = '/login';
+        }
+      }
+    };
+
+    // Initial check after 5 seconds
+    const timeoutId = setTimeout(verifyRole, 5000);
+
+    // Set up interval for periodic checks (every 30 seconds)
+    const intervalId = setInterval(verifyRole, 30000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [accessToken, user]);
+
   const login = async (email: string, password: string) => {
     try {
       const response = await axios.post(`${AUTH_SERVER_URL}/auth/login`, {
