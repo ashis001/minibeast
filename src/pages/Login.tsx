@@ -87,7 +87,7 @@ export default function Login() {
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h2>
-              <p className="text-slate-600">Sign in to access your deployment platform</p>
+              <p className="text-slate-600">Sign in to access Minibeast</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
