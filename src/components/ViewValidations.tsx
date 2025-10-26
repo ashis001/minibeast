@@ -474,12 +474,16 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
   const runValidations = async () => {
     setIsRunning(true);
     try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('access_token');
+      
       // Pass validation IDs instead of entities to avoid duplicate entity names
       // This allows filtering by specific validation rules (entity + description combination)
       const validationResponse = await fetch('/api/stepfunction/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           validationIds: selectedValidations
