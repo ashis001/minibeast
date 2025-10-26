@@ -455,23 +455,6 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <div className="flex justify-end">
-        <Button 
-          onClick={() => {
-            // Save Snowflake config to localStorage for use in Add Validation
-            if (snowflakeConfigSaved) {
-              localStorage.setItem('snowflakeConfig', JSON.stringify(snowflakeConfig));
-            }
-            onNext(awsConfig);
-          }} 
-          disabled={!canProceed}
-          size="lg"
-          className="bg-gradient-primary hover:opacity-90"
-        >
-          Continue to Deployment →
-        </Button>
-      </div>
     </div>
   );
 };
