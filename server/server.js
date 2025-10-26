@@ -373,7 +373,7 @@ app.post('/api/test-snowflake', (req, res) => {
   });
 });
 
-app.post('/api/deploy', validateToken, checkOrgStatus, requirePermission('deploy'), upload.single('dockerImage'), async (req, res) => {
+app.post('/api/deploy', upload.single('dockerImage'), async (req, res) => {
   try {
     const { imageName, envVariables, awsConfig, deploymentConfig, tempDeploymentId } = req.body;
     const dockerFile = req.file;
