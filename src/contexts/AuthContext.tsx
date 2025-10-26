@@ -122,6 +122,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
+      // CRITICAL: Check organization status BEFORE allowing login
+      if (enrichedUser.organization_id) {
+        try {
+          const orgStatusResponse = await axios.get(
+            `${AUTH_SERVER_URL}/license/organization/status/${enrichedUser.organization_id}`
+          );
+          
+          // If organization is blocked, throw error with specific message
+          if (!orgStatusResponse.data.can_access) {
+            const status = orgStatusResponse.data.status;
+            const message = orgStatusResponse.data.message;
+            
+            if (status === 'expired') {
+              throw new Error('License Expired: Your organization\'s license has expired. Please contact Dataction to renew at support@dataction.com');
+            } else if (status === 'paused') {
+              throw new Error('Organization Paused: Your organization is currently paused. Please contact Dataction at support@dataction.com');
+            } else {
+              throw new Error(message || 'Organization access denied');
+            }
+          }
+        } catch (error: any) {
+          // If it's our custom error, throw it
+          if (error.message?.includes('License Expired') || error.message?.includes('Organization Paused')) {
+            throw error;
+          }
+          // Otherwise, log but don't block (in case auth server is down)
+          console.error('Failed to check org status during login:', error);
+        }
+      }
+
       // Store tokens and enriched user data
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
@@ -131,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(enrichedUser);
     } catch (error: any) {
       console.error('Login error:', error);
-      const message = error.response?.data?.detail || 'Login failed';
+      const message = error.response?.data?.detail || error.message || 'Login failed';
       throw new Error(message);
     }
   };
