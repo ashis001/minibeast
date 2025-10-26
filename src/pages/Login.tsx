@@ -49,13 +49,13 @@ export default function Login() {
           }}></div>
         </div>
 
-        <div className="relative z-10 flex flex-col justify-center items-end pr-12 w-full">
+        <div className="relative z-10 flex flex-col justify-center items-center px-16 w-full">
           {/* Center Branding */}
           <div className="text-center">
-            <h1 className="text-7xl font-black text-brand-green mb-4 tracking-tight">
+            <h1 className="text-8xl font-black text-brand-green mb-6 tracking-tight">
               MiniBeast
             </h1>
-            <p className="text-xl text-brand-green font-light italic tracking-wide">
+            <p className="text-2xl text-brand-green font-light italic tracking-wide">
               a product of <span className="font-semibold">Dataction</span>
             </p>
           </div>
@@ -68,8 +68,8 @@ export default function Login() {
       </div>
 
       {/* Right side - Login Form */}
-      <div className="lg:w-1/2 w-full flex items-center justify-start pl-12 p-8 bg-slate-950">
-        <div className="w-full max-w-md">
+      <div className="lg:w-1/2 w-full flex items-center justify-center p-8 bg-slate-950">
+        <div className="w-full max-w-lg">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-10 h-10 bg-brand-green rounded-xl flex items-center justify-center">
@@ -83,13 +83,13 @@ export default function Login() {
           </div>
 
           {/* Login card */}
-          <div className="bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
-              <p className="text-slate-400">Sign in to access Minibeast</p>
+          <div className="bg-slate-800 rounded-2xl shadow-xl p-10 border border-slate-700">
+            <div className="mb-10">
+              <h2 className="text-3xl font-bold text-white mb-3">Welcome back</h2>
+              <p className="text-lg text-slate-400">Sign in to access Minibeast</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-slate-300">
                   Email address
