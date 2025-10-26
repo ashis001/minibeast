@@ -8,11 +8,11 @@ interface Props {
 
 export const OrgBlockedOverlay: React.FC<Props> = ({ status, message }) => {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ pointerEvents: 'all' }}>
       {/* Blurred Background */}
       <div 
-        className="absolute inset-0 bg-slate-900/80"
-        style={{ backdropFilter: 'blur(10px)' }}
+        className="absolute inset-0 bg-slate-900/95"
+        style={{ backdropFilter: 'blur(10px)', pointerEvents: 'all' }}
       />
       
       {/* Modal */}
@@ -45,7 +45,10 @@ export const OrgBlockedOverlay: React.FC<Props> = ({ status, message }) => {
           
           {/* Additional Info */}
           <p className="text-xs text-slate-500 mt-4">
-            Access will be restored once your organization is reactivated
+            {status === 'expired' 
+              ? 'Access will be restored once your license is renewed'
+              : 'Access will be restored once your organization is reactivated'
+            }
           </p>
         </div>
       </div>

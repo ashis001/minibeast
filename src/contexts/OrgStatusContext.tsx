@@ -45,11 +45,20 @@ export function OrgStatusProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Check status on mount and every 30 seconds
+  // Check status immediately on mount and every 10 seconds for real-time blocking
   useEffect(() => {
-    checkStatus();
-    const interval = setInterval(checkStatus, 30000);
+    checkStatus(); // Initial check
+    const interval = setInterval(checkStatus, 10000); // Check every 10 seconds
     return () => clearInterval(interval);
+  }, []);
+
+  // Also check when user data changes in localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      checkStatus();
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const isBlocked = orgStatus ? !orgStatus.can_access : false;
