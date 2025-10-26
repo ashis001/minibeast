@@ -43,7 +43,7 @@ export const OrgBlockedOverlay: React.FC<Props> = ({ status, message }) => {
           {/* Contact Info */}
           <div className="w-full p-4 bg-slate-700/50 rounded-lg border border-slate-600">
             <p className="text-sm text-slate-400 mb-2">To {status === 'expired' ? 'Renew' : 'Resume'}, Contact:</p>
-            <p className="text-white font-semibold text-lg">support@dataction.com</p>
+            <p className="text-white font-semibold text-lg">support@dataction.co</p>
           </div>
           
           {/* Additional Info */}
