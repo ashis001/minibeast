@@ -149,7 +149,7 @@ export default function Login() {
 
           {/* Version watermark */}
           <div className="absolute bottom-8 right-8">
-            <p className="text-xs text-slate-600 font-light">Version 2.0</p>
+            <p className="text-xs text-brand-green font-light">Version 2.0</p>
           </div>
         </div>
       </div>
