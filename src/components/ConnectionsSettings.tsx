@@ -132,7 +132,7 @@ const ConnectionsSettings = () => {
                   {/* Status Badge */}
                   {service.isActive && (
                     <div className="absolute top-3 right-3">
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                      <Badge className="bg-brand-green/100/20 text-brand-green/80 border-brand-green/100/30 text-xs">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Active
                       </Badge>

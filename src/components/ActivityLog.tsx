@@ -302,7 +302,7 @@ const ActivityLog = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'RUNNING': return 'bg-blue-500';
-      case 'SUCCEEDED': return 'bg-green-500';
+      case 'SUCCEEDED': return 'bg-brand-green/100';
       case 'FAILED': return 'bg-red-500';
       case 'TIMED_OUT': return 'bg-yellow-500';
       default: return 'bg-gray-500';
@@ -443,8 +443,8 @@ const ActivityLog = () => {
                         )}
                         
                         {isLatest && autoRefresh && selectedExecution === execution.executionArn && (
-                          <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <p className="text-xs text-brand-green/80 mt-1 flex items-center gap-1">
+                            <div className="w-2 h-2 bg-brand-green/80 rounded-full animate-pulse"></div>
                             Auto-refreshing
                           </p>
                         )}

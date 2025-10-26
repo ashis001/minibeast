@@ -280,15 +280,15 @@ const ModuleDeployment = () => {
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
-              <CheckCircle className="h-6 w-6 text-green-500" />
+              <CheckCircle className="h-6 w-6 text-brand-green/100" />
               {modules.find(m => m.id === selectedModule)?.name} Module Already Deployed
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-slate-700 border border-slate-600 rounded-lg p-4">
-              <h3 className="font-semibold text-green-400 mb-2">Deployment Details</h3>
+              <h3 className="font-semibold text-brand-green/80 mb-2">Deployment Details</h3>
               <div className="space-y-2 text-sm">
-                <p className="text-slate-300"><strong className="text-white">Status:</strong> <span className="text-green-400">{existingDeployment.status}</span></p>
+                <p className="text-slate-300"><strong className="text-white">Status:</strong> <span className="text-brand-green/80">{existingDeployment.status}</span></p>
                 <p className="text-slate-300"><strong className="text-white">Completed:</strong> {new Date(existingDeployment.completedAt).toLocaleString()}</p>
                 <p className="text-slate-300"><strong className="text-white">Region:</strong> {existingDeployment.region}</p>
                 <p className="text-slate-300"><strong className="text-white">Module:</strong> {selectedModule}</p>
@@ -359,9 +359,9 @@ const ModuleDeployment = () => {
           <ProgressStep deploymentId={deploymentId} onComplete={handleComplete} />
         )}
         {currentStep === 3 && (
-          <Card className="bg-green-900/20 border-green-500/30">
+          <Card className="bg-brand-green/20 border-brand-green/100/30">
             <CardContent className="p-8 text-center">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <CheckCircle className="h-16 w-16 text-brand-green/100 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-white mb-2">
                 Deployment Complete!
               </h2>

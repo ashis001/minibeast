@@ -267,8 +267,8 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
-          <CheckCircle className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-emerald-500" />
+          <div className="w-16 h-16 border-4 border-brand-green200 border-t-brand-green rounded-full animate-spin"></div>
+          <CheckCircle className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-brand-green" />
         </div>
         <div className="text-center space-y-2">
           <h3 className="text-xl font-semibold text-foreground">Checking all requirements...</h3>
@@ -415,7 +415,7 @@ const ValidationStep = ({ onNext, snowflakeConfig }: ValidationStepProps) => {
             disabled={isSubmittingValidation || showSuccess || !canProceedToForm}
             className={cn(
               "w-full transition-all duration-300",
-              showSuccess && "bg-green-600 hover:bg-green-600"
+              showSuccess && "bg-brand-green hover:bg-brand-green"
             )}
             size="lg"
           >

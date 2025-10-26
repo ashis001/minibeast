@@ -380,7 +380,7 @@ const DeploymentStep = ({ onNext, awsConfig, selectedModule }: DeploymentStepPro
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-green-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green/80" />
                       <span className="font-medium text-white">Active Deployment</span>
                       <span className="text-sm text-slate-400">
                         ({new Date(deployment.completedAt).toLocaleDateString()})
@@ -490,7 +490,7 @@ const DeploymentStep = ({ onNext, awsConfig, selectedModule }: DeploymentStepPro
                 Selected module: <strong>minibeat_{deploymentConfig.module}</strong>
               </p>
               {hasExistingDeployments && (
-                <div className="flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                <div className="flex items-center gap-1 text-xs bg-brand-green/20 text-brand-green px-2 py-1 rounded-full">
                   <CheckCircle className="h-3 w-3" />
                   Already Deployed
                 </div>

@@ -327,7 +327,7 @@ const ProgressStep = ({ onComplete, deploymentId }: ProgressStepProps) => {
                   </div>
                   <div className="bg-black rounded-md p-3 max-h-60 overflow-y-auto font-mono text-sm">
                     {step.logs.map((log, logIndex) => (
-                      <div key={logIndex} className="text-green-400 mb-1">
+                      <div key={logIndex} className="text-brand-green/80 mb-1">
                         <span className="text-gray-500 text-xs">
                           [{new Date(log.timestamp).toLocaleTimeString()}]
                         </span>{' '}

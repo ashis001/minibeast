@@ -125,7 +125,7 @@ const ValidationSummary = () => {
   const getStatusBadge = (status: string) => {
     const normalizedStatus = status?.toString().toUpperCase();
     if (normalizedStatus === 'PASSED' || normalizedStatus === 'PASS' || normalizedStatus === 'SUCCESS') {
-      return <Badge className="bg-green-500 text-white"><CheckCircle className="h-3 w-3 mr-1" />Passed</Badge>;
+      return <Badge className="bg-brand-green/100 text-white"><CheckCircle className="h-3 w-3 mr-1" />Passed</Badge>;
     } else if (normalizedStatus === 'FAILED' || normalizedStatus === 'FAIL' || normalizedStatus === 'ERROR') {
       return <Badge className="bg-red-500 text-white"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
     } else {
@@ -165,11 +165,11 @@ const ValidationSummary = () => {
         <div className="text-center">
           {/* Animated Loading Spinner */}
           <div className="relative w-32 h-32 mx-auto mb-8">
-            <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-transparent border-t-emerald-500 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 border-4 border-brand-green/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-transparent border-t-brand-green rounded-full animate-spin"></div>
             <div className="absolute inset-4 border-4 border-transparent border-t-blue-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <BarChart3 className="h-12 w-12 text-emerald-400 animate-pulse" />
+              <BarChart3 className="h-12 w-12 text-brand-green animate-pulse" />
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white mb-2 animate-pulse">Loading Validation Results</h2>
@@ -178,7 +178,7 @@ const ValidationSummary = () => {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
+                className="w-2 h-2 bg-brand-green rounded-full animate-bounce"
                 style={{ animationDelay: `${i * 0.15}s` }}
               ></div>
             ))}
@@ -196,7 +196,7 @@ const ValidationSummary = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold text-white mb-2 flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-xl flex items-center justify-center animate-pulse">
+                <div className="w-12 h-12 bg-gradient-to-br from-brand-green to-blue-500 rounded-xl flex items-center justify-center animate-pulse">
                   <BarChart3 className="h-7 w-7 text-white" />
                 </div>
                 <span>Validation Summary</span>
@@ -206,7 +206,7 @@ const ValidationSummary = () => {
             <div className="flex space-x-3">
               <Button
                 onClick={fetchValidationResults}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-200 hover:scale-105"
+                className="bg-brand-green hover:bg-brand-green text-white transition-all duration-200 hover:scale-105"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
@@ -226,13 +226,13 @@ const ValidationSummary = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[
               { label: 'Total Validations', value: stats.total, icon: Activity, color: 'from-blue-500 to-blue-600', delay: 0 },
-              { label: 'Passed', value: stats.passed, icon: CheckCircle, color: 'from-green-500 to-green-600', delay: 100 },
+              { label: 'Passed', value: stats.passed, icon: CheckCircle, color: 'from-brand-green/100 to-brand-green', delay: 100 },
               { label: 'Failed', value: stats.failed, icon: XCircle, color: 'from-red-500 to-red-600', delay: 200 },
-              { label: 'Success Rate', value: `${stats.successRate}%`, icon: TrendingUp, color: 'from-emerald-500 to-emerald-600', delay: 300 },
+              { label: 'Success Rate', value: `${stats.successRate}%`, icon: TrendingUp, color: 'from-brand-green to-brand-green', delay: 300 },
             ].map((stat, index) => (
               <Card 
                 key={index} 
-                className="bg-slate-800 border-slate-700 overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/20 animate-slideInUp"
+                className="bg-slate-800 border-slate-700 overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-brand-green/20 animate-slideInUp"
                 style={{ animationDelay: `${stat.delay}ms` }}
               >
                 <CardContent className="p-6">
@@ -262,7 +262,7 @@ const ValidationSummary = () => {
         <Card className="bg-slate-800 border-slate-700 animate-fadeIn" style={{ animationDelay: '500ms' }}>
           <CardHeader>
             <CardTitle className="text-white flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-emerald-400" />
+              <Activity className="h-5 w-5 text-brand-green" />
               <span>Validation Results</span>
             </CardTitle>
           </CardHeader>

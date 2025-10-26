@@ -13,7 +13,7 @@ const SimpleDashboard = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">MINIBEAST 2.0</h1>
           <div className="flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3 text-emerald-400" />
+            <Sparkles className="h-3 w-3 text-brand-green" />
             <p className="text-xs font-medium text-slate-500 tracking-wider">POWERED BY DATACTION</p>
           </div>
         </div>
@@ -22,7 +22,7 @@ const SimpleDashboard = () => {
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
-                <Zap className="h-5 w-5 text-emerald-500" />
+                <Zap className="h-5 w-5 text-brand-green" />
                 Add Validation
               </CardTitle>
             </CardHeader>
@@ -32,7 +32,7 @@ const SimpleDashboard = () => {
               </p>
               <Button 
                 onClick={() => navigate('/add-validation')}
-                className="w-full bg-emerald-500 hover:bg-emerald-600"
+                className="w-full bg-brand-green hover:bg-brand-green"
               >
                 Configure Validation
               </Button>
@@ -90,7 +90,7 @@ const SimpleDashboard = () => {
               <div className="flex gap-4">
                 <Button 
                   onClick={() => navigate('/add-validation')}
-                  className="bg-emerald-500 hover:bg-emerald-600"
+                  className="bg-brand-green hover:bg-brand-green"
                 >
                   <Zap className="h-4 w-4 mr-2" />
                   Add Validation Rules

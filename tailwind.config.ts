@@ -14,6 +14,7 @@ export default {
     },
     extend: {
       colors: {
+        'brand-green': '#47CD89',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

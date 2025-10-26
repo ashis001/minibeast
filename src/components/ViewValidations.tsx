@@ -723,7 +723,7 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
                       <td className="border border-gray-300 p-2 text-sm">{validation.ENTITY}</td>
                       <td className="border border-gray-300 p-2 text-sm">{validation.VALIDATION_DESCRIPTION}</td>
                       <td className="border border-gray-300 p-2">
-                        <span className={`px-2 py-1 rounded text-xs ${validation.IS_ACTIVE ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        <span className={`px-2 py-1 rounded text-xs ${validation.IS_ACTIVE ? 'bg-brand-green/20 text-brand-green' : 'bg-gray-100 text-gray-800'}`}>
                           {validation.IS_ACTIVE ? 'Active' : 'Inactive'}
                         </span>
                       </td>

@@ -247,7 +247,7 @@ const Dashboard = () => {
       title: "Total Validations",
       value: deploymentStats.totalValidations.toString(),
       icon: Cog,
-      color: "text-green-500",
+      color: "text-brand-green/100",
     },
     {
       title: "AWS Regions",
@@ -260,7 +260,7 @@ const Dashboard = () => {
       title: "Success Rate",
       value: `${deploymentStats.successRate}%`,
       icon: CheckCircle,
-      color: "text-green-500",
+      color: "text-brand-green/100",
     },
   ];
 
@@ -342,15 +342,15 @@ const Dashboard = () => {
                   <p className="text-slate-400 mb-4">Seamless data transfer between systems with zero downtime</p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Schema mapping</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Bulk data transfer</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Progress tracking</span>
                     </div>
                   </div>
@@ -358,11 +358,11 @@ const Dashboard = () => {
               </Card>
 
               {/* Validator Module */}
-              <Card className="bg-gradient-to-br from-emerald-900/20 to-slate-900 border-emerald-500/30 hover:border-emerald-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/20">
+              <Card className="bg-gradient-to-br from-slate-900/20 to-slate-900 border-brand-green/30 hover:border-brand-green/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-brand-green/20">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                      <Shield className="h-6 w-6 text-emerald-400" />
+                    <div className="w-12 h-12 bg-brand-green/20 rounded-lg flex items-center justify-center">
+                      <Shield className="h-6 w-6 text-brand-green" />
                     </div>
                     <Button onClick={() => {
                       if (!connectionsConfigured) {
@@ -381,15 +381,15 @@ const Dashboard = () => {
                   <p className="text-slate-400 mb-4">Real-time data quality checks with automated alerting</p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Custom rules engine</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Email notifications</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Detailed reports</span>
                     </div>
                   </div>
@@ -420,15 +420,15 @@ const Dashboard = () => {
                   <p className="text-slate-400 mb-4">Cross-system data matching and discrepancy detection</p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Multi-source compare</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Anomaly detection</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-400" />
+                      <CheckCircle className="h-4 w-4 text-brand-green" />
                       <span className="text-sm text-slate-300">Reconciliation reports</span>
                     </div>
                   </div>
@@ -593,7 +593,7 @@ const Dashboard = () => {
                     <div key={index} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700">
                       <div className="flex items-center space-x-3">
                         <div className={`w-2 h-2 rounded-full ${
-                          activity.status === 'success' ? 'bg-green-500' :
+                          activity.status === 'success' ? 'bg-brand-green/100' :
                           activity.status === 'running' ? 'bg-blue-500 animate-pulse' :
                           activity.status === 'failed' ? 'bg-red-500' :
                           'bg-slate-500'
@@ -616,7 +616,7 @@ const Dashboard = () => {
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-emerald-400" />
+                  <Database className="h-5 w-5 text-brand-green" />
                   <span>Data Migration</span>
                 </CardTitle>
               </CardHeader>
@@ -630,7 +630,7 @@ const Dashboard = () => {
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
-                  <Shield className="h-5 w-5 text-emerald-400" />
+                  <Shield className="h-5 w-5 text-brand-green" />
                   <span>Data Validation</span>
                 </CardTitle>
               </CardHeader>
@@ -644,7 +644,7 @@ const Dashboard = () => {
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
-                  <Globe className="h-5 w-5 text-emerald-400" />
+                  <Globe className="h-5 w-5 text-brand-green" />
                   <span>Global Scale</span>
                 </CardTitle>
               </CardHeader>
@@ -667,19 +667,19 @@ const Dashboard = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-brand-green/100 rounded-full"></div>
                   <span className="text-slate-300">AWS Services</span>
-                  <Badge className="bg-green-500 text-white ml-auto">Online</Badge>
+                  <Badge className="bg-brand-green/100 text-white ml-auto">Online</Badge>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-brand-green/100 rounded-full"></div>
                   <span className="text-slate-300">Snowflake Connection</span>
-                  <Badge className="bg-green-500 text-white ml-auto">Active</Badge>
+                  <Badge className="bg-brand-green/100 text-white ml-auto">Active</Badge>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-brand-green/100 rounded-full"></div>
                   <span className="text-slate-300">Validation Engine</span>
-                  <Badge className="bg-green-500 text-white ml-auto">Ready</Badge>
+                  <Badge className="bg-brand-green/100 text-white ml-auto">Ready</Badge>
                 </div>
               </div>
             </CardContent>
@@ -713,7 +713,7 @@ const Dashboard = () => {
             </p>
             <button 
               onClick={() => setCurrentView('home')}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-brand-green hover:bg-brand-green text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Back to Home
             </button>
@@ -730,13 +730,13 @@ const Dashboard = () => {
           <SidebarContent className="bg-slate-900">
             <div className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-brand-green rounded-lg flex items-center justify-center">
                   <Database className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <h1 className="text-white font-semibold">MINIBEAST 2.0</h1>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Sparkles className="h-2.5 w-2.5 text-emerald-400" />
+                    <Sparkles className="h-2.5 w-2.5 text-brand-green" />
                     <p className="text-[10px] font-medium text-slate-500 tracking-wider">POWERED BY DATACTION</p>
                   </div>
                 </div>
@@ -753,7 +753,7 @@ const Dashboard = () => {
                           onClick={() => handleMenuClick(item.id, !!item.children)}
                           className={`w-full justify-start cursor-pointer ${
                             currentView === item.id
-                              ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                              ? "bg-brand-green text-white hover:bg-brand-green"
                               : "text-slate-300 hover:text-white hover:bg-slate-800"
                           }`}
                         >
@@ -790,7 +790,7 @@ const Dashboard = () => {
                                       isDisabled
                                         ? "cursor-not-allowed opacity-50 text-slate-500 hover:bg-slate-800/50"
                                         : currentView === child.id
-                                        ? "cursor-pointer bg-emerald-500 text-white hover:bg-emerald-600"
+                                        ? "cursor-pointer bg-brand-green text-white hover:bg-brand-green"
                                         : "cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800"
                                     }`}
                                   >
