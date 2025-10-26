@@ -10,9 +10,10 @@ import { AWSConfig } from "@/types";
 
 interface ConfigurationStepProps {
   onNext: (config: AWSConfig) => void;
+  selectedService?: string;
 }
 
-const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
+const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) => {
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
@@ -223,19 +224,23 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
       </div>
 
 
-      <Tabs defaultValue="aws" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="aws" className="flex items-center gap-2">
-            <Cloud className="h-4 w-4" />
-            AWS Configuration
-          </TabsTrigger>
-          <TabsTrigger value="snowflake" className="flex items-center gap-2">
-            <Snowflake className="h-4 w-4" />
-            Snowflake Configuration
-          </TabsTrigger>
-        </TabsList>
+      {/* Show tabs only if no specific service selected, otherwise show single service */}
+      <Tabs defaultValue={selectedService || "aws"} className="w-full">
+        {!selectedService && (
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="aws" className="flex items-center gap-2">
+              <Cloud className="h-4 w-4" />
+              AWS Configuration
+            </TabsTrigger>
+            <TabsTrigger value="snowflake" className="flex items-center gap-2">
+              <Snowflake className="h-4 w-4" />
+              Snowflake Configuration
+            </TabsTrigger>
+          </TabsList>
+        )}
 
-        <TabsContent value="aws">
+        {(!selectedService || selectedService === 'aws') && (
+          <TabsContent value="aws">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -323,8 +328,10 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
-        <TabsContent value="snowflake">
+        {(!selectedService || selectedService === 'snowflake') && (
+          <TabsContent value="snowflake">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -454,6 +461,7 @@ const ConfigurationStep = ({ onNext }: ConfigurationStepProps) => {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );

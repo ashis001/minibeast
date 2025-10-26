@@ -200,7 +200,7 @@ const ConnectionsSettings = () => {
               </button>
             </div>
             <div className="p-6">
-              <ConfigurationStep onNext={handleConnectionsSaved} />
+              <ConfigurationStep onNext={handleConnectionsSaved} selectedService={selectedService} />
             </div>
           </div>
         </div>
