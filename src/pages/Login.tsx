@@ -49,7 +49,7 @@ export default function Login() {
           }}></div>
         </div>
 
-        <div className="relative z-10 flex flex-col justify-center items-center px-16 w-full">
+        <div className="relative z-10 flex flex-col justify-center items-end pr-12 w-full">
           {/* Center Branding */}
           <div className="text-center">
             <h1 className="text-7xl font-black text-brand-green mb-4 tracking-tight">
@@ -68,7 +68,7 @@ export default function Login() {
       </div>
 
       {/* Right side - Login Form */}
-      <div className="lg:w-1/2 w-full flex items-center justify-center p-8 bg-slate-950">
+      <div className="lg:w-1/2 w-full flex items-center justify-start pl-12 p-8 bg-slate-950">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
