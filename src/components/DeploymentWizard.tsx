@@ -176,7 +176,7 @@ const DeploymentWizard = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-slate-300 text-sm">{module.description}</p>
-                    <Button className="w-full mt-4" variant="outline">
+                    <Button className="w-full mt-4 text-white" style={{ backgroundColor: '#47CD89' }}>
                       Deploy {module.name}
                     </Button>
                   </CardContent>

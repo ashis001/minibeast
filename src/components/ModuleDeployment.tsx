@@ -250,7 +250,7 @@ const ModuleDeployment = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-slate-300 text-sm mb-4">{module.description}</p>
-                <Button className={`w-full bg-${module.color}-500 hover:bg-${module.color}-600`}>
+                <Button className="w-full text-white hover:opacity-90" style={{ backgroundColor: '#47CD89' }}>
                   Deploy {module.name}
                 </Button>
               </CardContent>
