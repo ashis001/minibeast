@@ -70,14 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 1. Check organization license status FIRST
         if (user.organization_id) {
           try {
-            const orgStatusResponse = await axios.get(
-              `${AUTH_SERVER_URL}/license/organization/status/${user.organization_id}`
-            );
+            const url = `${AUTH_SERVER_URL}/license/organization/status/${user.organization_id}`;
+            console.log('[LICENSE CHECK] Checking:', url);
+            
+            const orgStatusResponse = await axios.get(url);
+            
+            console.log('[LICENSE CHECK] Response:', orgStatusResponse.data);
+            console.log('[LICENSE CHECK] can_access:', orgStatusResponse.data.can_access);
+            console.log('[LICENSE CHECK] status:', orgStatusResponse.data.status);
             
             // If organization is blocked, force logout immediately
             if (!orgStatusResponse.data.can_access) {
               const status = orgStatusResponse.data.status;
-              console.warn(`Organization ${status} - forcing logout`);
+              console.error(`[LICENSE CHECK] ACCESS BLOCKED - Status: ${status}`);
               
               logout();
               
@@ -89,11 +94,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
               window.location.href = '/login';
               return; // Stop further checks
+            } else {
+              console.log('[LICENSE CHECK] Access allowed');
             }
           } catch (error) {
-            console.error('Failed to check org status:', error);
+            console.error('[LICENSE CHECK] Error checking org status:', error);
             // Don't block if check fails (network issues, etc.)
           }
+        } else {
+          console.warn('[LICENSE CHECK] No organization_id found for user');
         }
 
         // 2. Fetch fresh user data and verify role
@@ -154,14 +163,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // CRITICAL: Check organization status BEFORE allowing login
       if (enrichedUser.organization_id) {
         try {
-          const orgStatusResponse = await axios.get(
-            `${AUTH_SERVER_URL}/license/organization/status/${enrichedUser.organization_id}`
-          );
+          const url = `${AUTH_SERVER_URL}/license/organization/status/${enrichedUser.organization_id}`;
+          console.log('[LOGIN] Checking license for org:', enrichedUser.organization_id);
+          console.log('[LOGIN] URL:', url);
+          
+          const orgStatusResponse = await axios.get(url);
+          
+          console.log('[LOGIN] License check response:', orgStatusResponse.data);
           
           // If organization is blocked, throw error with specific message
           if (!orgStatusResponse.data.can_access) {
             const status = orgStatusResponse.data.status;
             const message = orgStatusResponse.data.message;
+            
+            console.error('[LOGIN] ACCESS DENIED -', status, message);
             
             if (status === 'expired') {
               throw new Error('License Expired: Your organization\'s license has expired. Please contact Dataction to renew at support@dataction.com');
@@ -170,6 +185,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
               throw new Error(message || 'Organization access denied');
             }
+          } else {
+            console.log('[LOGIN] License check passed - access allowed');
           }
         } catch (error: any) {
           // If it's our custom error, throw it
@@ -177,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             throw error;
           }
           // Otherwise, log but don't block (in case auth server is down)
-          console.error('Failed to check org status during login:', error);
+          console.error('[LOGIN] Failed to check org status during login:', error);
         }
       }
 
