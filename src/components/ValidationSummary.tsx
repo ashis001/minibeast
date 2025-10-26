@@ -39,7 +39,21 @@ const ValidationSummary = () => {
   const fetchValidationResults = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/validation-summary');
+      // Get Snowflake config from localStorage
+      const snowflakeConfigStr = localStorage.getItem('snowflakeConfig');
+      if (!snowflakeConfigStr) {
+        throw new Error('Snowflake configuration not found. Please configure Snowflake connection first.');
+      }
+      
+      const snowflakeConfig = JSON.parse(snowflakeConfigStr);
+      
+      const response = await fetch('/api/validation-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(snowflakeConfig),
+      });
       const data = await response.json();
 
       if (data.success) {

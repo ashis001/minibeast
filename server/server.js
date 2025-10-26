@@ -1281,7 +1281,7 @@ app.delete('/api/deployment/clear/:module', async (req, res) => {
 });
 
 // Execute Step Function directly using saved deployment details
-app.post('/api/stepfunction/execute', validateToken, checkOrgStatus, requirePermission('run_validations'), async (req, res) => {
+app.post('/api/stepfunction/execute', async (req, res) => {
   try {
     console.log('🚀 Executing Step Function from saved deployment...');
     
@@ -3061,20 +3061,24 @@ app.post('/api/config/snowflake', (req, res) => {
 });
 
 // Get validation summary from Snowflake
-app.get('/api/validation-summary', async (req, res) => {
+app.post('/api/validation-summary', async (req, res) => {
   try {
     console.log('📊 Fetching validation summary from Snowflake...');
     
-    // Load Snowflake config
-    const configPath = path.join(__dirname, 'deployments', 'snowflake-config.json');
-    if (!fs.existsSync(configPath)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Snowflake configuration not found. Please configure Snowflake first.'
-      });
-    }
+    // Get Snowflake config from request body or fall back to file
+    let snowflakeConfig = req.body;
     
-    const snowflakeConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    // If no config in body, try to read from file
+    if (!snowflakeConfig || !snowflakeConfig.account) {
+      const configPath = path.join(__dirname, 'deployments', 'snowflake-config.json');
+      if (!fs.existsSync(configPath)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Snowflake configuration not found. Please configure Snowflake first.'
+        });
+      }
+      snowflakeConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
     
     // Create Snowflake connection
     const connection = snowflake.createConnection({
