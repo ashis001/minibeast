@@ -40,7 +40,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-brand-green relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-950 relative overflow-hidden">
         {/* Subtle pattern overlay */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
@@ -52,17 +52,17 @@ export default function Login() {
         <div className="relative z-10 flex flex-col justify-center items-center px-16 w-full">
           {/* Center Branding */}
           <div className="text-center">
-            <h1 className="text-7xl font-black text-slate-900 mb-4 tracking-tight">
+            <h1 className="text-7xl font-black text-brand-green mb-4 tracking-tight">
               MiniBeast
             </h1>
-            <p className="text-xl text-slate-800 font-light italic tracking-wide">
+            <p className="text-xl text-brand-green font-light italic tracking-wide">
               a product of <span className="font-semibold">Dataction</span>
             </p>
           </div>
         </div>
 
         {/* Bottom left watermark */}
-        <div className="absolute bottom-8 left-8 text-slate-800/80">
+        <div className="absolute bottom-8 left-8 text-brand-green/80">
           <p className="text-sm font-medium">© 2025 Dataction</p>
         </div>
       </div>
