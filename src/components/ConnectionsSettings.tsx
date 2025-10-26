@@ -78,10 +78,7 @@ const ConnectionsSettings = () => {
       icon: Workflow,
       color: 'amber',
       services: [
-        { id: 'dbt', name: 'dbt (Data Build Tool)', logo: '🔧', isActive: false, comingSoon: true, color: 'orange' },
-        { id: 'airflow', name: 'Apache Airflow', logo: '🌊', isActive: false, comingSoon: true, color: 'cyan' },
-        { id: 'fivetran', name: 'Fivetran', logo: '🔄', isActive: false, comingSoon: true, color: 'purple' },
-        { id: 'airbyte', name: 'Airbyte', logo: '✈️', isActive: false, comingSoon: true, color: 'blue' },
+        { id: 'dbt', name: 'dbt (Data Build Tool)', logo: '🛠️', isActive: false, comingSoon: true, color: 'orange' },
       ]
     },
   ];
