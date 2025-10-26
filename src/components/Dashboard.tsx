@@ -827,7 +827,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 {user?.role && (
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="mt-2">
                     <Badge className={`text-xs ${
                       user.role === 'developer' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                       user.role === 'tester' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
@@ -836,9 +836,6 @@ const Dashboard = () => {
                     }`}>
                       {user.role.toUpperCase()}
                     </Badge>
-                    <span className="text-xs text-slate-500">
-                      {user.permissions?.description || 'User'}
-                    </span>
                   </div>
                 )}
               </div>
