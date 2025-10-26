@@ -130,7 +130,7 @@ export default function Login() {
 
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -146,24 +146,7 @@ export default function Login() {
                 )}
               </Button>
             </form>
-
-            {/* Demo credentials */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Zap className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold text-blue-900 mb-1">Demo Credentials</p>
-                  <p className="text-blue-700">Email: admin@minibeat.com</p>
-                  <p className="text-blue-700">Password: Admin2024</p>
-                </div>
-              </div>
-            </div>
           </div>
-
-          {/* Footer */}
-          <p className="text-center text-sm text-slate-500 mt-6">
-            Powered by MiniBeast © 2024. All rights reserved.
-          </p>
         </div>
       </div>
     </div>
