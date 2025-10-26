@@ -38,55 +38,40 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-950 relative overflow-hidden">
-        {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}></div>
-        </div>
-
-        <div className="relative z-10 flex flex-col justify-center items-center px-16 w-full">
-          {/* Center Branding */}
-          <div className="text-center">
-            <h1 className="text-8xl font-black text-brand-green mb-6 tracking-tight">
-              MiniBeast
-            </h1>
-            <p className="text-2xl text-brand-green font-light italic tracking-wide">
-              a product of <span className="font-semibold">Dataction</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom left watermark */}
-        <div className="absolute bottom-8 left-8 text-brand-green/80">
-          <p className="text-sm font-medium">© 2025 Dataction</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden">
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"></div>
+      
+      {/* Subtle pattern overlay */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+          backgroundSize: '40px 40px'
+        }}></div>
       </div>
 
-      {/* Right side - Login Form */}
-      <div className="lg:w-1/2 w-full flex items-center justify-center p-8 bg-slate-950">
-        <div className="w-full max-w-lg">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-brand-green rounded-xl flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-slate-900" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">
-                MiniBeast
-              </h1>
-            </div>
-          </div>
+      {/* Center container */}
+      <div className="relative z-10 w-full max-w-md mx-4">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-black text-brand-green mb-2 tracking-tight">
+            MiniBeast
+          </h1>
+          <p className="text-lg text-brand-green/80 font-light italic">
+            a product of <span className="font-semibold">Dataction</span>
+          </p>
+        </div>
 
-          {/* Login card */}
-          <div className="bg-slate-800 rounded-2xl shadow-xl p-10 border border-slate-700">
-            <div className="mb-10">
-              <h2 className="text-3xl font-bold text-white mb-3">Welcome back</h2>
-              <p className="text-lg text-slate-400">Sign in to access Minibeast</p>
+        {/* Glass-style Login card */}
+        <div className="relative">
+          {/* Glass effect background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl"></div>
+          
+          {/* Content */}
+          <div className="relative p-8">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
+              <p className="text-sm text-slate-400">Sign in to access MiniBeast</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -146,11 +131,11 @@ export default function Login() {
               </Button>
             </form>
           </div>
+        </div>
 
-          {/* Version watermark */}
-          <div className="absolute bottom-8 right-8">
-            <p className="text-xs text-brand-green font-light">Version 2.0</p>
-          </div>
+        {/* Copyright */}
+        <div className="text-center mt-6">
+          <p className="text-xs text-slate-500">© 2025 Dataction. All rights reserved.</p>
         </div>
       </div>
     </div>
