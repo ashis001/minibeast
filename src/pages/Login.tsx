@@ -64,7 +64,6 @@ export default function Login() {
         {/* Bottom left watermark */}
         <div className="absolute bottom-8 left-8 text-slate-800/80">
           <p className="text-sm font-medium">© 2025 Dataction</p>
-          <p className="text-xs font-light mt-1">Version 2.0</p>
         </div>
       </div>
 
@@ -146,6 +145,11 @@ export default function Login() {
                 )}
               </Button>
             </form>
+          </div>
+
+          {/* Version watermark */}
+          <div className="absolute bottom-8 right-8">
+            <p className="text-xs text-slate-400 font-light">Version 2.0</p>
           </div>
         </div>
       </div>
