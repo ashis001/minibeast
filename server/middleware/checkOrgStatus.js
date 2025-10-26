@@ -20,8 +20,8 @@ async function checkOrgStatus(req, res, next) {
       {
         timeout: 3000, // 3 second timeout
         validateStatus: function (status) {
-          // Consider any status code less than 500 as success
-          return status < 500;
+          // Accept all status codes to prevent axios throwing
+          return true;
         }
       }
     );
