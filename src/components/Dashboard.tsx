@@ -99,11 +99,9 @@ const Dashboard = () => {
     loadSnowflakeConfig();
   }, [loadSnowflakeConfig]);
 
-  // Reload config when switching to validation views
+  // Reload config whenever view changes to ensure latest config is loaded
   React.useEffect(() => {
-    if (currentView === 'add-validation' || currentView === 'view-validations') {
-      loadSnowflakeConfig();
-    }
+    loadSnowflakeConfig();
   }, [currentView, loadSnowflakeConfig]);
 
   // Check if connections are configured

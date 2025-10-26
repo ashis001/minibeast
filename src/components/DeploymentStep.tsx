@@ -112,8 +112,14 @@ const DeploymentStep = ({ onNext, awsConfig, selectedModule }: DeploymentStepPro
 
       setDeploymentStatus('Initializing AWS resources...');
       
+      // Get auth token from localStorage
+      const token = localStorage.getItem('access_token');
+      
       const response = await fetch('/api/deploy', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 
