@@ -36,6 +36,8 @@ import {
   LogOut,
 } from "lucide-react";
 import DeploymentWizard from "./DeploymentWizard";
+import ConnectionsSettings from "./ConnectionsSettings";
+import ModuleDeployment from "./ModuleDeployment";
 import ValidationStep from "./ValidationStep";
 import ViewValidations from "./ViewValidations";
 import ActivityLog from "./ActivityLog";
@@ -301,9 +303,9 @@ const Dashboard = () => {
 
   const renderContent = () => {
     if (currentView === 'connections') {
-      return <DeploymentWizard />;
+      return <ConnectionsSettings />;
     } else if (currentView === 'deployment') {
-      return <DeploymentWizard />;
+      return <ModuleDeployment />;
     } else if (currentView === 'config') {
       return <DeploymentWizard />;
     } else if (currentView === 'home') {

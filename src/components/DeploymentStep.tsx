@@ -13,6 +13,7 @@ import { AWSConfig } from "@/types";
 interface DeploymentStepProps {
   onNext: (deploymentId: string) => void;
   awsConfig: AWSConfig | null;
+  selectedModule?: string;
 }
 
 interface FileUpload {
@@ -39,7 +40,7 @@ interface ExistingDeployment {
   imageName: string;
 }
 
-const DeploymentStep = ({ onNext, awsConfig }: DeploymentStepProps) => {
+const DeploymentStep = ({ onNext, awsConfig, selectedModule }: DeploymentStepProps) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<FileUpload[]>([]);
