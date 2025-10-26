@@ -34,21 +34,21 @@ export const OrgBlockedOverlay: React.FC<Props> = ({ status, message }) => {
           
           {/* Message */}
           <p className="text-slate-300 mb-6 leading-relaxed text-base">
-            {message}
+            {status === 'expired' 
+              ? 'Your organization\'s license has expired. Please contact Dataction to renew your license and restore access.'
+              : 'Your organization is currently paused. Please contact Dataction to resume access.'
+            }
           </p>
           
           {/* Contact Info */}
           <div className="w-full p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-            <p className="text-sm text-slate-400 mb-2">Contact Support:</p>
+            <p className="text-sm text-slate-400 mb-2">To {status === 'expired' ? 'Renew' : 'Resume'}, Contact:</p>
             <p className="text-white font-semibold text-lg">support@dataction.com</p>
           </div>
           
           {/* Additional Info */}
           <p className="text-xs text-slate-500 mt-4">
-            {status === 'expired' 
-              ? 'Access will be restored once your license is renewed'
-              : 'Access will be restored once your organization is reactivated'
-            }
+            All functionality is temporarily disabled until {status === 'expired' ? 'license renewal' : 'organization reactivation'}.
           </p>
         </div>
       </div>

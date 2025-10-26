@@ -61,51 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Periodic role and license verification - check every 10 seconds
+  // Periodic role verification - check every 30 seconds
+  // Note: License blocking is handled by OrgStatusContext with overlay
   useEffect(() => {
     if (!accessToken || !user) return;
 
-    const verifyUserAndLicense = async () => {
+    const verifyRole = async () => {
       try {
-        // 1. Check organization license status FIRST
-        if (user.organization_id) {
-          try {
-            const url = `${AUTH_SERVER_URL}/license/organization/status/${user.organization_id}`;
-            console.log('[LICENSE CHECK] Checking:', url);
-            
-            const orgStatusResponse = await axios.get(url);
-            
-            console.log('[LICENSE CHECK] Response:', orgStatusResponse.data);
-            console.log('[LICENSE CHECK] can_access:', orgStatusResponse.data.can_access);
-            console.log('[LICENSE CHECK] status:', orgStatusResponse.data.status);
-            
-            // If organization is blocked, force logout immediately
-            if (!orgStatusResponse.data.can_access) {
-              const status = orgStatusResponse.data.status;
-              console.error(`[LICENSE CHECK] ACCESS BLOCKED - Status: ${status}`);
-              
-              logout();
-              
-              if (status === 'expired') {
-                alert('Your organization\'s license has expired. Please contact Dataction to renew at support@dataction.com');
-              } else if (status === 'paused') {
-                alert('Your organization has been paused. Please contact Dataction at support@dataction.com');
-              }
-              
-              window.location.href = '/login';
-              return; // Stop further checks
-            } else {
-              console.log('[LICENSE CHECK] Access allowed');
-            }
-          } catch (error) {
-            console.error('[LICENSE CHECK] Error checking org status:', error);
-            // Don't block if check fails (network issues, etc.)
-          }
-        } else {
-          console.warn('[LICENSE CHECK] No organization_id found for user');
-        }
-
-        // 2. Fetch fresh user data and verify role
+        // Fetch fresh user data and verify role
         const response = await axios.get(`${AUTH_SERVER_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -129,11 +92,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Initial check after 2 seconds
-    const timeoutId = setTimeout(verifyUserAndLicense, 2000);
+    // Initial check after 5 seconds
+    const timeoutId = setTimeout(verifyRole, 5000);
 
-    // Set up interval for periodic checks (every 10 seconds for aggressive license checking)
-    const intervalId = setInterval(verifyUserAndLicense, 10000);
+    // Set up interval for periodic checks (every 30 seconds)
+    const intervalId = setInterval(verifyRole, 30000);
 
     return () => {
       clearTimeout(timeoutId);
