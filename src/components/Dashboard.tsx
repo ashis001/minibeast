@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { canAccessModule } from "@/utils/permissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -153,14 +154,20 @@ const Dashboard = () => {
       return () => clearInterval(interval);
     }
   }, [currentView]);
-  const menuItems = [
-    { icon: Home, label: "Home", id: "home" },
-    { icon: Database, label: "Migrator", id: "migrator" },
-    { icon: GitBranch, label: "Reconciliator", id: "reconciliator" },
+
+  // Get user permissions
+  const userPermissions = user?.permissions?.modules || [];
+
+  // Base menu items (all possible items)
+  const allMenuItems = [
+    { icon: Home, label: "Home", id: "home", module: "dashboard" },
+    { icon: Database, label: "Migrator", id: "migrator", module: "migrator" },
+    { icon: GitBranch, label: "Reconciliator", id: "reconciliator", module: "reconciliator" },
     { 
       icon: Shield, 
       label: "Validator", 
       id: "validator",
+      module: "validator",
       children: [
         { icon: Zap, label: "Add Validation", id: "add-validation" },
         { icon: Eye, label: "View Validations", id: "view-validations" },
@@ -168,8 +175,20 @@ const Dashboard = () => {
         { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
       ]
     },
-    { icon: Settings, label: "Config", id: "config" },
+    { icon: Settings, label: "Config", id: "config", module: "config" },
   ];
+
+  // Filter menu items based on user permissions
+  const menuItems = React.useMemo(() => {
+    return allMenuItems.filter(item => {
+      // Home/Dashboard is always visible if user has dashboard permission
+      if (item.id === 'home') {
+        return canAccessModule(userPermissions, 'dashboard');
+      }
+      // Check if user has permission for this module
+      return item.module ? canAccessModule(userPermissions, item.module) : true;
+    });
+  }, [userPermissions]);
 
   const handleMenuClick = (id: string, hasChildren?: boolean) => {
     if (hasChildren) {
@@ -725,14 +744,31 @@ const Dashboard = () => {
 
             <div className="mt-auto p-4 space-y-3 border-t border-slate-800">
               {/* User info */}
-              <div className="flex items-center gap-3 px-2 py-2 bg-slate-800/50 rounded-lg">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <Users className="h-4 w-4 text-white" />
+              <div className="px-2 py-3 bg-slate-800/50 rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <Users className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
+                    <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
-                  <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-                </div>
+                {user?.role && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className={`text-xs ${
+                      user.role === 'developer' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                      user.role === 'tester' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                      user.role === 'ops' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                      'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                    }`}>
+                      {user.role.toUpperCase()}
+                    </Badge>
+                    <span className="text-xs text-slate-500">
+                      {user.permissions?.description || 'User'}
+                    </span>
+                  </div>
+                )}
               </div>
               
               {/* Logout button */}

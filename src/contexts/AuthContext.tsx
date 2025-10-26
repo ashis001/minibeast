@@ -13,6 +13,11 @@ interface Organization {
   id: string;
 }
 
+interface Permissions {
+  modules: string[];
+  description: string;
+}
+
 interface User {
   id: string;
   email: string;
@@ -20,7 +25,7 @@ interface User {
   role: string;
   organization_id: string;
   organization_name?: string;
-  permissions: string[];
+  permissions: Permissions;
   license?: License;
   organization?: Organization;
 }
