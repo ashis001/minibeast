@@ -68,30 +68,30 @@ export default function Login() {
       </div>
 
       {/* Right side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-8 bg-slate-950">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 bg-brand-green rounded-xl flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-slate-900" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-white">
                 MiniBeast
               </h1>
             </div>
           </div>
 
           {/* Login card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+          <div className="bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700">
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h2>
-              <p className="text-slate-600">Sign in to access Minibeast</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
+              <p className="text-slate-400">Sign in to access Minibeast</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                <Label htmlFor="email" className="text-sm font-medium text-slate-300">
                   Email address
                 </Label>
                 <Input
@@ -102,18 +102,18 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="h-12 px-4 bg-slate-50 border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-slate-900"
+                  className="h-12 px-4 bg-slate-900 border-slate-600 focus:border-brand-green focus:ring-brand-green text-white placeholder:text-slate-500"
                 />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+                  <Label htmlFor="password" className="text-sm font-medium text-slate-300">
                     Password
                   </Label>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <Input
                     id="password"
                     type="password"
@@ -122,19 +122,19 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="h-12 pl-11 pr-4 bg-slate-50 border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-slate-900"
+                    className="h-12 pl-11 pr-4 bg-slate-900 border-slate-600 focus:border-brand-green focus:ring-brand-green text-white placeholder:text-slate-500"
                   />
                 </div>
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full h-12 bg-brand-green hover:bg-brand-green/90 text-slate-900 font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin"></div>
                     Signing in...
                   </div>
                 ) : (
@@ -149,7 +149,7 @@ export default function Login() {
 
           {/* Version watermark */}
           <div className="absolute bottom-8 right-8">
-            <p className="text-xs text-slate-400 font-light">Version 2.0</p>
+            <p className="text-xs text-slate-600 font-light">Version 2.0</p>
           </div>
         </div>
       </div>
