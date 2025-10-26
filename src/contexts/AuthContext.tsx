@@ -61,13 +61,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Periodic role verification - check every 30 seconds
+  // Periodic role and license verification - check every 10 seconds
   useEffect(() => {
     if (!accessToken || !user) return;
 
-    const verifyRole = async () => {
+    const verifyUserAndLicense = async () => {
       try {
-        // Fetch fresh user data from backend
+        // 1. Check organization license status FIRST
+        if (user.organization_id) {
+          try {
+            const orgStatusResponse = await axios.get(
+              `${AUTH_SERVER_URL}/license/organization/status/${user.organization_id}`
+            );
+            
+            // If organization is blocked, force logout immediately
+            if (!orgStatusResponse.data.can_access) {
+              const status = orgStatusResponse.data.status;
+              console.warn(`Organization ${status} - forcing logout`);
+              
+              logout();
+              
+              if (status === 'expired') {
+                alert('Your organization\'s license has expired. Please contact Dataction to renew at support@dataction.com');
+              } else if (status === 'paused') {
+                alert('Your organization has been paused. Please contact Dataction at support@dataction.com');
+              }
+              
+              window.location.href = '/login';
+              return; // Stop further checks
+            }
+          } catch (error) {
+            console.error('Failed to check org status:', error);
+            // Don't block if check fails (network issues, etc.)
+          }
+        }
+
+        // 2. Fetch fresh user data and verify role
         const response = await axios.get(`${AUTH_SERVER_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -91,11 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Initial check after 5 seconds
-    const timeoutId = setTimeout(verifyRole, 5000);
+    // Initial check after 2 seconds
+    const timeoutId = setTimeout(verifyUserAndLicense, 2000);
 
-    // Set up interval for periodic checks (every 30 seconds)
-    const intervalId = setInterval(verifyRole, 30000);
+    // Set up interval for periodic checks (every 10 seconds for aggressive license checking)
+    const intervalId = setInterval(verifyUserAndLicense, 10000);
 
     return () => {
       clearTimeout(timeoutId);
