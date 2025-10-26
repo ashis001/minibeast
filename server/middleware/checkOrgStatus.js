@@ -14,12 +14,20 @@ async function checkOrgStatus(req, res, next) {
 
     const orgId = req.user.organization_id;
 
+    // Add timeout to prevent hanging requests
     const response = await axios.get(
-      `${AUTH_SERVER_URL}/license/organization/status/${orgId}`
+      `${AUTH_SERVER_URL}/license/organization/status/${orgId}`,
+      {
+        timeout: 3000, // 3 second timeout
+        validateStatus: function (status) {
+          // Consider any status code less than 500 as success
+          return status < 500;
+        }
+      }
     );
 
     // If organization cannot access, block the request
-    if (!response.data.can_access) {
+    if (response.data && !response.data.can_access) {
       return res.status(403).json({
         success: false,
         error: 'Organization access denied',
