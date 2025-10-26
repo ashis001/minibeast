@@ -40,70 +40,31 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-600 to-emerald-500 relative overflow-hidden">
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }}></div>
         </div>
 
-        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Sparkles className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                MiniBeast
-              </h1>
-              <p className="text-sm text-slate-400">Data Deployment Platform</p>
-            </div>
+        <div className="relative z-10 flex flex-col justify-center items-center px-16 w-full">
+          {/* Center Branding */}
+          <div className="text-center">
+            <h1 className="text-7xl font-black text-slate-900 mb-4 tracking-tight">
+              MiniBeast
+            </h1>
+            <p className="text-xl text-slate-800 font-light italic tracking-wide">
+              a product of <span className="font-semibold">Dataction</span>
+            </p>
           </div>
+        </div>
 
-          {/* Tagline */}
-          <h2 className="text-4xl font-bold mb-6 leading-tight">
-            Your Complete
-            <br />
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Data Platform
-            </span>
-          </h2>
-          <p className="text-lg text-slate-300 mb-12 leading-relaxed">
-            Validate, migrate, and reconcile your data with confidence.
-            Enterprise-grade accuracy. Lightning-fast execution.
-          </p>
-
-          {/* Features */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <Shield className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Validator Module</h3>
-                <p className="text-sm text-slate-400">Real-time data quality checks</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                <Database className="h-5 w-5 text-emerald-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Migrator Module</h3>
-                <p className="text-sm text-slate-400">Zero-downtime migrations</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                <GitBranch className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Reconciliator Module</h3>
-                <p className="text-sm text-slate-400">Automated data reconciliation</p>
-              </div>
-            </div>
-          </div>
+        {/* Bottom left watermark */}
+        <div className="absolute bottom-8 left-8 text-slate-800/80">
+          <p className="text-sm font-medium">© 2025 Dataction</p>
+          <p className="text-xs font-light mt-1">Version 2.0</p>
         </div>
       </div>
 
