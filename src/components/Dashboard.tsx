@@ -47,6 +47,7 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const [currentView, setCurrentView] = useState('home');
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [connectionsConfigured, setConnectionsConfigured] = useState(false);
   
   // Real-time data states
   const [deploymentStats, setDeploymentStats] = useState({
@@ -102,6 +103,23 @@ const Dashboard = () => {
       loadSnowflakeConfig();
     }
   }, [currentView, loadSnowflakeConfig]);
+
+  // Check if connections are configured
+  React.useEffect(() => {
+    const checkConnections = () => {
+      // Check if AWS and Snowflake configs exist
+      const awsConfig = localStorage.getItem('awsConfig');
+      const snowflakeConfigStr = localStorage.getItem('snowflakeConfig');
+      const hasConnections = !!(awsConfig && snowflakeConfigStr);
+      setConnectionsConfigured(hasConnections);
+    };
+    
+    checkConnections();
+    // Re-check when view changes to connections
+    if (currentView === 'connections') {
+      checkConnections();
+    }
+  }, [currentView]);
 
   // Fetch real deployment statistics
   useEffect(() => {
@@ -175,7 +193,16 @@ const Dashboard = () => {
         { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
       ]
     },
-    { icon: Settings, label: "Config", id: "config", module: "config" },
+    { 
+      icon: Settings, 
+      label: "Settings", 
+      id: "settings",
+      module: "config",
+      children: [
+        { icon: Cloud, label: "Connections", id: "connections" },
+        { icon: Rocket, label: "Deployment", id: "deployment", requiresConnection: true },
+      ]
+    },
   ];
 
   // Filter menu items based on user permissions
@@ -190,7 +217,7 @@ const Dashboard = () => {
     });
   }, [userPermissions]);
 
-  const handleMenuClick = (id: string, hasChildren?: boolean) => {
+  const handleMenuClick = (id: string, hasChildren?: boolean, requiresConnection?: boolean) => {
     if (hasChildren) {
       // Toggle expand/collapse
       setExpandedMenus(prev => 
@@ -199,6 +226,12 @@ const Dashboard = () => {
           : [...prev, id]
       );
     } else {
+      // Check if this view requires connections
+      if (requiresConnection && !connectionsConfigured) {
+        // Show alert that connections must be configured first
+        alert('⚠️ Please configure AWS and Snowflake connections first before accessing Deployment.');
+        return;
+      }
       setCurrentView(id);
     }
   };
@@ -267,9 +300,13 @@ const Dashboard = () => {
   ];
 
   const renderContent = () => {
-    if (currentView === 'config') {
-    return <DeploymentWizard />;
-  } else if (currentView === 'home') {
+    if (currentView === 'connections') {
+      return <DeploymentWizard />;
+    } else if (currentView === 'deployment') {
+      return <DeploymentWizard />;
+    } else if (currentView === 'config') {
+      return <DeploymentWizard />;
+    } else if (currentView === 'home') {
       return (
         <>
           {/* License Info */}
@@ -288,9 +325,17 @@ const Dashboard = () => {
                     <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
                       <GitBranch className="h-6 w-6 text-blue-400" />
                     </div>
-                    <Button onClick={() => handleMenuClick('config')} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                    <Button onClick={() => {
+                      if (!connectionsConfigured) {
+                        setExpandedMenus(['settings']);
+                        setCurrentView('connections');
+                      } else {
+                        setExpandedMenus(['settings']);
+                        setCurrentView('deployment');
+                      }
+                    }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
                       <Rocket className="h-3 w-3 mr-1" />
-                      Deploy
+                      {connectionsConfigured ? 'Deploy' : 'Setup'}
                     </Button>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Migration</h3>
@@ -319,9 +364,17 @@ const Dashboard = () => {
                     <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
                       <Shield className="h-6 w-6 text-emerald-400" />
                     </div>
-                    <Button onClick={() => handleMenuClick('config')} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                    <Button onClick={() => {
+                      if (!connectionsConfigured) {
+                        setExpandedMenus(['settings']);
+                        setCurrentView('connections');
+                      } else {
+                        setExpandedMenus(['settings']);
+                        setCurrentView('deployment');
+                      }
+                    }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
                       <Rocket className="h-3 w-3 mr-1" />
-                      Deploy
+                      {connectionsConfigured ? 'Deploy' : 'Setup'}
                     </Button>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Validator</h3>
@@ -350,9 +403,17 @@ const Dashboard = () => {
                     <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
                       <Activity className="h-6 w-6 text-purple-400" />
                     </div>
-                    <Button onClick={() => handleMenuClick('config')} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                    <Button onClick={() => {
+                      if (!connectionsConfigured) {
+                        setExpandedMenus(['settings']);
+                        setCurrentView('connections');
+                      } else {
+                        setExpandedMenus(['settings']);
+                        setCurrentView('deployment');
+                      }
+                    }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
                       <Rocket className="h-3 w-3 mr-1" />
-                      Deploy
+                      {connectionsConfigured ? 'Deploy' : 'Setup'}
                     </Button>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Reconciliation</h3>
@@ -718,21 +779,30 @@ const Dashboard = () => {
                           }`}
                         >
                           <div className="ml-6 mt-1 space-y-1">
-                            {item.children.map((child, childIndex) => (
-                              <SidebarMenuItem key={childIndex}>
-                                <SidebarMenuButton
-                                  onClick={() => handleMenuClick(child.id)}
-                                  className={`w-full justify-start cursor-pointer transition-all duration-200 ${
-                                    currentView === child.id
-                                      ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                                      : "text-slate-300 hover:text-white hover:bg-slate-800"
-                                  }`}
-                                >
-                                  <child.icon className="h-4 w-4" />
-                                  <span>{child.label}</span>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            ))}
+                            {item.children.map((child: any, childIndex) => {
+                              const isDisabled = child.requiresConnection && !connectionsConfigured;
+                              return (
+                                <SidebarMenuItem key={childIndex}>
+                                  <SidebarMenuButton
+                                    onClick={() => !isDisabled && handleMenuClick(child.id, false, child.requiresConnection)}
+                                    disabled={isDisabled}
+                                    className={`w-full justify-start transition-all duration-200 ${
+                                      isDisabled
+                                        ? "cursor-not-allowed opacity-50 text-slate-500 hover:bg-slate-800/50"
+                                        : currentView === child.id
+                                        ? "cursor-pointer bg-emerald-500 text-white hover:bg-emerald-600"
+                                        : "cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800"
+                                    }`}
+                                  >
+                                    <child.icon className="h-4 w-4" />
+                                    <span>{child.label}</span>
+                                    {isDisabled && (
+                                      <Lock className="h-3 w-3 ml-auto text-orange-400" />
+                                    )}
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
