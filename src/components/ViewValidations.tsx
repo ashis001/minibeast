@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from './ui/dropdown-menu';
-import { AlertTriangle, Activity, Play, RefreshCw, ChevronDown, Edit, X } from 'lucide-react';
+import { AlertTriangle, Activity, Play, RefreshCw, ChevronDown, Edit, X, BarChart3 } from 'lucide-react';
 
 interface ValidationRule {
   ID: string;
@@ -534,6 +534,35 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          {/* Animated Loading Spinner */}
+          <div className="relative w-32 h-32 mx-auto mb-8">
+            <div className="absolute inset-0 border-4 border-brand-green/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-transparent border-t-brand-green rounded-full animate-spin"></div>
+            <div className="absolute inset-4 border-4 border-transparent border-t-blue-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <BarChart3 className="h-12 w-12 text-brand-green animate-pulse" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2 animate-pulse">Loading Validations</h2>
+          <p className="text-slate-400">Fetching data from Snowflake...</p>
+          <div className="flex justify-center space-x-1 mt-4">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 bg-brand-green rounded-full animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              ></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -551,7 +580,9 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
               <Button variant="outline" className="w-full justify-between">
                 {selectedEntities.length === 0 
                   ? "Select entities..." 
-                  : `${selectedEntities.length} selected`
+                  : selectedEntities.length === entities.length
+                    ? "Select All"
+                    : `${selectedEntities.length} selected`
                 }
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -605,7 +636,9 @@ const ViewValidations = ({ snowflakeConfig, onNavigate }: ViewValidationsProps) 
               <Button variant="outline" className="w-full justify-between">
                 {selectedDescriptions.length === 0 
                   ? "Select descriptions..." 
-                  : `${selectedDescriptions.length} selected`
+                  : selectedDescriptions.length === descriptions.length
+                    ? "Select All"
+                    : `${selectedDescriptions.length} selected`
                 }
                 <ChevronDown className="h-4 w-4" />
               </Button>
