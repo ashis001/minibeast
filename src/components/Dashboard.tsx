@@ -34,10 +34,12 @@ import {
   ChevronRight,
   Sparkles,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 import DeploymentWizard from "./DeploymentWizard";
 import ConnectionsSettings from "./ConnectionsSettings";
 import ModuleDeployment from "./ModuleDeployment";
+import { Documentation } from "./Documentation";
 import ValidationStep from "./ValidationStep";
 import ViewValidations from "./ViewValidations";
 import ActivityLog from "./ActivityLog";
@@ -50,6 +52,7 @@ const Dashboard = () => {
   const [currentView, setCurrentView] = useState('home');
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [connectionsConfigured, setConnectionsConfigured] = useState(false);
+  const [showDocumentation, setShowDocumentation] = useState(false);
   const [deployedModules, setDeployedModules] = useState<{[key: string]: boolean}>({
     migrator: false,
     validator: false,
@@ -710,6 +713,15 @@ const Dashboard = () => {
                 )}
               </div>
               
+              {/* Documentation button */}
+              <button
+                onClick={() => setShowDocumentation(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Documentation</span>
+              </button>
+              
               {/* Logout button */}
               <button
                 onClick={() => {
@@ -730,10 +742,14 @@ const Dashboard = () => {
         <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             {renderContent()}
-
           </div>
         </main>
       </div>
+      
+      {/* Documentation Modal */}
+      {showDocumentation && (
+        <Documentation onClose={() => setShowDocumentation(false)} />
+      )}
     </SidebarProvider>
   );
 };
