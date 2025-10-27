@@ -206,8 +206,9 @@ const Dashboard = () => {
     }
   }, [currentView]);
 
-  // Get user permissions
+  // Get user permissions and organization features
   const userPermissions = user?.permissions?.modules || [];
+  const organizationFeatures = user?.license?.features || [];
 
   // Base menu items (all possible items)
   const allMenuItems = [
@@ -238,17 +239,17 @@ const Dashboard = () => {
     },
   ];
 
-  // Filter menu items based on user permissions
+  // Filter menu items based on user permissions AND organization features
   const menuItems = React.useMemo(() => {
     return allMenuItems.filter(item => {
       // Home/Dashboard is always visible if user has dashboard permission
       if (item.id === 'home') {
-        return canAccessModule(userPermissions, 'dashboard');
+        return canAccessModule(userPermissions, 'dashboard', organizationFeatures);
       }
-      // Check if user has permission for this module
-      return item.module ? canAccessModule(userPermissions, item.module) : true;
+      // Check if user has BOTH role permission AND organization feature for this module
+      return item.module ? canAccessModule(userPermissions, item.module, organizationFeatures) : true;
     });
-  }, [userPermissions]);
+  }, [userPermissions, organizationFeatures]);
 
   const handleMenuClick = (id: string, hasChildren?: boolean, requiresConnection?: boolean) => {
     if (hasChildren) {
