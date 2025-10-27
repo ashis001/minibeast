@@ -54,19 +54,13 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-md mx-4">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center">
             <img 
               src="https://cdn.prod.website-files.com/66d705faac628063be399fde/66dd39e12f6ed23bce7b7321_DataAction-%20Green.svg" 
               alt="DataAction" 
               className="h-16 w-auto"
             />
           </div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tight">
-            MiniBeast
-          </h1>
-          <p className="text-sm text-slate-400 font-light">
-            Enterprise Data Validation Platform
-          </p>
         </div>
 
         {/* Glass-style Login card */}
@@ -76,9 +70,9 @@ export default function Login() {
           
           {/* Content */}
           <div className="relative p-8">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
-              <p className="text-sm text-slate-400">Sign in to access MiniBeast</p>
+            <div className="mb-8 text-center">
+              <h2 className="text-3xl font-black text-white mb-2">MiniBeast</h2>
+              <p className="text-sm text-slate-400">Sign in to your account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
