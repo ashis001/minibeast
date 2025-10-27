@@ -54,11 +54,18 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-md mx-4">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-black text-brand-green mb-2 tracking-tight">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="https://cdn.prod.website-files.com/66d705faac628063be399fde/66dd39e12f6ed23bce7b7321_DataAction-%20Green.svg" 
+              alt="DataAction" 
+              className="h-16 w-auto"
+            />
+          </div>
+          <h1 className="text-4xl font-black text-white mb-2 tracking-tight">
             MiniBeast
           </h1>
-          <p className="text-lg text-brand-green/80 font-light italic">
-            a product of <span className="font-semibold">Dataction</span>
+          <p className="text-sm text-slate-400 font-light">
+            Enterprise Data Validation Platform
           </p>
         </div>
 
