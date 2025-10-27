@@ -215,7 +215,7 @@ const Dashboard = () => {
     { icon: Database, label: "Migrator", id: "migrator", module: "migrator" },
     { icon: GitBranch, label: "Reconciliator", id: "reconciliator", module: "reconciliator" },
     { 
-      icon: Shield, 
+      icon: CheckCircle, 
       label: "Validator", 
       id: "validator",
       module: "validator",
@@ -395,7 +395,7 @@ const Dashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-brand-green/20 rounded-lg flex items-center justify-center">
-                      <Shield className="h-6 w-6 text-brand-green" />
+                      <CheckCircle className="h-6 w-6 text-brand-green" />
                     </div>
                     {deployedModules.validator ? (
                       <Badge className="bg-brand-green text-white">

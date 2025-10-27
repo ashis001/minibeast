@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Upload, Rocket, CheckCircle, RefreshCw, Trash2, AlertTriangle, Shield, GitBranch, Activity } from "lucide-react";
+import { Upload, Rocket, CheckCircle, RefreshCw, Trash2, AlertTriangle, GitBranch, Activity } from "lucide-react";
 import Header from "./Header";
 import StepIndicator from "./StepIndicator";
 import DeploymentStep from './DeploymentStep';
@@ -51,7 +51,7 @@ const ModuleDeployment = () => {
       id: 'validator', 
       name: 'Validator', 
       description: 'Data validation and quality checks',
-      icon: Shield,
+      icon: CheckCircle,
       color: 'emerald'
     },
     { 
