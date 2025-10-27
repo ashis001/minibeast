@@ -248,15 +248,15 @@ const Dashboard = () => {
   // Filter menu items based on user permissions AND organization features
   const menuItems = React.useMemo(() => {
     return allMenuItems.filter(item => {
-      // Home/Dashboard is always visible if user has dashboard permission
+      // Dashboard - only check role permission (not org features)
       if (item.id === 'home') {
-        return canAccessModule(userPermissions, 'dashboard', organizationFeatures);
+        return userPermissions.includes('dashboard');
       }
-      // Settings menu is only for developer role
+      // Settings - only for developer role with config permission (not org features)
       if (item.id === 'settings') {
-        return isDeveloper && canAccessModule(userPermissions, 'config', organizationFeatures);
+        return isDeveloper && userPermissions.includes('config');
       }
-      // Check if user has BOTH role permission AND organization feature for this module
+      // Actual modules (validator, migrator, reconciliator) - check BOTH role permission AND org features
       return item.module ? canAccessModule(userPermissions, item.module, organizationFeatures) : true;
     });
   }, [userPermissions, organizationFeatures, isDeveloper]);
