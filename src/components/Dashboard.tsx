@@ -50,6 +50,11 @@ const Dashboard = () => {
   const [currentView, setCurrentView] = useState('home');
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [connectionsConfigured, setConnectionsConfigured] = useState(false);
+  const [deployedModules, setDeployedModules] = useState<{[key: string]: boolean}>({
+    migrator: false,
+    validator: false,
+    reconciliator: false
+  });
   
   // Real-time data states
   const [deploymentStats, setDeploymentStats] = useState({
@@ -118,6 +123,34 @@ const Dashboard = () => {
     // Re-check when view changes to connections
     if (currentView === 'connections') {
       checkConnections();
+    }
+  }, [currentView]);
+
+  // Check deployment status for each module
+  React.useEffect(() => {
+    const checkModuleDeployments = async () => {
+      const modules = ['migrator', 'validator', 'reconciliator'];
+      const deploymentStatus: {[key: string]: boolean} = {};
+      
+      for (const module of modules) {
+        try {
+          const response = await fetch(`/api/deployment/status/${module}`);
+          if (response.ok) {
+            const data = await response.json();
+            deploymentStatus[module] = data.deployed || false;
+          } else {
+            deploymentStatus[module] = false;
+          }
+        } catch (error) {
+          deploymentStatus[module] = false;
+        }
+      }
+      
+      setDeployedModules(deploymentStatus);
+    };
+    
+    if (currentView === 'home') {
+      checkModuleDeployments();
     }
   }, [currentView]);
 
@@ -318,120 +351,108 @@ const Dashboard = () => {
           <div className="mb-12">
             {/* Three Module Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {/* Migration Module */}
-              <Card className="bg-gradient-to-br from-blue-900/20 to-slate-900 border-blue-500/30 hover:border-blue-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20">
+              {/* Migrator Module */}
+              <Card className={`bg-gradient-to-br from-blue-900/20 to-slate-900 border-blue-500/30 transition-all duration-300 ${
+                deployedModules.migrator 
+                  ? 'opacity-70 cursor-not-allowed' 
+                  : 'hover:border-blue-500/60 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20'
+              }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
                       <GitBranch className="h-6 w-6 text-blue-400" />
                     </div>
-                    <Button onClick={() => {
-                      if (!connectionsConfigured) {
-                        setExpandedMenus(['settings']);
-                        setCurrentView('connections');
-                      } else {
-                        setExpandedMenus(['settings']);
-                        setCurrentView('deployment');
-                      }
-                    }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
-                      <Rocket className="h-3 w-3 mr-1" />
-                      {connectionsConfigured ? 'Deploy' : 'Setup'}
-                    </Button>
+                    {deployedModules.migrator ? (
+                      <Badge className="bg-brand-green text-white">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Deployed
+                      </Badge>
+                    ) : (
+                      <Button onClick={() => {
+                        if (!connectionsConfigured) {
+                          setExpandedMenus(['settings']);
+                          setCurrentView('connections');
+                        } else {
+                          setExpandedMenus(['settings']);
+                          setCurrentView('deployment');
+                        }
+                      }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                        <Rocket className="h-3 w-3 mr-1" />
+                        {connectionsConfigured ? 'Deploy' : 'Setup'}
+                      </Button>
+                    )}
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Migration</h3>
-                  <p className="text-slate-400 mb-4">Seamless data transfer between systems with zero downtime</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Schema mapping</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Bulk data transfer</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Progress tracking</span>
-                    </div>
-                  </div>
+                  <h3 className="text-2xl font-bold text-white">Migrator</h3>
                 </CardContent>
               </Card>
 
               {/* Validator Module */}
-              <Card className="bg-gradient-to-br from-slate-900/20 to-slate-900 border-brand-green/30 hover:border-brand-green/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-brand-green/20">
+              <Card className={`bg-gradient-to-br from-slate-900/20 to-slate-900 border-brand-green/30 transition-all duration-300 ${
+                deployedModules.validator 
+                  ? 'opacity-70 cursor-not-allowed' 
+                  : 'hover:border-brand-green/60 hover:scale-105 hover:shadow-2xl hover:shadow-brand-green/20'
+              }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-brand-green/20 rounded-lg flex items-center justify-center">
                       <Shield className="h-6 w-6 text-brand-green" />
                     </div>
-                    <Button onClick={() => {
-                      if (!connectionsConfigured) {
-                        setExpandedMenus(['settings']);
-                        setCurrentView('connections');
-                      } else {
-                        setExpandedMenus(['settings']);
-                        setCurrentView('deployment');
-                      }
-                    }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
-                      <Rocket className="h-3 w-3 mr-1" />
-                      {connectionsConfigured ? 'Deploy' : 'Setup'}
-                    </Button>
+                    {deployedModules.validator ? (
+                      <Badge className="bg-brand-green text-white">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Deployed
+                      </Badge>
+                    ) : (
+                      <Button onClick={() => {
+                        if (!connectionsConfigured) {
+                          setExpandedMenus(['settings']);
+                          setCurrentView('connections');
+                        } else {
+                          setExpandedMenus(['settings']);
+                          setCurrentView('deployment');
+                        }
+                      }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                        <Rocket className="h-3 w-3 mr-1" />
+                        {connectionsConfigured ? 'Deploy' : 'Setup'}
+                      </Button>
+                    )}
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Validator</h3>
-                  <p className="text-slate-400 mb-4">Real-time data quality checks with automated alerting</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Custom rules engine</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Email notifications</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Detailed reports</span>
-                    </div>
-                  </div>
+                  <h3 className="text-2xl font-bold text-white">Validator</h3>
                 </CardContent>
               </Card>
 
-              {/* Reconciliation Module */}
-              <Card className="bg-gradient-to-br from-purple-900/20 to-slate-900 border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20">
+              {/* Reconciliator Module */}
+              <Card className={`bg-gradient-to-br from-purple-900/20 to-slate-900 border-purple-500/30 transition-all duration-300 ${
+                deployedModules.reconciliator 
+                  ? 'opacity-70 cursor-not-allowed' 
+                  : 'hover:border-purple-500/60 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20'
+              }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
                       <Activity className="h-6 w-6 text-purple-400" />
                     </div>
-                    <Button onClick={() => {
-                      if (!connectionsConfigured) {
-                        setExpandedMenus(['settings']);
-                        setCurrentView('connections');
-                      } else {
-                        setExpandedMenus(['settings']);
-                        setCurrentView('deployment');
-                      }
-                    }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
-                      <Rocket className="h-3 w-3 mr-1" />
-                      {connectionsConfigured ? 'Deploy' : 'Setup'}
-                    </Button>
+                    {deployedModules.reconciliator ? (
+                      <Badge className="bg-brand-green text-white">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Deployed
+                      </Badge>
+                    ) : (
+                      <Button onClick={() => {
+                        if (!connectionsConfigured) {
+                          setExpandedMenus(['settings']);
+                          setCurrentView('connections');
+                        } else {
+                          setExpandedMenus(['settings']);
+                          setCurrentView('deployment');
+                        }
+                      }} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                        <Rocket className="h-3 w-3 mr-1" />
+                        {connectionsConfigured ? 'Deploy' : 'Setup'}
+                      </Button>
+                    )}
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Reconciliation</h3>
-                  <p className="text-slate-400 mb-4">Cross-system data matching and discrepancy detection</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Multi-source compare</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Anomaly detection</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-brand-green" />
-                      <span className="text-sm text-slate-300">Reconciliation reports</span>
-                    </div>
-                  </div>
+                  <h3 className="text-2xl font-bold text-white">Reconciliator</h3>
                 </CardContent>
               </Card>
             </div>
