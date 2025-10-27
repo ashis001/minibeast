@@ -611,51 +611,6 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-brand-green" />
-                  <span>Data Migration</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-400">
-                  Seamlessly migrate data between systems with zero downtime and full integrity validation.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
-                  <Shield className="h-5 w-5 text-brand-green" />
-                  <span>Data Validation</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-400">
-                  Advanced validation rules with custom business logic and real-time error detection.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
-                  <Globe className="h-5 w-5 text-brand-green" />
-                  <span>Global Scale</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-400">
-                  Deploy across multiple AWS regions with automatic failover and load balancing.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* System Status */}
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
