@@ -531,23 +531,29 @@ const Dashboard = () => {
                 <p className="text-slate-400 text-sm">Success vs Failed validations</p>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={validationMetrics.length > 0 ? validationMetrics : [
-                    { module: 'Validator', success: 42, failed: 3 },
-                    { module: 'Migrator', success: 28, failed: 2 },
-                    { module: 'Reconciliator', success: 35, failed: 1 },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="module" stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
-                      labelStyle={{ color: '#f1f5f9' }}
-                    />
-                    <Bar dataKey="success" fill="#10b981" />
-                    <Bar dataKey="failed" fill="#ef4444" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {validationMetrics.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={validationMetrics}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="module" stroke="#9ca3af" />
+                      <YAxis stroke="#9ca3af" />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
+                        labelStyle={{ color: '#f1f5f9' }}
+                      />
+                      <Bar dataKey="success" fill="#10b981" />
+                      <Bar dataKey="failed" fill="#ef4444" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[250px]">
+                    <div className="text-center">
+                      <BarChart3 className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                      <p className="text-slate-400">No validation data available</p>
+                      <p className="text-slate-500 text-sm mt-1">Deploy a module to see validation metrics</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
