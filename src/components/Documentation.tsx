@@ -42,7 +42,7 @@ export const Documentation: React.FC<DocumentationProps> = ({ onClose }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
                 <div className="text-brand-green font-bold text-2xl mb-1">10x</div>
-                <div className="text-slate-400 text-sm">Faster than Node.js</div>
+                <div className="text-slate-400 text-sm">Faster</div>
               </div>
               <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
                 <div className="text-brand-green font-bold text-2xl mb-1">50%</div>
@@ -164,128 +164,6 @@ export const Documentation: React.FC<DocumentationProps> = ({ onClose }) => {
             </div>
           </section>
 
-          {/* Architecture */}
-          <section className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Server className="h-6 w-6 text-brand-green" />
-              Technical Architecture
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-bold text-white">Frontend</h3>
-                <ul className="space-y-2 text-slate-300 text-sm">
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>React 18 with TypeScript</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>Vite for lightning-fast builds</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>Tailwind CSS + Shadcn UI</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>Real-time dashboard updates</span>
-                  </li>
-                </ul>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-bold text-white">Backend</h3>
-                <ul className="space-y-2 text-slate-300 text-sm">
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>Go AWS Lambda (Serverless)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>AWS API Gateway</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>Zero cold start optimization</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-brand-green">▸</span>
-                    <span>Auto-scaling infrastructure</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-slate-900 rounded-lg border border-slate-700">
-              <h4 className="text-sm font-bold text-white mb-2">API Gateway</h4>
-              <code className="text-xs text-brand-green">
-                https://b36k00if4h.execute-api.ap-south-1.amazonaws.com/Prod
-              </code>
-            </div>
-          </section>
-
-          {/* Security */}
-          <section className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Shield className="h-6 w-6 text-brand-green" />
-              Security Features
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-brand-green mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-white mb-1">Authentication & Authorization</h4>
-                    <p className="text-slate-400 text-sm">JWT-based authentication with role-based access control (RBAC)</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-brand-green mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-white mb-1">Encrypted Connections</h4>
-                    <p className="text-slate-400 text-sm">All API communications use HTTPS/TLS encryption</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-brand-green mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-white mb-1">Credential Management</h4>
-                    <p className="text-slate-400 text-sm">AWS and Snowflake credentials encrypted at rest</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-brand-green mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-white mb-1">License Management</h4>
-                    <p className="text-slate-400 text-sm">Organization-level feature control and license enforcement</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-brand-green mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-white mb-1">Session Management</h4>
-                    <p className="text-slate-400 text-sm">Automatic session timeout and token refresh</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-brand-green mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-white mb-1">Audit Logging</h4>
-                    <p className="text-slate-400 text-sm">Comprehensive activity logs for compliance</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
 
           {/* Deployment */}
           <section className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
