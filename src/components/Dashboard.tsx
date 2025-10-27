@@ -242,6 +242,9 @@ const Dashboard = () => {
     },
   ];
 
+  // Check if user is developer (only developers can access Settings)
+  const isDeveloper = user?.role === 'developer';
+
   // Filter menu items based on user permissions AND organization features
   const menuItems = React.useMemo(() => {
     return allMenuItems.filter(item => {
@@ -249,10 +252,14 @@ const Dashboard = () => {
       if (item.id === 'home') {
         return canAccessModule(userPermissions, 'dashboard', organizationFeatures);
       }
+      // Settings menu is only for developer role
+      if (item.id === 'settings') {
+        return isDeveloper && canAccessModule(userPermissions, 'config', organizationFeatures);
+      }
       // Check if user has BOTH role permission AND organization feature for this module
       return item.module ? canAccessModule(userPermissions, item.module, organizationFeatures) : true;
     });
-  }, [userPermissions, organizationFeatures]);
+  }, [userPermissions, organizationFeatures, isDeveloper]);
 
   const handleMenuClick = (id: string, hasChildren?: boolean, requiresConnection?: boolean) => {
     if (hasChildren) {
@@ -713,14 +720,16 @@ const Dashboard = () => {
                 )}
               </div>
               
-              {/* Documentation button */}
-              <button
-                onClick={() => setShowDocumentation(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                <BookOpen className="h-4 w-4" />
-                <span>Documentation</span>
-              </button>
+              {/* Documentation button - Only for developers */}
+              {isDeveloper && (
+                <button
+                  onClick={() => setShowDocumentation(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  <span>Documentation</span>
+                </button>
+              )}
               
               {/* Logout button */}
               <button
