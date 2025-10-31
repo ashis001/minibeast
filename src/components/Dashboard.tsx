@@ -46,6 +46,7 @@ import ActivityLog from "./ActivityLog";
 import ValidationSummary from "./ValidationSummary";
 import LicenseInfo from "./LicenseInfo";
 import DataMigrator from "./DataMigrator";
+import MigrationActivityLog from "./MigrationActivityLog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -216,7 +217,16 @@ const Dashboard = () => {
   // Base menu items (all possible items)
   const allMenuItems = [
     { icon: Home, label: "Home", id: "home", module: "dashboard" },
-    { icon: Database, label: "Migrator", id: "migrator", module: "migrator" },
+    { 
+      icon: Database, 
+      label: "Migrator", 
+      id: "migrator-parent",
+      module: "migrator",
+      children: [
+        { icon: Rocket, label: "Launch Pad", id: "migrator" },
+        { icon: Activity, label: "Activity Log", id: "migration-activity-log" },
+      ]
+    },
     { icon: GitBranch, label: "Reconciliator", id: "reconciliator", module: "reconciliator" },
     { 
       icon: CheckCircle, 
@@ -349,7 +359,9 @@ const Dashboard = () => {
     } else if (currentView === 'deployment') {
       return <ModuleDeployment />;
     } else if (currentView === 'migrator') {
-      return <DataMigrator />;
+      return <DataMigrator onNavigateToActivityLog={() => setCurrentView('migration-activity-log')} />;
+    } else if (currentView === 'migration-activity-log') {
+      return <MigrationActivityLog />;
     } else if (currentView === 'config') {
       return <DeploymentWizard />;
     } else if (currentView === 'home') {

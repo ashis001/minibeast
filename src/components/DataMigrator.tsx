@@ -37,7 +37,11 @@ interface TableInfo {
   lastUpdated: string;
 }
 
-const DataMigrator = () => {
+interface DataMigratorProps {
+  onNavigateToActivityLog?: () => void;
+}
+
+const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSource, setSelectedSource] = useState<Connection | null>(null);
@@ -909,6 +913,30 @@ const DataMigrator = () => {
                           setMigrationLogs([]);
                           setLastLogTimestamp(null);
                           console.log('✅ Migration started:', data.jobId);
+                          
+                          // Store migration context in localStorage for Activity Log
+                          localStorage.setItem('currentMigrationJobId', data.jobId);
+                          localStorage.setItem('migrationSource', JSON.stringify({
+                            name: selectedSource!.name,
+                            type: selectedSource!.type
+                          }));
+                          localStorage.setItem('migrationDestination', JSON.stringify({
+                            name: selectedDestination!.name,
+                            type: selectedDestination!.type
+                          }));
+                          localStorage.setItem('migrationTables', JSON.stringify(selectedTables));
+                          
+                          // Navigate to Activity Log
+                          if (onNavigateToActivityLog) {
+                            toast({
+                              title: "Migration Started",
+                              description: "Redirecting to Activity Log to monitor progress...",
+                            });
+                            setTimeout(() => {
+                              onNavigateToActivityLog();
+                            }, 1000);
+                            return; // Don't start polling here, Activity Log will handle it
+                          }
                           
                           // Initial log fetch
                           const initialLogsResponse = await fetch(`/api/migrate/logs/${data.jobId}`);
