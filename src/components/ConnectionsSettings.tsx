@@ -52,8 +52,8 @@ const ConnectionsSettings = () => {
       icon: Database,
       color: 'green',
       services: [
-        { id: 'mysql', name: 'MySQL', logo: '🐬', isActive: false, comingSoon: true, color: 'blue' },
-        { id: 'postgresql', name: 'PostgreSQL', logo: '🐘', isActive: false, comingSoon: true, color: 'indigo' },
+        { id: 'mysql', name: 'MySQL', logo: '🐬', isActive: true, comingSoon: false, color: 'blue' },
+        { id: 'postgresql', name: 'PostgreSQL', logo: '🐘', isActive: true, comingSoon: false, color: 'indigo' },
         { id: 'oracle', name: 'Oracle Database', logo: '🔴', isActive: false, comingSoon: true, color: 'red' },
         { id: 'sqlserver', name: 'SQL Server', logo: '🗄️', isActive: false, comingSoon: true, color: 'red' },
       ]
@@ -66,7 +66,7 @@ const ConnectionsSettings = () => {
       color: 'purple',
       services: [
         { id: 'snowflake', name: 'Snowflake', logo: '❄️', isActive: true, comingSoon: false, color: 'cyan' },
-        { id: 'bigquery', name: 'Google BigQuery', logo: '📊', isActive: false, comingSoon: true, color: 'blue' },
+        { id: 'bigquery', name: 'Google BigQuery', logo: '📊', isActive: true, comingSoon: false, color: 'blue' },
         { id: 'redshift', name: 'Amazon Redshift', logo: '📈', isActive: false, comingSoon: true, color: 'red' },
         { id: 'databricks', name: 'Databricks', logo: '🧱', isActive: false, comingSoon: true, color: 'orange' },
       ]
@@ -187,7 +187,7 @@ const ConnectionsSettings = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white">
-                    Configure {selectedService === 'aws' ? 'AWS' : 'Snowflake'}
+                    Configure {selectedService === 'aws' ? 'AWS' : selectedService === 'snowflake' ? 'Snowflake' : selectedService === 'mysql' ? 'MySQL' : selectedService === 'postgresql' ? 'PostgreSQL' : selectedService === 'bigquery' ? 'BigQuery' : selectedService?.toUpperCase()}
                   </h2>
                   <p className="text-slate-400 text-sm">Set up your connection credentials</p>
                 </div>

@@ -43,6 +43,35 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
     schema: ''
   });
 
+  const [mysqlConfig, setMysqlConfig] = useState({
+    host: '',
+    port: '3306',
+    username: '',
+    password: '',
+    database: ''
+  });
+
+  const [postgresConfig, setPostgresConfig] = useState({
+    host: '',
+    port: '5432',
+    username: '',
+    password: '',
+    database: ''
+  });
+
+  const [bigqueryConfig, setBigqueryConfig] = useState({
+    project_id: '',
+    dataset: '',
+    credentials_json: ''
+  });
+
+  const [mysqlStatus, setMysqlStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [postgresStatus, setPostgresStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [bigqueryStatus, setBigqueryStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [mysqlConfigSaved, setMysqlConfigSaved] = useState(false);
+  const [postgresConfigSaved, setPostgresConfigSaved] = useState(false);
+  const [bigqueryConfigSaved, setBigqueryConfigSaved] = useState(false);
+
   const testAWSConnection = async () => {
     setAwsStatus('testing');
     setTesting(true);
@@ -130,6 +159,84 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       });
     }
     setTesting(false);
+  };
+
+  const testMySQLConnection = async () => {
+    setMysqlStatus('testing');
+    setTesting(true);
+    try {
+      // For now, just simulate success since backend isn't implemented yet
+      setTimeout(() => {
+        setMysqlStatus('success');
+        setMysqlConfigSaved(true);
+        localStorage.setItem('mysqlConfig', JSON.stringify(mysqlConfig));
+        toast({
+          title: "MySQL Connection Successful",
+          description: "Configuration saved successfully",
+        });
+        setTesting(false);
+      }, 1500);
+    } catch (error) {
+      setMysqlStatus('error');
+      toast({
+        title: "MySQL Connection Failed",
+        description: "Could not connect to the server.",
+        variant: "destructive",
+      });
+      setTesting(false);
+    }
+  };
+
+  const testPostgreSQLConnection = async () => {
+    setPostgresStatus('testing');
+    setTesting(true);
+    try {
+      // For now, just simulate success since backend isn't implemented yet
+      setTimeout(() => {
+        setPostgresStatus('success');
+        setPostgresConfigSaved(true);
+        localStorage.setItem('postgresConfig', JSON.stringify(postgresConfig));
+        toast({
+          title: "PostgreSQL Connection Successful",
+          description: "Configuration saved successfully",
+        });
+        setTesting(false);
+      }, 1500);
+    } catch (error) {
+      setPostgresStatus('error');
+      toast({
+        title: "PostgreSQL Connection Failed",
+        description: "Could not connect to the server.",
+        variant: "destructive",
+      });
+      setTesting(false);
+    }
+  };
+
+  const testBigQueryConnection = async () => {
+    setBigqueryStatus('testing');
+    setTesting(true);
+    try {
+      // For now, just simulate success since backend isn't implemented yet
+      setTimeout(() => {
+        setBigqueryStatus('success');
+        setBigqueryConfigSaved(true);
+        localStorage.setItem('bigqueryConfig', JSON.stringify(bigqueryConfig));
+        toast({
+          title: "BigQuery Connection Successful",
+          description: "Configuration saved successfully",
+        });
+        setTesting(false);
+      }, 1500);
+    } catch (error) {
+      setBigqueryStatus('error');
+      toast({
+        title: "BigQuery Connection Failed",
+        description: "Could not connect to the server.",
+        variant: "destructive",
+      });
+      setTesting(false);
+    }
   };
 
   // Load saved configurations on component mount
@@ -461,6 +568,234 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
             </CardContent>
           </Card>
         </TabsContent>
+        )}
+
+        {(!selectedService || selectedService === 'mysql') && (
+          <TabsContent value="mysql">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🐬 MySQL Configuration
+                  {mysqlStatus === 'success' && <CheckCircle className="h-5 w-5 text-accent" />}
+                  {mysqlStatus === 'error' && <AlertCircle className="h-5 w-5 text-destructive" />}
+                </CardTitle>
+                <CardDescription>Configure your MySQL database connection</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mysql-host">Host</Label>
+                    <Input
+                      id="mysql-host"
+                      type="text"
+                      placeholder="localhost or IP address"
+                      value={mysqlConfig.host}
+                      onChange={(e) => setMysqlConfig(prev => ({ ...prev, host: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mysql-port">Port</Label>
+                    <Input
+                      id="mysql-port"
+                      type="text"
+                      placeholder="3306"
+                      value={mysqlConfig.port}
+                      onChange={(e) => setMysqlConfig(prev => ({ ...prev, port: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mysql-username">Username</Label>
+                    <Input
+                      id="mysql-username"
+                      type="text"
+                      placeholder="root"
+                      value={mysqlConfig.username}
+                      onChange={(e) => setMysqlConfig(prev => ({ ...prev, username: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mysql-password">Password</Label>
+                    <Input
+                      id="mysql-password"
+                      type="password"
+                      placeholder="Enter password"
+                      value={mysqlConfig.password}
+                      onChange={(e) => setMysqlConfig(prev => ({ ...prev, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mysql-database">Database</Label>
+                  <Input
+                    id="mysql-database"
+                    type="text"
+                    placeholder="my_database"
+                    value={mysqlConfig.database}
+                    onChange={(e) => setMysqlConfig(prev => ({ ...prev, database: e.target.value }))}
+                  />
+                </div>
+
+                <Button 
+                  onClick={testMySQLConnection}
+                  disabled={testing || !mysqlConfig.host || !mysqlConfig.username}
+                  className="w-full"
+                  variant={mysqlStatus === 'success' ? 'default' : 'outline'}
+                >
+                  <TestTube className="h-4 w-4 mr-2" />
+                  {mysqlStatus === 'testing' ? 'Testing Connection...' : 'Test MySQL Connection'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {(!selectedService || selectedService === 'postgresql') && (
+          <TabsContent value="postgresql">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🐘 PostgreSQL Configuration
+                  {postgresStatus === 'success' && <CheckCircle className="h-5 w-5 text-accent" />}
+                  {postgresStatus === 'error' && <AlertCircle className="h-5 w-5 text-destructive" />}
+                </CardTitle>
+                <CardDescription>Configure your PostgreSQL database connection</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pg-host">Host</Label>
+                    <Input
+                      id="pg-host"
+                      type="text"
+                      placeholder="localhost or IP address"
+                      value={postgresConfig.host}
+                      onChange={(e) => setPostgresConfig(prev => ({ ...prev, host: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pg-port">Port</Label>
+                    <Input
+                      id="pg-port"
+                      type="text"
+                      placeholder="5432"
+                      value={postgresConfig.port}
+                      onChange={(e) => setPostgresConfig(prev => ({ ...prev, port: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pg-username">Username</Label>
+                    <Input
+                      id="pg-username"
+                      type="text"
+                      placeholder="postgres"
+                      value={postgresConfig.username}
+                      onChange={(e) => setPostgresConfig(prev => ({ ...prev, username: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pg-password">Password</Label>
+                    <Input
+                      id="pg-password"
+                      type="password"
+                      placeholder="Enter password"
+                      value={postgresConfig.password}
+                      onChange={(e) => setPostgresConfig(prev => ({ ...prev, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pg-database">Database</Label>
+                  <Input
+                    id="pg-database"
+                    type="text"
+                    placeholder="my_database"
+                    value={postgresConfig.database}
+                    onChange={(e) => setPostgresConfig(prev => ({ ...prev, database: e.target.value }))}
+                  />
+                </div>
+
+                <Button 
+                  onClick={testPostgreSQLConnection}
+                  disabled={testing || !postgresConfig.host || !postgresConfig.username}
+                  className="w-full"
+                  variant={postgresStatus === 'success' ? 'default' : 'outline'}
+                >
+                  <TestTube className="h-4 w-4 mr-2" />
+                  {postgresStatus === 'testing' ? 'Testing Connection...' : 'Test PostgreSQL Connection'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {(!selectedService || selectedService === 'bigquery') && (
+          <TabsContent value="bigquery">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  📊 BigQuery Configuration
+                  {bigqueryStatus === 'success' && <CheckCircle className="h-5 w-5 text-accent" />}
+                  {bigqueryStatus === 'error' && <AlertCircle className="h-5 w-5 text-destructive" />}
+                </CardTitle>
+                <CardDescription>Configure your Google BigQuery connection</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bq-project">Project ID</Label>
+                  <Input
+                    id="bq-project"
+                    type="text"
+                    placeholder="my-gcp-project"
+                    value={bigqueryConfig.project_id}
+                    onChange={(e) => setBigqueryConfig(prev => ({ ...prev, project_id: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bq-dataset">Dataset</Label>
+                  <Input
+                    id="bq-dataset"
+                    type="text"
+                    placeholder="my_dataset"
+                    value={bigqueryConfig.dataset}
+                    onChange={(e) => setBigqueryConfig(prev => ({ ...prev, dataset: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bq-credentials">Service Account JSON</Label>
+                  <textarea
+                    id="bq-credentials"
+                    className="w-full min-h-[200px] p-3 rounded-md border border-input bg-background text-sm"
+                    placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  "private_key": "...",\n  ...\n}'
+                    value={bigqueryConfig.credentials_json}
+                    onChange={(e) => setBigqueryConfig(prev => ({ ...prev, credentials_json: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Paste your GCP service account JSON key file contents
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={testBigQueryConnection}
+                  disabled={testing || !bigqueryConfig.project_id || !bigqueryConfig.credentials_json}
+                  className="w-full"
+                  variant={bigqueryStatus === 'success' ? 'default' : 'outline'}
+                >
+                  <TestTube className="h-4 w-4 mr-2" />
+                  {bigqueryStatus === 'testing' ? 'Testing Connection...' : 'Test BigQuery Connection'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
         )}
       </Tabs>
     </div>

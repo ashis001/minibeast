@@ -60,7 +60,6 @@ const DataMigrator = () => {
         if (snowflakeConfig) {
           try {
             const config = JSON.parse(snowflakeConfig);
-            // Only add if successfully tested (saved in localStorage means it was tested)
             loadedConnections.push({
               id: 'snowflake',
               type: 'Snowflake',
@@ -74,10 +73,59 @@ const DataMigrator = () => {
           }
         }
         
-        // TODO: Add other database connections when they become available
-        // PostgreSQL, MySQL, BigQuery, etc.
-        // const postgresConfig = localStorage.getItem('postgresConfig');
-        // if (postgresConfig) { ... }
+        // Load MySQL connection
+        const mysqlConfig = localStorage.getItem('mysqlConfig');
+        if (mysqlConfig) {
+          try {
+            const config = JSON.parse(mysqlConfig);
+            loadedConnections.push({
+              id: 'mysql',
+              type: 'MySQL',
+              name: 'MySQL Connection',
+              host: config.host,
+              database: config.database,
+              status: 'connected'
+            });
+          } catch (e) {
+            console.error('Failed to parse MySQL config:', e);
+          }
+        }
+        
+        // Load PostgreSQL connection
+        const postgresConfig = localStorage.getItem('postgresConfig');
+        if (postgresConfig) {
+          try {
+            const config = JSON.parse(postgresConfig);
+            loadedConnections.push({
+              id: 'postgresql',
+              type: 'PostgreSQL',
+              name: 'PostgreSQL Connection',
+              host: config.host,
+              database: config.database,
+              status: 'connected'
+            });
+          } catch (e) {
+            console.error('Failed to parse PostgreSQL config:', e);
+          }
+        }
+        
+        // Load BigQuery connection
+        const bigqueryConfig = localStorage.getItem('bigqueryConfig');
+        if (bigqueryConfig) {
+          try {
+            const config = JSON.parse(bigqueryConfig);
+            loadedConnections.push({
+              id: 'bigquery',
+              type: 'BigQuery',
+              name: 'BigQuery Connection',
+              account: config.project_id,
+              database: config.dataset,
+              status: 'connected'
+            });
+          } catch (e) {
+            console.error('Failed to parse BigQuery config:', e);
+          }
+        }
         
         setConnections(loadedConnections);
       } catch (error) {
