@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Database, 
   ArrowRight, 
@@ -37,6 +38,7 @@ interface TableInfo {
 }
 
 const DataMigrator = () => {
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSource, setSelectedSource] = useState<Connection | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Connection | null>(null);
@@ -47,6 +49,11 @@ const DataMigrator = () => {
   const [migrationProgress, setMigrationProgress] = useState(0);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loadingConnections, setLoadingConnections] = useState(true);
+  const [migratorDeployed, setMigratorDeployed] = useState(false);
+  const [migratorEndpoint, setMigratorEndpoint] = useState<string | null>(null);
+  const [migrationJobId, setMigrationJobId] = useState<string | null>(null);
+  const [migrationSpeed, setMigrationSpeed] = useState(0);
+  const [estimatedTime, setEstimatedTime] = useState('');
   
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
@@ -147,6 +154,30 @@ const DataMigrator = () => {
     return () => {
       window.removeEventListener('connectionsUpdated', handleConnectionsUpdated);
     };
+  }, []);
+
+  // Check if Migrator module is deployed
+  useEffect(() => {
+    const checkMigratorDeployment = async () => {
+      try {
+        const response = await fetch('/api/deployment/status/migrator');
+        const data = await response.json();
+        
+        if (data.success && data.isDeployed && data.deploymentData) {
+          setMigratorDeployed(true);
+          setMigratorEndpoint(data.deploymentData.apiEndpoint);
+          console.log('✅ Migrator service deployed:', data.deploymentData.apiEndpoint);
+        } else {
+          setMigratorDeployed(false);
+          console.log('⚠️ Migrator service not deployed');
+        }
+      } catch (error) {
+        console.error('Failed to check Migrator deployment:', error);
+        setMigratorDeployed(false);
+      }
+    };
+
+    checkMigratorDeployment();
   }, []);
 
   const [tables, setTables] = useState<TableInfo[]>([]);
@@ -658,8 +689,8 @@ const DataMigrator = () => {
             </div>
             <Progress value={migrationProgress} className="h-3" />
             <div className="flex justify-between text-xs mt-2 text-slate-400">
-              <span>Current speed: 6,234 rows/sec</span>
-              <span>Estimated remaining: 6 minutes</span>
+              <span>Current speed: {migrationSpeed > 0 ? `${migrationSpeed.toLocaleString()} rows/sec` : 'Starting...'}</span>
+              <span>Estimated remaining: {estimatedTime || 'Calculating...'}</span>
             </div>
           </div>
 
@@ -722,23 +753,82 @@ const DataMigrator = () => {
                   </Button>
                 ) : (
                   <Button
-                    onClick={() => {
-                      setMigrationStarted(true);
-                      // Simulate progress
-                      const interval = setInterval(() => {
-                        setMigrationProgress(prev => {
-                          if (prev >= 100) {
-                            clearInterval(interval);
-                            return 100;
-                          }
-                          return prev + 10;
+                    onClick={async () => {
+                      if (!migratorDeployed) {
+                        toast({
+                          title: "Migrator Not Deployed",
+                          description: "Please deploy the Migrator module in Settings → Deployment first.",
+                          variant: "destructive",
                         });
-                      }, 1000);
+                        return;
+                      }
+
+                      setMigrationStarted(true);
+                      
+                      try {
+                        // Get source and destination configs
+                        const sourceConfigKey = `${selectedSource!.id}Config`;
+                        const destConfigKey = `${selectedDestination!.id}Config`;
+                        const sourceConfig = JSON.parse(localStorage.getItem(sourceConfigKey) || '{}');
+                        const destConfig = JSON.parse(localStorage.getItem(destConfigKey) || '{}');
+
+                        // Start migration via deployed Migrator service
+                        const response = await fetch(`${migratorEndpoint}/migrate`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            source: {
+                              type: selectedSource!.type,
+                              config: sourceConfig,
+                            },
+                            destination: {
+                              type: selectedDestination!.type,
+                              config: destConfig,
+                            },
+                            tables: selectedTables,
+                          }),
+                        });
+
+                        const data = await response.json();
+                        if (data.success && data.jobId) {
+                          setMigrationJobId(data.jobId);
+                          
+                          // Poll for progress
+                          const pollInterval = setInterval(async () => {
+                            try {
+                              const statusResponse = await fetch(`${migratorEndpoint}/migrate/status/${data.jobId}`);
+                              const statusData = await statusResponse.json();
+                              
+                              if (statusData.success) {
+                                setMigrationProgress(statusData.progress || 0);
+                                setMigrationSpeed(statusData.speed || 0);
+                                setEstimatedTime(statusData.estimatedTime || '');
+                                
+                                if (statusData.status === 'completed' || statusData.status === 'failed') {
+                                  clearInterval(pollInterval);
+                                }
+                              }
+                            } catch (error) {
+                              console.error('Failed to poll migration status:', error);
+                            }
+                          }, 2000); // Poll every 2 seconds
+                        } else {
+                          throw new Error(data.message || 'Failed to start migration');
+                        }
+                      } catch (error: any) {
+                        toast({
+                          title: "Migration Failed",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                        setMigrationStarted(false);
+                      }
                     }}
                     className="bg-green-500 hover:bg-green-600 text-white"
+                    disabled={!migratorDeployed}
                   >
                     <Play className="h-4 w-4 mr-2" />
-                    Start Migration
+                    {migratorDeployed ? 'Start Migration' : 'Migrator Not Deployed'}
                   </Button>
                 )}
               </div>
