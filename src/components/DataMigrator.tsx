@@ -56,6 +56,7 @@ const DataMigrator = () => {
   const [estimatedTime, setEstimatedTime] = useState('');
   const [migrationLogs, setMigrationLogs] = useState<Array<{timestamp: number, message: string}>>([]);
   const [logsNextToken, setLogsNextToken] = useState<string | null>(null);
+  const [migrationStatus, setMigrationStatus] = useState<'running' | 'completed' | 'failed'>('running');
   
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
@@ -677,9 +678,18 @@ const DataMigrator = () => {
                 {getConnectionIcon(selectedDestination!.type)} {selectedDestination!.name}
               </p>
             </div>
-            <Badge className="bg-blue-500 text-white">
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              Running
+            <Badge className={`${
+              migrationStatus === 'completed' ? 'bg-green-500' :
+              migrationStatus === 'failed' ? 'bg-red-500' :
+              'bg-blue-500'
+            } text-white`}>
+              {migrationStatus === 'completed' ? (
+                <><CheckCircle className="h-3 w-3 mr-1" /> Completed</>
+              ) : migrationStatus === 'failed' ? (
+                <><AlertCircle className="h-3 w-3 mr-1" /> Failed</>
+              ) : (
+                <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Running</>
+              )}
             </Badge>
           </div>
         </CardHeader>
@@ -715,24 +725,21 @@ const DataMigrator = () => {
                   style={{ width: `${migrationProgress}%` }}
                 />
                 
-                {/* Animated Data Packets */}
+                {/* Professional flowing data stream */}
                 {migrationProgress < 100 && (
-                  <>
-                    <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-400 rounded-full animate-ping" style={{ left: '10%' }} />
-                    <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-cyan-400 rounded-full animate-ping" style={{ left: '40%', animationDelay: '0.3s' }} />
-                    <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-purple-400 rounded-full animate-ping" style={{ left: '70%', animationDelay: '0.6s' }} />
-                  </>
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute h-1 w-full top-1/2 -translate-y-1/2">
+                      <div 
+                        className="h-full w-20 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
+                        style={{
+                          animation: 'slideRight 1.5s ease-in-out infinite',
+                          filter: 'blur(2px)'
+                        }}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-              
-              {/* Flowing particles animation */}
-              {migrationProgress < 100 && (
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute h-px w-full top-1/2 left-0 animate-pulse">
-                    <div className="h-full w-8 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-[slide_2s_linear_infinite]" />
-                  </div>
-                </div>
-              )}
             </div>
             
             <div className="flex justify-between text-xs mt-3 text-slate-400">
@@ -741,62 +748,76 @@ const DataMigrator = () => {
             </div>
           </div>
 
-          {/* Live CloudWatch Logs */}
+          {/* Table Progress */}
           <div>
-            <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-              <HardDrive className="h-4 w-4" />
-              Live Migration Logs
-            </h4>
-            <div className="bg-slate-900 rounded-lg border border-slate-700 p-4 max-h-96 overflow-y-auto font-mono text-xs">
-              {migrationLogs.length === 0 ? (
-                <div className="text-slate-500 text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                  Waiting for logs from CloudWatch...
+            <h4 className="text-white font-semibold mb-3">Table Progress</h4>
+            <div className="space-y-3">
+              {selectedTables.map((table) => (
+                <div key={table} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white">
+                      {migrationProgress === 100 ? '✅' : migrationProgress > 0 ? '🔄' : '⏳'} {table}
+                    </span>
+                    <span className="text-slate-400">{migrationProgress.toFixed(0)}%</span>
+                  </div>
+                  <Progress value={migrationProgress} className="h-2" />
                 </div>
-              ) : (
-                <div className="space-y-1">
-                  {migrationLogs.map((log, index) => {
-                    const isError = log.message.includes('ERROR') || log.message.includes('❌');
-                    const isSuccess = log.message.includes('✅') || log.message.includes('SUCCESS');
-                    const isWarning = log.message.includes('WARNING') || log.message.includes('⚠️');
-                    const isInfo = log.message.includes('INFO') || log.message.includes('🚀') || log.message.includes('📊');
-                    
-                    return (
-                      <div 
-                        key={`${log.timestamp}-${index}`}
-                        className={`py-1 px-2 rounded hover:bg-slate-800 transition-colors ${
-                          isError ? 'text-red-400' : 
-                          isSuccess ? 'text-green-400' : 
-                          isWarning ? 'text-yellow-400' :
-                          isInfo ? 'text-blue-400' :
-                          'text-slate-300'
-                        }`}
-                      >
-                        <span className="text-slate-500 mr-2">
-                          {new Date(log.timestamp).toLocaleTimeString()}
-                        </span>
-                        {log.message}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              ))}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="text-white font-semibold">Table Progress</h4>
-            {selectedTables.slice(0, 2).map((table, idx) => (
-              <div key={table} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white">
-                    {idx === 0 ? '✅' : '🔄'} {table}
-                  </span>
-                  <span className="text-slate-400">{idx === 0 ? '100%' : '52%'}</span>
-                </div>
-                <Progress value={idx === 0 ? 100 : 52} className="h-2" />
+          {/* Activity Log */}
+          <div>
+            <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <HardDrive className="h-4 w-4" />
+              Activity Log
+            </h4>
+            <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+              {/* Table Header */}
+              <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-slate-800 border-b border-slate-700 text-xs font-semibold text-slate-400">
+                <div className="col-span-2">Timestamp</div>
+                <div className="col-span-10">Message</div>
               </div>
-            ))}
+              
+              {/* Logs */}
+              <div className="max-h-96 overflow-y-auto">
+                {migrationLogs.length === 0 ? (
+                  <div className="text-slate-500 text-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    Waiting for logs from CloudWatch...
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-800">
+                    {migrationLogs.map((log, index) => {
+                      const isError = log.message.includes('ERROR') || log.message.includes('❌');
+                      const isSuccess = log.message.includes('✅') || log.message.includes('SUCCESS');
+                      const isWarning = log.message.includes('WARNING') || log.message.includes('⚠️');
+                      const isInfo = log.message.includes('INFO') || log.message.includes('🚀') || log.message.includes('📊');
+                      
+                      return (
+                        <div 
+                          key={`${log.timestamp}-${index}`}
+                          className="grid grid-cols-12 gap-4 px-4 py-2 hover:bg-slate-800 transition-colors text-xs"
+                        >
+                          <div className="col-span-2 text-slate-500 font-mono">
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </div>
+                          <div className={`col-span-10 font-mono ${
+                            isError ? 'text-red-400' : 
+                            isSuccess ? 'text-green-400' : 
+                            isWarning ? 'text-yellow-400' :
+                            isInfo ? 'text-blue-400' :
+                            'text-slate-300'
+                          }`}>
+                            {log.message}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -932,17 +953,33 @@ const DataMigrator = () => {
                                 });
                                 setLogsNextToken(logsData.nextToken);
                                 
-                                // Parse logs for progress
-                                const lastLog = logsData.logs[logsData.logs.length - 1];
-                                if (lastLog?.message.includes('rows migrated')) {
-                                  const match = lastLog.message.match(/(\d+)\s+rows/i);
-                                  if (match) {
-                                    // Calculate progress based on rows
-                                    const migratedRows = parseInt(match[1]);
-                                    // This is approximate - you'd need total rows from somewhere
-                                    setMigrationProgress(Math.min(95, (migratedRows / 1004) * 100));
+                                // Parse logs for progress and status
+                                logsData.logs.forEach((log: any) => {
+                                  // Check for completion
+                                  if (log.message.includes('Migration completed successfully') || 
+                                      log.message.includes('🎉') ||
+                                      log.message.includes('MIGRATION SUMMARY') && log.message.includes('✅')) {
+                                    setMigrationProgress(100);
+                                    setMigrationStatus('completed');
+                                    clearInterval(pollInterval);
                                   }
-                                }
+                                  // Check for failure
+                                  else if (log.message.includes('Migration failed') || 
+                                               log.message.includes('Tables failed: 1')) {
+                                    setMigrationStatus('failed');
+                                    clearInterval(pollInterval);
+                                  }
+                                  // Parse progress from logs
+                                  else if (log.message.includes('Migrated rows:')) {
+                                    const match = log.message.match(/Migrated rows:\s*(\d+)/i);
+                                    if (match) {
+                                      const migratedRows = parseInt(match[1]);
+                                      if (migratedRows > 0) {
+                                        setMigrationProgress(Math.min(98, (migratedRows / 1004) * 100));
+                                      }
+                                    }
+                                  }
+                                });
                               }
                             } catch (error) {
                               console.error('Failed to poll migration:', error);
