@@ -45,6 +45,7 @@ import ViewValidations from "./ViewValidations";
 import ActivityLog from "./ActivityLog";
 import ValidationSummary from "./ValidationSummary";
 import LicenseInfo from "./LicenseInfo";
+import DataMigrator from "./DataMigrator";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -348,6 +349,8 @@ const Dashboard = () => {
       return <ConnectionsSettings />;
     } else if (currentView === 'deployment') {
       return <ModuleDeployment />;
+    } else if (currentView === 'migrator') {
+      return <DataMigrator />;
     } else if (currentView === 'config') {
       return <DeploymentWizard />;
     } else if (currentView === 'home') {
