@@ -271,6 +271,9 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
   useEffect(() => {
     const savedAwsConfig = localStorage.getItem('awsConfig');
     const savedSnowflakeConfig = localStorage.getItem('snowflakeConfig');
+    const savedMysqlConfig = localStorage.getItem('mysqlConfig');
+    const savedPostgresConfig = localStorage.getItem('postgresConfig');
+    const savedBigqueryConfig = localStorage.getItem('bigqueryConfig');
     
     if (savedAwsConfig) {
       const parsedAwsConfig = JSON.parse(savedAwsConfig);
@@ -284,6 +287,27 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       setSnowflakeConfig(parsedSnowflakeConfig);
       setSnowflakeStatus('success');
       setSnowflakeConfigSaved(true);
+    }
+
+    if (savedMysqlConfig) {
+      const parsedMysqlConfig = JSON.parse(savedMysqlConfig);
+      setMysqlConfig(parsedMysqlConfig);
+      setMysqlStatus('success');
+      setMysqlConfigSaved(true);
+    }
+
+    if (savedPostgresConfig) {
+      const parsedPostgresConfig = JSON.parse(savedPostgresConfig);
+      setPostgresConfig(parsedPostgresConfig);
+      setPostgresStatus('success');
+      setPostgresConfigSaved(true);
+    }
+
+    if (savedBigqueryConfig) {
+      const parsedBigqueryConfig = JSON.parse(savedBigqueryConfig);
+      setBigqueryConfig(parsedBigqueryConfig);
+      setBigqueryStatus('success');
+      setBigqueryConfigSaved(true);
     }
   }, []);
 
