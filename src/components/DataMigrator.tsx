@@ -201,8 +201,8 @@ const DataMigrator = () => {
             // Transform API response to TableInfo format
             const tableList: TableInfo[] = data.tables.map((t: any) => ({
               name: t.name || t.TABLE_NAME,
-              rowCount: t.rowCount || t.row_count || 0,
-              sizeGB: t.sizeGB || t.size_gb || 0,
+              rowCount: parseInt(t.rowCount || t.row_count || 0),
+              sizeGB: parseFloat(t.sizeGB || t.size_gb || 0),
               lastUpdated: t.lastUpdated || t.last_updated || 'Unknown'
             }));
             setTables(tableList);
