@@ -617,13 +617,12 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
     let logs = [];
     
     try {
-      // Try multiple possible log group names
-      const taskDefinition = resourcesData.taskDefinition || 'minibeat-migrator-task';
+      // Try multiple possible log group names - prioritize actual AWS log group
       const possibleLogGroups = [
-        `/ecs/${taskDefinition}`,
-        `/aws/ecs/${taskDefinition}`,
+        '/ecs/minibeat-migrator-repo-deploy-1',  // Actual AWS log group (FIRST PRIORITY)
         resourcesData.logGroups?.ecsTask,
-        '/ecs/minibeat-migrator-task'
+        `/ecs/${resourcesData.taskDefinition || 'minibeat-migrator-task'}`,
+        `/aws/ecs/${resourcesData.taskDefinition || 'minibeat-migrator-task'}`
       ].filter(Boolean);
       
       console.log('🔍 Trying log groups for job:', jobId);
