@@ -580,11 +580,17 @@ app.post('/api/migrate/start', async (req, res) => {
   }
 });
 
-// Get migration CloudWatch logs
+// Get migration CloudWatch logs (using same mechanism as validator)
 app.get('/api/migrate/logs/:jobId', async (req, res) => {
   try {
     const { jobId } = req.params;
-    const { nextToken } = req.query;
+    const startTime = req.query.startTime;
+    const isIncremental = req.query.incremental === 'true';
+    
+    console.log('📋 Fetching migration logs for job:', jobId);
+    if (isIncremental && startTime) {
+      console.log('🔄 Incremental fetch from:', new Date(parseInt(startTime)).toISOString());
+    }
     
     // Load migrator deployment details
     const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
@@ -592,9 +598,9 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
     const resourcesFile = path.join(moduleDir, 'aws-resources.json');
     
     if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Migrator module is not deployed.'
+      return res.json({
+        success: true,
+        logs: []
       });
     }
     
@@ -608,52 +614,83 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
       region: resourcesData.region
     });
     
-    // Try multiple possible log group names
-    const taskDefinition = resourcesData.taskDefinition || 'minibeat-migrator-task';
-    const possibleLogGroups = [
-      `/ecs/${taskDefinition}`,
-      `/aws/ecs/${taskDefinition}`,
-      `/ecs/containerinsights/${resourcesData.ecsCluster}/performance`,
-      '/aws/ecs/containerinsights'
-    ];
-    
     let logs = [];
-    let nextForwardToken = null;
     
-    for (const logGroupName of possibleLogGroups) {
-      try {
-        const params = {
-          logGroupName: logGroupName,
-          startTime: Date.now() - (24 * 60 * 60 * 1000), // Last 24 hours
-          filterPattern: jobId, // Filter by job ID
-          limit: 100
-        };
-        
-        if (nextToken) {
-          params.nextToken = nextToken;
+    try {
+      // Try multiple possible log group names
+      const taskDefinition = resourcesData.taskDefinition || 'minibeat-migrator-task';
+      const possibleLogGroups = [
+        `/ecs/${taskDefinition}`,
+        `/aws/ecs/${taskDefinition}`,
+        resourcesData.logGroups?.ecsTask,
+        '/ecs/minibeat-migrator-task'
+      ].filter(Boolean);
+      
+      console.log('🔍 Trying log groups for job:', jobId);
+      console.log('📋 Available log groups:', possibleLogGroups);
+      
+      // Try each possible log group
+      for (const logGroupName of possibleLogGroups) {
+        try {
+          console.log(`📋 Checking log group: ${logGroupName}`);
+          
+          // Get recent log streams
+          const streams = await cloudwatchLogs.describeLogStreams({
+            logGroupName: logGroupName,
+            orderBy: 'LastEventTime',
+            descending: true,
+            limit: 5  // Check last 5 streams
+          }).promise();
+          
+          console.log(`✅ Found ${streams.logStreams.length} streams in ${logGroupName}`);
+          
+          if (streams.logStreams.length > 0) {
+            // Use the most recent stream
+            const targetStream = streams.logStreams[0];
+            console.log(`📋 Using stream: ${targetStream.logStreamName}`);
+            
+            let logParams = {
+              logGroupName: logGroupName,
+              logStreamName: targetStream.logStreamName,
+              limit: 1000,
+              startFromHead: !isIncremental
+            };
+            
+            if (isIncremental && startTime) {
+              logParams.startTime = parseInt(startTime) + 1;
+              logParams.startFromHead = false;
+            } else {
+              // Get logs from last hour for initial load
+              logParams.startTime = Date.now() - (60 * 60 * 1000);
+            }
+            
+            const logEvents = await cloudwatchLogs.getLogEvents(logParams).promise();
+            
+            logs = logEvents.events.map(event => ({
+              timestamp: event.timestamp,
+              message: event.message.trim()
+            }));
+            
+            console.log(`✅ Retrieved ${logs.length} log entries from ${logGroupName}`);
+            break; // Found logs, stop searching
+          }
+        } catch (groupError) {
+          console.log(`⚠️ Log group ${logGroupName} not accessible:`, groupError.message);
+          continue;
         }
-        
-        const response = await cloudwatchLogs.filterLogEvents(params).promise();
-        
-        if (response.events && response.events.length > 0) {
-          logs = response.events.map(event => ({
-            timestamp: event.timestamp,
-            message: event.message
-          }));
-          nextForwardToken = response.nextToken;
-          break; // Found logs, stop searching
-        }
-      } catch (err) {
-        // Log group doesn't exist or access denied, try next one
-        continue;
       }
+      
+      if (logs.length === 0) {
+        console.log('⚠️ No logs found in any log group');
+      }
+      
+    } catch (logError) {
+      console.log('⚠️ Could not fetch logs:', logError.message);
     }
     
     res.json({
       success: true,
-      logs: logs,
-      nextToken: nextForwardToken,
-      hasMore: !!nextForwardToken
+      logs: logs
     });
     
   } catch (error) {

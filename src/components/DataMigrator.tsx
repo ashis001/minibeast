@@ -55,7 +55,7 @@ const DataMigrator = () => {
   const [migrationSpeed, setMigrationSpeed] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState('');
   const [migrationLogs, setMigrationLogs] = useState<Array<{timestamp: number, message: string}>>([]);
-  const [logsNextToken, setLogsNextToken] = useState<string | null>(null);
+  const [lastLogTimestamp, setLastLogTimestamp] = useState<number | null>(null);
   const [migrationStatus, setMigrationStatus] = useState<'running' | 'completed' | 'failed'>('running');
   
   // Fetch connections from localStorage (Settings/Connections)
@@ -906,9 +906,19 @@ const DataMigrator = () => {
                         const data = await response.json();
                         if (data.success && data.jobId) {
                           setMigrationJobId(data.jobId);
+                          setMigrationLogs([]);
+                          setLastLogTimestamp(null);
                           console.log('✅ Migration started:', data.jobId);
                           
-                          // Poll for progress
+                          // Initial log fetch
+                          const initialLogsResponse = await fetch(`/api/migrate/logs/${data.jobId}`);
+                          const initialLogsData = await initialLogsResponse.json();
+                          if (initialLogsData.success && initialLogsData.logs && initialLogsData.logs.length > 0) {
+                            setMigrationLogs(initialLogsData.logs);
+                            setLastLogTimestamp(initialLogsData.logs[initialLogsData.logs.length - 1].timestamp);
+                            console.log(`📥 Initial load: ${initialLogsData.logs.length} logs`);
+                          }
+                          
                           // Poll for both status and logs
                           const pollInterval = setInterval(async () => {
                             try {
@@ -937,21 +947,31 @@ const DataMigrator = () => {
                                 }
                               }
                               
-                              // Get CloudWatch logs
-                              const logsResponse = await fetch(`/api/migrate/logs/${data.jobId}`);
+                              // Get CloudWatch logs (incremental)
+                              let logsUrl = `/api/migrate/logs/${data.jobId}`;
+                              if (lastLogTimestamp) {
+                                logsUrl += `?incremental=true&startTime=${lastLogTimestamp}`;
+                              }
+                              
+                              const logsResponse = await fetch(logsUrl);
                               const logsData = await logsResponse.json();
                               
-                              if (logsData.success && logsData.logs) {
+                              if (logsData.success && logsData.logs && logsData.logs.length > 0) {
                                 setMigrationLogs(prev => {
-                                  const newLogs = logsData.logs.filter(
-                                    (newLog: any) => !prev.some(existingLog => 
-                                      existingLog.timestamp === newLog.timestamp && 
-                                      existingLog.message === newLog.message
-                                    )
+                                  // Filter out duplicates by timestamp
+                                  const existingTimestamps = new Set(prev.map(log => log.timestamp));
+                                  const uniqueNewLogs = logsData.logs.filter(
+                                    (newLog: any) => !existingTimestamps.has(newLog.timestamp)
                                   );
-                                  return [...prev, ...newLogs];
+                                  
+                                  if (uniqueNewLogs.length > 0) {
+                                    const lastLog = uniqueNewLogs[uniqueNewLogs.length - 1];
+                                    setLastLogTimestamp(lastLog.timestamp);
+                                    console.log(`📝 Appended ${uniqueNewLogs.length} new logs`);
+                                    return [...prev, ...uniqueNewLogs];
+                                  }
+                                  return prev;
                                 });
-                                setLogsNextToken(logsData.nextToken);
                                 
                                 // Parse logs for progress and status
                                 logsData.logs.forEach((log: any) => {
