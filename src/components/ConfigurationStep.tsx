@@ -267,48 +267,104 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
     }
   };
 
-  // Load saved configurations on component mount
+  // Load saved configurations on component mount from server
   useEffect(() => {
-    const savedAwsConfig = localStorage.getItem('awsConfig');
-    const savedSnowflakeConfig = localStorage.getItem('snowflakeConfig');
-    const savedMysqlConfig = localStorage.getItem('mysqlConfig');
-    const savedPostgresConfig = localStorage.getItem('postgresConfig');
-    const savedBigqueryConfig = localStorage.getItem('bigqueryConfig');
+    const loadConnectionsFromServer = async () => {
+      try {
+        const response = await fetch('/api/connections');
+        const data = await response.json();
+        
+        if (data.success && data.connections) {
+          const { aws, snowflake, mysql, postgres, bigquery } = data.connections;
+          
+          if (aws) {
+            setAwsConfig(aws);
+            setAwsStatus('success');
+            setAwsConfigSaved(true);
+            localStorage.setItem('awsConfig', JSON.stringify(aws));
+          }
+          
+          if (snowflake) {
+            setSnowflakeConfig(snowflake);
+            setSnowflakeStatus('success');
+            setSnowflakeConfigSaved(true);
+            localStorage.setItem('snowflakeConfig', JSON.stringify(snowflake));
+          }
+          
+          if (mysql) {
+            setMysqlConfig(mysql);
+            setMysqlStatus('success');
+            setMysqlConfigSaved(true);
+            localStorage.setItem('mysqlConfig', JSON.stringify(mysql));
+          }
+          
+          if (postgres) {
+            setPostgresConfig(postgres);
+            setPostgresStatus('success');
+            setPostgresConfigSaved(true);
+            localStorage.setItem('postgresConfig', JSON.stringify(postgres));
+          }
+          
+          if (bigquery) {
+            setBigqueryConfig(bigquery);
+            setBigqueryStatus('success');
+            setBigqueryConfigSaved(true);
+            localStorage.setItem('bigqueryConfig', JSON.stringify(bigquery));
+          }
+          
+          console.log('✅ Loaded connections from server');
+        }
+      } catch (error) {
+        console.error('Failed to load connections from server:', error);
+        // Fallback to localStorage if server fails
+        loadFromLocalStorage();
+      }
+    };
     
-    if (savedAwsConfig) {
-      const parsedAwsConfig = JSON.parse(savedAwsConfig);
-      setAwsConfig(parsedAwsConfig);
-      setAwsStatus('success');
-      setAwsConfigSaved(true);
-    }
-    
-    if (savedSnowflakeConfig) {
-      const parsedSnowflakeConfig = JSON.parse(savedSnowflakeConfig);
-      setSnowflakeConfig(parsedSnowflakeConfig);
-      setSnowflakeStatus('success');
-      setSnowflakeConfigSaved(true);
-    }
+    const loadFromLocalStorage = () => {
+      const savedAwsConfig = localStorage.getItem('awsConfig');
+      const savedSnowflakeConfig = localStorage.getItem('snowflakeConfig');
+      const savedMysqlConfig = localStorage.getItem('mysqlConfig');
+      const savedPostgresConfig = localStorage.getItem('postgresConfig');
+      const savedBigqueryConfig = localStorage.getItem('bigqueryConfig');
+      
+      if (savedAwsConfig) {
+        const parsedAwsConfig = JSON.parse(savedAwsConfig);
+        setAwsConfig(parsedAwsConfig);
+        setAwsStatus('success');
+        setAwsConfigSaved(true);
+      }
+      
+      if (savedSnowflakeConfig) {
+        const parsedSnowflakeConfig = JSON.parse(savedSnowflakeConfig);
+        setSnowflakeConfig(parsedSnowflakeConfig);
+        setSnowflakeStatus('success');
+        setSnowflakeConfigSaved(true);
+      }
 
-    if (savedMysqlConfig) {
-      const parsedMysqlConfig = JSON.parse(savedMysqlConfig);
-      setMysqlConfig(parsedMysqlConfig);
-      setMysqlStatus('success');
-      setMysqlConfigSaved(true);
-    }
+      if (savedMysqlConfig) {
+        const parsedMysqlConfig = JSON.parse(savedMysqlConfig);
+        setMysqlConfig(parsedMysqlConfig);
+        setMysqlStatus('success');
+        setMysqlConfigSaved(true);
+      }
 
-    if (savedPostgresConfig) {
-      const parsedPostgresConfig = JSON.parse(savedPostgresConfig);
-      setPostgresConfig(parsedPostgresConfig);
-      setPostgresStatus('success');
-      setPostgresConfigSaved(true);
-    }
+      if (savedPostgresConfig) {
+        const parsedPostgresConfig = JSON.parse(savedPostgresConfig);
+        setPostgresConfig(parsedPostgresConfig);
+        setPostgresStatus('success');
+        setPostgresConfigSaved(true);
+      }
 
-    if (savedBigqueryConfig) {
-      const parsedBigqueryConfig = JSON.parse(savedBigqueryConfig);
-      setBigqueryConfig(parsedBigqueryConfig);
-      setBigqueryStatus('success');
-      setBigqueryConfigSaved(true);
-    }
+      if (savedBigqueryConfig) {
+        const parsedBigqueryConfig = JSON.parse(savedBigqueryConfig);
+        setBigqueryConfig(parsedBigqueryConfig);
+        setBigqueryStatus('success');
+        setBigqueryConfigSaved(true);
+      }
+    };
+
+    loadConnectionsFromServer();
   }, []);
 
   const handleEditAws = () => {

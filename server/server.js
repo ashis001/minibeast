@@ -37,6 +37,44 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Helper functions for managing connections.json
+function getConnectionsFilePath() {
+  const deploymentsDir = path.join(__dirname, 'deployments');
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
+  return path.join(deploymentsDir, 'connections.json');
+}
+
+function loadConnections() {
+  const filePath = getConnectionsFilePath();
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+  try {
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading connections.json:', error.message);
+    return {};
+  }
+}
+
+function saveConnectionToFile(type, config) {
+  try {
+    const connections = loadConnections();
+    connections[type] = {
+      ...config,
+      savedAt: new Date().toISOString()
+    };
+    const filePath = getConnectionsFilePath();
+    fs.writeFileSync(filePath, JSON.stringify(connections, null, 2));
+    console.log(`✅ Saved ${type} connection to connections.json`);
+  } catch (error) {
+    console.error(`Error saving ${type} connection:`, error.message);
+  }
+}
+
 // Create required IAM policy for deployment
 app.post('/api/setup-permissions', async (req, res) => {
   const { accessKey, secretKey, region, userName } = req.body;
@@ -171,10 +209,17 @@ app.post('/api/test-aws', async (req, res) => {
     });
     await ecr.describeRepositories({ maxResults: 1 }).promise();
     
+    console.log('✅ AWS Connection Successful');
+    console.log('  Region:', region);
+    console.log('  Access:', `${accessKey.substring(0, 8)}...`);
+    
+    // Save to connections.json
+    saveConnectionToFile('aws', { accessKey, secretKey, region });
+    
     res.json({ 
       success: true, 
-      message: `AWS connection successful! Account: ${identity.Account}`,
-      accountId: identity.Account
+      message: 'AWS connection successful',
+      region: region
     });
   } catch (error) {
     console.error('AWS connection test failed:', error);
@@ -368,6 +413,9 @@ app.post('/api/test-snowflake', (req, res) => {
       // Don't fail the response if save fails
     }
     
+    // Save to connections.json
+    saveConnectionToFile('snowflake', { account, username, password, database, schema, warehouse, role });
+    
     res.json({ success: true, message: 'Snowflake connection successful.' });
     conn.destroy(); // Close the connection
   });
@@ -395,9 +443,24 @@ app.post('/api/test-mysql', async (req, res) => {
     await connection.end();
 
     console.log('✅ Successfully connected to MySQL');
+    
+    // Save to connections.json
+    saveConnectionToFile('mysql', { host, port, username, password, database });
+    
     res.json({ success: true, message: 'MySQL connection successful.' });
   } catch (error) {
     console.error('❌ MySQL connection failed:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get all saved connections
+app.get('/api/connections', (req, res) => {
+  try {
+    const connections = loadConnections();
+    res.json({ success: true, connections });
+  } catch (error) {
+    console.error('Failed to load connections:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -425,6 +488,10 @@ app.post('/api/test-postgres', async (req, res) => {
     await client.end();
 
     console.log('✅ Successfully connected to PostgreSQL');
+    
+    // Save to connections.json
+    saveConnectionToFile('postgres', { host, port, username, password, database });
+    
     res.json({ success: true, message: 'PostgreSQL connection successful.' });
   } catch (error) {
     console.error('❌ PostgreSQL connection failed:', error.message);
