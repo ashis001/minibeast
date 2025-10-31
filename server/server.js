@@ -754,7 +754,7 @@ app.post('/api/snowflake/create-config-table', async (req, res) => {
   }
 });
 
-app.post('/api/snowflake/insert-validation', validateToken, checkOrgStatus, requirePermission('add_validations'), async (req, res) => {
+app.post('/api/snowflake/insert-validation', async (req, res) => {
   let connection;
   try {
     const { account, username, password, database, schema, warehouse, role, validationCase } = req.body;
@@ -974,7 +974,7 @@ app.post('/api/snowflake/validations-filtered', async (req, res) => {
   }
 });
 
-app.post('/api/snowflake/update-validations', validateToken, checkOrgStatus, requirePermission('edit_validations'), async (req, res) => {
+app.post('/api/snowflake/update-validations', async (req, res) => {
   let connection;
   try {
     const { snowflakeConfig, selectedValidationIds } = req.body;
