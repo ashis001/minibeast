@@ -465,6 +465,152 @@ app.get('/api/connections', (req, res) => {
   }
 });
 
+// Start migration via deployed Migrator Step Function
+app.post('/api/migrate/start', async (req, res) => {
+  try {
+    const { source, destination, tables } = req.body;
+    
+    // Load migrator deployment details
+    const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
+    const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    
+    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Migrator module is not deployed. Please deploy it first.'
+      });
+    }
+    
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    
+    if (!resourcesData.stepFunctionArn || !deploymentData.awsConfig) {
+      return res.status(400).json({
+        success: false,
+        message: 'Migrator deployment is incomplete or corrupted.'
+      });
+    }
+    
+    // Prepare AWS Step Functions client
+    const stepFunctions = new AWS.StepFunctions({
+      accessKeyId: deploymentData.awsConfig.accessKey,
+      secretAccessKey: deploymentData.awsConfig.secretKey,
+      region: resourcesData.region
+    });
+    
+    // Generate unique job ID
+    const jobId = `migration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Start Step Function execution
+    const executionParams = {
+      stateMachineArn: resourcesData.stepFunctionArn,
+      name: jobId,
+      input: JSON.stringify({
+        source,
+        destination,
+        tables,
+        jobId
+      })
+    };
+    
+    const execution = await stepFunctions.startExecution(executionParams).promise();
+    
+    console.log(`✅ Started migration job: ${jobId}`);
+    console.log(`🔗 Execution ARN: ${execution.executionArn}`);
+    
+    res.json({
+      success: true,
+      jobId: jobId,
+      executionArn: execution.executionArn,
+      message: 'Migration started successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start migration:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Get migration status
+app.get('/api/migrate/status/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    // Load migrator deployment details
+    const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
+    const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    
+    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Migrator module is not deployed.'
+      });
+    }
+    
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    
+    // Prepare AWS Step Functions client
+    const stepFunctions = new AWS.StepFunctions({
+      accessKeyId: deploymentData.awsConfig.accessKey,
+      secretAccessKey: deploymentData.awsConfig.secretKey,
+      region: resourcesData.region
+    });
+    
+    // List executions to find our job
+    const executions = await stepFunctions.listExecutions({
+      stateMachineArn: resourcesData.stepFunctionArn,
+      maxResults: 50
+    }).promise();
+    
+    const execution = executions.executions.find(e => e.name === jobId);
+    
+    if (!execution) {
+      return res.json({
+        success: true,
+        status: 'not_found',
+        progress: 0,
+        message: 'Migration job not found'
+      });
+    }
+    
+    // Map Step Function status to our status
+    let status = 'running';
+    let progress = 50; // Default progress for running
+    
+    if (execution.status === 'SUCCEEDED') {
+      status = 'completed';
+      progress = 100;
+    } else if (execution.status === 'FAILED' || execution.status === 'TIMED_OUT' || execution.status === 'ABORTED') {
+      status = 'failed';
+      progress = 0;
+    }
+    
+    res.json({
+      success: true,
+      status: status,
+      progress: progress,
+      speed: 0, // TODO: Calculate from logs
+      estimatedTime: status === 'running' ? 'Calculating...' : '',
+      executionArn: execution.executionArn,
+      startDate: execution.startDate,
+      stopDate: execution.stopDate
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to get migration status:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 // Test PostgreSQL connection
 app.post('/api/test-postgres', async (req, res) => {
   const { host, port, username, password, database } = req.body;

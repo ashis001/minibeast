@@ -756,12 +756,11 @@ const DataMigrator = () => {
                     onClick={async () => {
                       console.log('🚀 Start Migration clicked');
                       console.log('Migrator deployed:', migratorDeployed);
-                      console.log('Migrator endpoint:', migratorEndpoint);
                       
-                      if (!migratorDeployed || !migratorEndpoint) {
+                      if (!migratorDeployed) {
                         toast({
                           title: "Migrator Not Deployed",
-                          description: migratorEndpoint ? "Migrator endpoint not configured." : "Please deploy the Migrator module in Settings → Deployment first.",
+                          description: "Please deploy the Migrator module in Settings → Deployment first.",
                           variant: "destructive",
                         });
                         return;
@@ -776,8 +775,8 @@ const DataMigrator = () => {
                         const sourceConfig = JSON.parse(localStorage.getItem(sourceConfigKey) || '{}');
                         const destConfig = JSON.parse(localStorage.getItem(destConfigKey) || '{}');
 
-                        // Start migration via deployed Migrator service
-                        const response = await fetch(`${migratorEndpoint}/migrate`, {
+                        // Start migration via backend API (which calls Step Function)
+                        const response = await fetch('/api/migrate/start', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
@@ -796,11 +795,12 @@ const DataMigrator = () => {
                         const data = await response.json();
                         if (data.success && data.jobId) {
                           setMigrationJobId(data.jobId);
+                          console.log('✅ Migration started:', data.jobId);
                           
                           // Poll for progress
                           const pollInterval = setInterval(async () => {
                             try {
-                              const statusResponse = await fetch(`${migratorEndpoint}/migrate/status/${data.jobId}`);
+                              const statusResponse = await fetch(`/api/migrate/status/${data.jobId}`);
                               const statusData = await statusResponse.json();
                               
                               if (statusData.success) {
@@ -808,8 +808,19 @@ const DataMigrator = () => {
                                 setMigrationSpeed(statusData.speed || 0);
                                 setEstimatedTime(statusData.estimatedTime || '');
                                 
-                                if (statusData.status === 'completed' || statusData.status === 'failed') {
+                                if (statusData.status === 'completed') {
                                   clearInterval(pollInterval);
+                                  toast({
+                                    title: "Migration Complete!",
+                                    description: "All tables migrated successfully.",
+                                  });
+                                } else if (statusData.status === 'failed') {
+                                  clearInterval(pollInterval);
+                                  toast({
+                                    title: "Migration Failed",
+                                    description: "Check logs for details.",
+                                    variant: "destructive",
+                                  });
                                 }
                               }
                             } catch (error) {
