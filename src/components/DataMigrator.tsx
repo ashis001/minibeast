@@ -914,17 +914,32 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                           setLastLogTimestamp(null);
                           console.log('✅ Migration started:', data.jobId);
                           
-                          // Store migration context in localStorage for Activity Log
-                          localStorage.setItem('currentMigrationJobId', data.jobId);
-                          localStorage.setItem('migrationSource', JSON.stringify({
-                            name: selectedSource!.name,
-                            type: selectedSource!.type
-                          }));
-                          localStorage.setItem('migrationDestination', JSON.stringify({
-                            name: selectedDestination!.name,
-                            type: selectedDestination!.type
-                          }));
-                          localStorage.setItem('migrationTables', JSON.stringify(selectedTables));
+                          // Store migration in history array
+                          const historyJson = localStorage.getItem('migrationHistory');
+                          const history = historyJson ? JSON.parse(historyJson) : [];
+                          
+                          history.unshift({
+                            jobId: data.jobId,
+                            status: 'RUNNING',
+                            startTime: new Date().toISOString(),
+                            source: {
+                              name: selectedSource!.name,
+                              type: selectedSource!.type
+                            },
+                            destination: {
+                              name: selectedDestination!.name,
+                              type: selectedDestination!.type
+                            },
+                            tables: selectedTables,
+                            logs: []
+                          });
+                          
+                          // Keep only last 50 migrations
+                          if (history.length > 50) {
+                            history.pop();
+                          }
+                          
+                          localStorage.setItem('migrationHistory', JSON.stringify(history));
                           
                           // Navigate to Activity Log
                           if (onNavigateToActivityLog) {
