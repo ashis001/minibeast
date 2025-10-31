@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
 import { 
   RefreshCw, 
   CheckCircle, 
@@ -414,6 +415,19 @@ const MigrationActivityLog = () => {
                       <p className="text-white font-semibold">Snowflake Destination</p>
                       <p className="text-xs text-slate-400">Target Database</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Overall Progress Bar */}
+                <div className="bg-slate-900 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <p className="text-sm text-slate-300 font-semibold">Overall Progress</p>
+                    <p className="text-2xl font-bold text-white">85%</p>
+                  </div>
+                  <Progress value={85} className="h-3" />
+                  <div className="flex justify-between text-xs text-slate-400 mt-2">
+                    <span>850 / 1,004 rows migrated</span>
+                    <span>~2 mins remaining</span>
                   </div>
                 </div>
 
