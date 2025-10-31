@@ -508,6 +508,12 @@ app.post('/api/migrate/start', async (req, res) => {
     
     console.log(`📦 Container name: ${containerName}`);
     
+    // Extract database and schema from configs
+    const sourceDatabase = source.config.database || source.type;
+    const sourceSchema = source.config.schema || 'public';
+    const destDatabase = destination.config.database || destination.type;
+    const destSchema = destination.config.schema || 'public';
+    
     // Prepare container overrides with environment variables
     const containerOverrides = {
       ContainerOverrides: [
@@ -515,15 +521,30 @@ app.post('/api/migrate/start', async (req, res) => {
           Name: containerName,
           Environment: [
             { Name: 'JOB_ID', Value: jobId },
+            { Name: 'ORG_ID', Value: 'default' },
+            { Name: 'SOURCE_CONNECTION_ID', Value: 'direct' },
+            { Name: 'DEST_CONNECTION_ID', Value: 'direct' },
             { Name: 'SOURCE_TYPE', Value: source.type },
             { Name: 'SOURCE_CONFIG', Value: JSON.stringify(source.config) },
             { Name: 'DESTINATION_TYPE', Value: destination.type },
             { Name: 'DESTINATION_CONFIG', Value: JSON.stringify(destination.config) },
-            { Name: 'TABLES', Value: JSON.stringify(tables) }
+            { Name: 'SOURCE_DATABASE', Value: sourceDatabase },
+            { Name: 'SOURCE_SCHEMA', Value: sourceSchema },
+            { Name: 'DEST_DATABASE', Value: destDatabase },
+            { Name: 'DEST_SCHEMA', Value: destSchema },
+            { Name: 'TABLES', Value: JSON.stringify(tables) },
+            { Name: 'NUM_WORKERS', Value: '4' },
+            { Name: 'BATCH_SIZE', Value: '50000' },
+            { Name: 'USE_S3_STAGING', Value: 'false' }
           ]
         }
       ]
     };
+    
+    console.log(`📊 Migration params:`);
+    console.log(`   Source: ${sourceDatabase}.${sourceSchema}`);
+    console.log(`   Destination: ${destDatabase}.${destSchema}`);
+    console.log(`   Tables: ${tables.join(', ')}`);
     
     // Start Step Function execution with containerOverrides
     const executionParams = {
