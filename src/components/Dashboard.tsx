@@ -116,10 +116,9 @@ const Dashboard = () => {
   // Check if connections are configured
   React.useEffect(() => {
     const checkConnections = () => {
-      // Check if AWS and Snowflake configs exist
       const awsConfig = localStorage.getItem('awsConfig');
-      const snowflakeConfigStr = localStorage.getItem('snowflakeConfig');
-      const hasConnections = !!(awsConfig && snowflakeConfigStr);
+      // Only AWS config is required to unlock Deployment
+      const hasConnections = !!awsConfig;
       setConnectionsConfigured(hasConnections);
     };
     
@@ -274,7 +273,7 @@ const Dashboard = () => {
       // Check if this view requires connections
       if (requiresConnection && !connectionsConfigured) {
         // Show alert that connections must be configured first
-        alert('⚠️ Please configure AWS and Snowflake connections first before accessing Deployment.');
+        alert('⚠️ Please configure AWS connection first before accessing Deployment.');
         return;
       }
       setCurrentView(id);
