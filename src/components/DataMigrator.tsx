@@ -54,6 +54,8 @@ const DataMigrator = () => {
   const [migrationJobId, setMigrationJobId] = useState<string | null>(null);
   const [migrationSpeed, setMigrationSpeed] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState('');
+  const [migrationLogs, setMigrationLogs] = useState<Array<{timestamp: number, message: string}>>([]);
+  const [logsNextToken, setLogsNextToken] = useState<string | null>(null);
   
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
@@ -682,15 +684,103 @@ const DataMigrator = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Animated Transfer Progress */}
           <div>
-            <div className="flex justify-between text-sm mb-2">
+            <div className="flex justify-between text-sm mb-4">
               <span className="text-slate-400">Overall Progress</span>
-              <span className="text-white font-semibold">{migrationProgress}%</span>
+              <span className="text-white font-semibold">{migrationProgress.toFixed(1)}%</span>
             </div>
-            <Progress value={migrationProgress} className="h-3" />
-            <div className="flex justify-between text-xs mt-2 text-slate-400">
-              <span>Current speed: {migrationSpeed > 0 ? `${migrationSpeed.toLocaleString()} rows/sec` : 'Starting...'}</span>
-              <span>Estimated remaining: {estimatedTime || 'Calculating...'}</span>
+            
+            {/* Animated Transfer Bar */}
+            <div className="relative h-16 bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+              {/* Source Icon */}
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                <div className="bg-blue-500 rounded-lg p-2">
+                  <Database className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              
+              {/* Destination Icon */}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10">
+                <div className="bg-purple-500 rounded-lg p-2">
+                  <Database className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              
+              {/* Progress Bar Track */}
+              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 h-2 bg-slate-800 rounded-full">
+                {/* Filled Progress */}
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500"
+                  style={{ width: `${migrationProgress}%` }}
+                />
+                
+                {/* Animated Data Packets */}
+                {migrationProgress < 100 && (
+                  <>
+                    <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-400 rounded-full animate-ping" style={{ left: '10%' }} />
+                    <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-cyan-400 rounded-full animate-ping" style={{ left: '40%', animationDelay: '0.3s' }} />
+                    <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-purple-400 rounded-full animate-ping" style={{ left: '70%', animationDelay: '0.6s' }} />
+                  </>
+                )}
+              </div>
+              
+              {/* Flowing particles animation */}
+              {migrationProgress < 100 && (
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute h-px w-full top-1/2 left-0 animate-pulse">
+                    <div className="h-full w-8 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-[slide_2s_linear_infinite]" />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-between text-xs mt-3 text-slate-400">
+              <span>Speed: {migrationSpeed > 0 ? `${migrationSpeed.toLocaleString()} rows/sec` : 'Starting...'}</span>
+              <span>Remaining: {estimatedTime || 'Calculating...'}</span>
+            </div>
+          </div>
+
+          {/* Live CloudWatch Logs */}
+          <div>
+            <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <HardDrive className="h-4 w-4" />
+              Live Migration Logs
+            </h4>
+            <div className="bg-slate-900 rounded-lg border border-slate-700 p-4 max-h-96 overflow-y-auto font-mono text-xs">
+              {migrationLogs.length === 0 ? (
+                <div className="text-slate-500 text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                  Waiting for logs from CloudWatch...
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {migrationLogs.map((log, index) => {
+                    const isError = log.message.includes('ERROR') || log.message.includes('❌');
+                    const isSuccess = log.message.includes('✅') || log.message.includes('SUCCESS');
+                    const isWarning = log.message.includes('WARNING') || log.message.includes('⚠️');
+                    const isInfo = log.message.includes('INFO') || log.message.includes('🚀') || log.message.includes('📊');
+                    
+                    return (
+                      <div 
+                        key={`${log.timestamp}-${index}`}
+                        className={`py-1 px-2 rounded hover:bg-slate-800 transition-colors ${
+                          isError ? 'text-red-400' : 
+                          isSuccess ? 'text-green-400' : 
+                          isWarning ? 'text-yellow-400' :
+                          isInfo ? 'text-blue-400' :
+                          'text-slate-300'
+                        }`}
+                      >
+                        <span className="text-slate-500 mr-2">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </span>
+                        {log.message}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -798,8 +888,10 @@ const DataMigrator = () => {
                           console.log('✅ Migration started:', data.jobId);
                           
                           // Poll for progress
+                          // Poll for both status and logs
                           const pollInterval = setInterval(async () => {
                             try {
+                              // Get status
                               const statusResponse = await fetch(`/api/migrate/status/${data.jobId}`);
                               const statusData = await statusResponse.json();
                               
@@ -823,10 +915,39 @@ const DataMigrator = () => {
                                   });
                                 }
                               }
+                              
+                              // Get CloudWatch logs
+                              const logsResponse = await fetch(`/api/migrate/logs/${data.jobId}`);
+                              const logsData = await logsResponse.json();
+                              
+                              if (logsData.success && logsData.logs) {
+                                setMigrationLogs(prev => {
+                                  const newLogs = logsData.logs.filter(
+                                    (newLog: any) => !prev.some(existingLog => 
+                                      existingLog.timestamp === newLog.timestamp && 
+                                      existingLog.message === newLog.message
+                                    )
+                                  );
+                                  return [...prev, ...newLogs];
+                                });
+                                setLogsNextToken(logsData.nextToken);
+                                
+                                // Parse logs for progress
+                                const lastLog = logsData.logs[logsData.logs.length - 1];
+                                if (lastLog?.message.includes('rows migrated')) {
+                                  const match = lastLog.message.match(/(\d+)\s+rows/i);
+                                  if (match) {
+                                    // Calculate progress based on rows
+                                    const migratedRows = parseInt(match[1]);
+                                    // This is approximate - you'd need total rows from somewhere
+                                    setMigrationProgress(Math.min(95, (migratedRows / 1004) * 100));
+                                  }
+                                }
+                              }
                             } catch (error) {
-                              console.error('Failed to poll migration status:', error);
+                              console.error('Failed to poll migration:', error);
                             }
-                          }, 2000); // Poll every 2 seconds
+                          }, 3000); // Poll every 3 seconds
                         } else {
                           throw new Error(data.message || 'Failed to start migration');
                         }

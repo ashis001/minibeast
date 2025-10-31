@@ -580,6 +580,92 @@ app.post('/api/migrate/start', async (req, res) => {
   }
 });
 
+// Get migration CloudWatch logs
+app.get('/api/migrate/logs/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { nextToken } = req.query;
+    
+    // Load migrator deployment details
+    const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
+    const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    
+    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Migrator module is not deployed.'
+      });
+    }
+    
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    
+    // Prepare AWS CloudWatch Logs client
+    const cloudwatchLogs = new AWS.CloudWatchLogs({
+      accessKeyId: deploymentData.awsConfig.accessKey,
+      secretAccessKey: deploymentData.awsConfig.secretKey,
+      region: resourcesData.region
+    });
+    
+    // Try multiple possible log group names
+    const taskDefinition = resourcesData.taskDefinition || 'minibeat-migrator-task';
+    const possibleLogGroups = [
+      `/ecs/${taskDefinition}`,
+      `/aws/ecs/${taskDefinition}`,
+      `/ecs/containerinsights/${resourcesData.ecsCluster}/performance`,
+      '/aws/ecs/containerinsights'
+    ];
+    
+    let logs = [];
+    let nextForwardToken = null;
+    
+    for (const logGroupName of possibleLogGroups) {
+      try {
+        const params = {
+          logGroupName: logGroupName,
+          startTime: Date.now() - (24 * 60 * 60 * 1000), // Last 24 hours
+          filterPattern: jobId, // Filter by job ID
+          limit: 100
+        };
+        
+        if (nextToken) {
+          params.nextToken = nextToken;
+        }
+        
+        const response = await cloudwatchLogs.filterLogEvents(params).promise();
+        
+        if (response.events && response.events.length > 0) {
+          logs = response.events.map(event => ({
+            timestamp: event.timestamp,
+            message: event.message
+          }));
+          nextForwardToken = response.nextToken;
+          break; // Found logs, stop searching
+        }
+      } catch (err) {
+        // Log group doesn't exist or access denied, try next one
+        continue;
+      }
+    }
+    
+    res.json({
+      success: true,
+      logs: logs,
+      nextToken: nextForwardToken,
+      hasMore: !!nextForwardToken
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to get migration logs:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      logs: []
+    });
+  }
+});
+
 // Get migration status
 app.get('/api/migrate/status/:jobId', async (req, res) => {
   try {
