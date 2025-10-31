@@ -45,42 +45,31 @@ const DataMigrator = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [migrationStarted, setMigrationStarted] = useState(false);
   const [migrationProgress, setMigrationProgress] = useState(0);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [loadingConnections, setLoadingConnections] = useState(true);
   
-  // Mock connections - replace with API call
-  const connections: Connection[] = [
-    {
-      id: 'pg-prod',
-      type: 'PostgreSQL',
-      name: 'PostgreSQL Production',
-      host: 'prod-db.company.com',
-      database: 'sales_db',
-      status: 'connected'
-    },
-    {
-      id: 'sf-legacy',
-      type: 'Snowflake',
-      name: 'Snowflake Legacy',
-      account: 'xyz123.us-east-1',
-      database: 'OLD_DATA',
-      status: 'connected'
-    },
-    {
-      id: 'mysql-analytics',
-      type: 'MySQL',
-      name: 'MySQL Analytics',
-      host: 'analytics.company.com',
-      database: 'metrics',
-      status: 'connected'
-    },
-    {
-      id: 'sf-prod',
-      type: 'Snowflake',
-      name: 'Snowflake Production',
-      account: 'abc456.us-east-1',
-      database: 'PROD_WAREHOUSE',
-      status: 'connected'
-    }
-  ];
+  // Fetch connections from API/SSM
+  useEffect(() => {
+    const fetchConnections = async () => {
+      try {
+        setLoadingConnections(true);
+        // TODO: Replace with actual API endpoint
+        // const response = await fetch('/api/connections');
+        // const data = await response.json();
+        // setConnections(data.connections || []);
+        
+        // For now show empty - user needs to configure connections first
+        setConnections([]);
+      } catch (error) {
+        console.error('Failed to fetch connections:', error);
+        setConnections([]);
+      } finally {
+        setLoadingConnections(false);
+      }
+    };
+    
+    fetchConnections();
+  }, []);
 
   // Mock tables - replace with API call
   const tables: TableInfo[] = [
@@ -157,9 +146,25 @@ const DataMigrator = () => {
         />
       </div>
 
-      <div className="grid gap-4">
-        {connections.map((conn) => (
-          <Card 
+      {loadingConnections ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <span className="ml-3 text-slate-400">Loading connections...</span>
+        </div>
+      ) : connections.length === 0 ? (
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-8 text-center">
+            <Database className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+            <h3 className="text-white font-semibold mb-2">No Connections Found</h3>
+            <p className="text-slate-400 mb-4">
+              Please configure database connections in Settings → Connections before starting a migration.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {connections.map((conn) => (
+            <Card 
             key={conn.id}
             className={`bg-slate-800 border-2 cursor-pointer transition-all ${
               selectedSource?.id === conn.id 
@@ -190,9 +195,10 @@ const DataMigrator = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 
