@@ -754,10 +754,14 @@ const DataMigrator = () => {
                 ) : (
                   <Button
                     onClick={async () => {
-                      if (!migratorDeployed) {
+                      console.log('🚀 Start Migration clicked');
+                      console.log('Migrator deployed:', migratorDeployed);
+                      console.log('Migrator endpoint:', migratorEndpoint);
+                      
+                      if (!migratorDeployed || !migratorEndpoint) {
                         toast({
                           title: "Migrator Not Deployed",
-                          description: "Please deploy the Migrator module in Settings → Deployment first.",
+                          description: migratorEndpoint ? "Migrator endpoint not configured." : "Please deploy the Migrator module in Settings → Deployment first.",
                           variant: "destructive",
                         });
                         return;
