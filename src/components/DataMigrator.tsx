@@ -941,15 +941,9 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                           
                           localStorage.setItem('migrationHistory', JSON.stringify(history));
                           
-                          // Navigate to Activity Log
+                          // Navigate to Activity Log immediately
                           if (onNavigateToActivityLog) {
-                            toast({
-                              title: "Migration Started",
-                              description: "Redirecting to Activity Log to monitor progress...",
-                            });
-                            setTimeout(() => {
-                              onNavigateToActivityLog();
-                            }, 1000);
+                            onNavigateToActivityLog();
                             return; // Don't start polling here, Activity Log will handle it
                           }
                           
