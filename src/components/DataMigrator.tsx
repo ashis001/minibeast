@@ -149,13 +149,73 @@ const DataMigrator = () => {
     };
   }, []);
 
-  // Mock tables - replace with API call
-  const tables: TableInfo[] = [
-    { name: 'customers', rowCount: 1245678, sizeGB: 2.3, lastUpdated: '2 hours ago' },
-    { name: 'orders', rowCount: 5892340, sizeGB: 8.7, lastUpdated: '1 hour ago' },
-    { name: 'products', rowCount: 45123, sizeGB: 0.125, lastUpdated: '1 day ago' },
-    { name: 'audit_logs', rowCount: 15234567, sizeGB: 45, lastUpdated: '10 minutes ago' },
-  ];
+  const [tables, setTables] = useState<TableInfo[]>([]);
+  const [loadingTables, setLoadingTables] = useState(false);
+
+  // Load tables when source is selected
+  useEffect(() => {
+    const loadTablesFromSource = async () => {
+      if (!selectedSource) {
+        setTables([]);
+        return;
+      }
+
+      setLoadingTables(true);
+      try {
+        // Get connection config from localStorage
+        const configKey = `${selectedSource.id}Config`;
+        const configStr = localStorage.getItem(configKey);
+        if (!configStr) {
+          console.error('No config found for', selectedSource.id);
+          setLoadingTables(false);
+          return;
+        }
+
+        const config = JSON.parse(configStr);
+        
+        // Call appropriate API based on connection type
+        let response;
+        if (selectedSource.type === 'Snowflake') {
+          response = await fetch('/api/snowflake/tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+          });
+        } else if (selectedSource.type === 'PostgreSQL') {
+          response = await fetch('/api/postgres/tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+          });
+        } else if (selectedSource.type === 'MySQL') {
+          response = await fetch('/api/mysql/tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+          });
+        }
+
+        if (response && response.ok) {
+          const data = await response.json();
+          if (data.success && data.tables) {
+            // Transform API response to TableInfo format
+            const tableList: TableInfo[] = data.tables.map((t: any) => ({
+              name: t.name || t.TABLE_NAME,
+              rowCount: t.rowCount || t.row_count || 0,
+              sizeGB: t.sizeGB || t.size_gb || 0,
+              lastUpdated: t.lastUpdated || t.last_updated || 'Unknown'
+            }));
+            setTables(tableList);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load tables:', error);
+      }
+      setLoadingTables(false);
+    };
+
+    loadTablesFromSource();
+  }, [selectedSource]);
 
   const filteredTables = tables.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase())

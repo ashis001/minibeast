@@ -373,6 +373,65 @@ app.post('/api/test-snowflake', (req, res) => {
   });
 });
 
+// Test MySQL connection
+app.post('/api/test-mysql', async (req, res) => {
+  const { host, port, username, password, database } = req.body;
+
+  if (!host || !username || !password || !database) {
+    return res.status(400).json({ success: false, message: 'Missing MySQL credentials.' });
+  }
+
+  try {
+    const mysql = require('mysql2/promise');
+    const connection = await mysql.createConnection({
+      host: host,
+      port: port || 3306,
+      user: username,
+      password: password,
+      database: database
+    });
+
+    await connection.execute('SELECT VERSION() as version');
+    await connection.end();
+
+    console.log('✅ Successfully connected to MySQL');
+    res.json({ success: true, message: 'MySQL connection successful.' });
+  } catch (error) {
+    console.error('❌ MySQL connection failed:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Test PostgreSQL connection
+app.post('/api/test-postgres', async (req, res) => {
+  const { host, port, username, password, database } = req.body;
+
+  if (!host || !username || !password || !database) {
+    return res.status(400).json({ success: false, message: 'Missing PostgreSQL credentials.' });
+  }
+
+  try {
+    const { Client } = require('pg');
+    const client = new Client({
+      host: host,
+      port: port || 5432,
+      user: username,
+      password: password,
+      database: database
+    });
+
+    await client.connect();
+    await client.query('SELECT version()');
+    await client.end();
+
+    console.log('✅ Successfully connected to PostgreSQL');
+    res.json({ success: true, message: 'PostgreSQL connection successful.' });
+  } catch (error) {
+    console.error('❌ PostgreSQL connection failed:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/deploy', upload.single('dockerImage'), async (req, res) => {
   try {
     const { imageName, envVariables, awsConfig, deploymentConfig, tempDeploymentId } = req.body;
@@ -674,6 +733,88 @@ app.post('/api/snowflake/tables', async (req, res) => {
     if (connection) {
       connection.destroy();
     }
+  }
+});
+
+// Get MySQL tables
+app.post('/api/mysql/tables', async (req, res) => {
+  const { host, port, username, password, database } = req.body;
+
+  try {
+    const mysql = require('mysql2/promise');
+    const connection = await mysql.createConnection({
+      host: host,
+      port: port || 3306,
+      user: username,
+      password: password,
+      database: database
+    });
+
+    const [rows] = await connection.execute(`
+      SELECT 
+        TABLE_NAME as name,
+        TABLE_ROWS as row_count,
+        ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 / 1024), 2) as size_gb,
+        UPDATE_TIME as last_updated
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = ?
+      ORDER BY TABLE_NAME
+    `, [database]);
+
+    await connection.end();
+
+    const tables = rows.map((row) => ({
+      name: row.name,
+      rowCount: row.row_count || 0,
+      sizeGB: row.size_gb || 0,
+      lastUpdated: row.last_updated || 'Unknown'
+    }));
+
+    res.json({ success: true, tables });
+  } catch (error) {
+    console.error('❌ Failed to fetch MySQL tables:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get PostgreSQL tables
+app.post('/api/postgres/tables', async (req, res) => {
+  const { host, port, username, password, database } = req.body;
+
+  try {
+    const { Client } = require('pg');
+    const client = new Client({
+      host: host,
+      port: port || 5432,
+      user: username,
+      password: password,
+      database: database
+    });
+
+    await client.connect();
+
+    const result = await client.query(`
+      SELECT 
+        schemaname || '.' || tablename as name,
+        n_live_tup as row_count,
+        pg_total_relation_size(schemaname||'.'||tablename)::bigint / 1024.0 / 1024.0 / 1024.0 as size_gb
+      FROM pg_stat_user_tables
+      ORDER BY schemaname, tablename
+    `);
+
+    await client.end();
+
+    const tables = result.rows.map((row) => ({
+      name: row.name,
+      rowCount: parseInt(row.row_count) || 0,
+      sizeGB: parseFloat(row.size_gb) || 0,
+      lastUpdated: 'Unknown'
+    }));
+
+    res.json({ success: true, tables });
+  } catch (error) {
+    console.error('❌ Failed to fetch PostgreSQL tables:', error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

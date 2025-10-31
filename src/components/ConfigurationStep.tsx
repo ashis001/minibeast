@@ -165,17 +165,31 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
     setMysqlStatus('testing');
     setTesting(true);
     try {
-      // For now, just simulate success since backend isn't implemented yet
-      setTimeout(() => {
+      const response = await fetch('/api/test-mysql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(mysqlConfig),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
         setMysqlStatus('success');
         setMysqlConfigSaved(true);
         localStorage.setItem('mysqlConfig', JSON.stringify(mysqlConfig));
+        window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "MySQL Connection Successful",
           description: "Configuration saved successfully",
         });
-        setTesting(false);
-      }, 1500);
+      } else {
+        setMysqlStatus('error');
+        toast({
+          title: "MySQL Connection Failed",
+          description: data.message || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       setMysqlStatus('error');
       toast({
@@ -183,25 +197,39 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
         description: "Could not connect to the server.",
         variant: "destructive",
       });
-      setTesting(false);
     }
+    setTesting(false);
   };
 
   const testPostgreSQLConnection = async () => {
     setPostgresStatus('testing');
     setTesting(true);
     try {
-      // For now, just simulate success since backend isn't implemented yet
-      setTimeout(() => {
+      const response = await fetch('/api/test-postgres', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postgresConfig),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
         setPostgresStatus('success');
         setPostgresConfigSaved(true);
         localStorage.setItem('postgresConfig', JSON.stringify(postgresConfig));
+        window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "PostgreSQL Connection Successful",
           description: "Configuration saved successfully",
         });
-        setTesting(false);
-      }, 1500);
+      } else {
+        setPostgresStatus('error');
+        toast({
+          title: "PostgreSQL Connection Failed",
+          description: data.message || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       setPostgresStatus('error');
       toast({
@@ -209,8 +237,8 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
         description: "Could not connect to the server.",
         variant: "destructive",
       });
-      setTesting(false);
     }
+    setTesting(false);
   };
 
   const testBigQueryConnection = async () => {
