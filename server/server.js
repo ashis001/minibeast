@@ -502,11 +502,35 @@ app.post('/api/migrate/start', async (req, res) => {
     // Generate unique job ID
     const jobId = `migration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Start Step Function execution
+    // Extract container name from ECR repository URI
+    const ecrRepository = resourcesData.ecrRepository || 'minibeat-migrator-repo';
+    const containerName = ecrRepository.split('/').pop().split(':')[0];
+    
+    console.log(`📦 Container name: ${containerName}`);
+    
+    // Prepare container overrides with environment variables
+    const containerOverrides = {
+      ContainerOverrides: [
+        {
+          Name: containerName,
+          Environment: [
+            { Name: 'JOB_ID', Value: jobId },
+            { Name: 'SOURCE_TYPE', Value: source.type },
+            { Name: 'SOURCE_CONFIG', Value: JSON.stringify(source.config) },
+            { Name: 'DESTINATION_TYPE', Value: destination.type },
+            { Name: 'DESTINATION_CONFIG', Value: JSON.stringify(destination.config) },
+            { Name: 'TABLES', Value: JSON.stringify(tables) }
+          ]
+        }
+      ]
+    };
+    
+    // Start Step Function execution with containerOverrides
     const executionParams = {
       stateMachineArn: resourcesData.stepFunctionArn,
       name: jobId,
       input: JSON.stringify({
+        containerOverrides: containerOverrides,
         source,
         destination,
         tables,
