@@ -48,27 +48,57 @@ const DataMigrator = () => {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loadingConnections, setLoadingConnections] = useState(true);
   
-  // Fetch connections from API/SSM
+  // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
-    const fetchConnections = async () => {
+    const loadConnections = () => {
       try {
         setLoadingConnections(true);
-        // TODO: Replace with actual API endpoint
-        // const response = await fetch('/api/connections');
-        // const data = await response.json();
-        // setConnections(data.connections || []);
+        const loadedConnections: Connection[] = [];
         
-        // For now show empty - user needs to configure connections first
-        setConnections([]);
+        // Load Snowflake connection
+        const snowflakeConfig = localStorage.getItem('snowflakeConfig');
+        if (snowflakeConfig) {
+          try {
+            const config = JSON.parse(snowflakeConfig);
+            // Only add if successfully tested (saved in localStorage means it was tested)
+            loadedConnections.push({
+              id: 'snowflake',
+              type: 'Snowflake',
+              name: 'Snowflake Connection',
+              account: config.account,
+              database: config.database,
+              status: 'connected'
+            });
+          } catch (e) {
+            console.error('Failed to parse Snowflake config:', e);
+          }
+        }
+        
+        // TODO: Add other database connections when they become available
+        // PostgreSQL, MySQL, BigQuery, etc.
+        // const postgresConfig = localStorage.getItem('postgresConfig');
+        // if (postgresConfig) { ... }
+        
+        setConnections(loadedConnections);
       } catch (error) {
-        console.error('Failed to fetch connections:', error);
+        console.error('Failed to load connections:', error);
         setConnections([]);
       } finally {
         setLoadingConnections(false);
       }
     };
     
-    fetchConnections();
+    loadConnections();
+    
+    // Listen for connection updates from Settings page
+    const handleConnectionsUpdated = () => {
+      loadConnections();
+    };
+    window.addEventListener('connectionsUpdated', handleConnectionsUpdated);
+    
+    return () => {
+      window.removeEventListener('connectionsUpdated', handleConnectionsUpdated);
+    };
   }, []);
 
   // Mock tables - replace with API call
