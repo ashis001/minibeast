@@ -47,7 +47,7 @@ const DeploymentStep = ({ onNext, awsConfig, selectedModule }: DeploymentStepPro
   const [existingDeployments, setExistingDeployments] = useState<ExistingDeployment[]>([]);
   const [hasExistingDeployments, setHasExistingDeployments] = useState(false);
   const [showRedeployDialog, setShowRedeployDialog] = useState(false);
-  // Predefined environment variables for validator module
+  // Predefined environment variables for modules
   const getDefaultEnvVariables = (module: string): EnvVariable[] => {
     if (module === 'validator') {
       return [
@@ -59,15 +59,32 @@ const DeploymentStep = ({ onNext, awsConfig, selectedModule }: DeploymentStepPro
         { id: '6', key: 'SENDER_EMAIL', value: '' },
         { id: '7', key: 'SNOWFLAKE_CRED_PARAM', value: '' }
       ];
+    } else if (module === 'migrator') {
+      return [
+        { id: '1', key: 'AWS_REGION', value: '' },
+        { id: '2', key: 'S3_STAGING_BUCKET', value: '' },
+        { id: '3', key: 'NUM_WORKERS', value: '4' },
+        { id: '4', key: 'BATCH_SIZE', value: '50000' },
+        { id: '5', key: 'USE_S3_STAGING', value: 'true' },
+        { id: '6', key: 'LOG_LEVEL', value: 'INFO' }
+      ];
+    } else if (module === 'reconciliator') {
+      return [
+        { id: '1', key: 'AWS_REGION', value: '' },
+        { id: '2', key: 'PRIMARY_RECIPIENT', value: '' },
+        { id: '3', key: 'CC_RECIPIENTS', value: '' },
+        { id: '4', key: 'SENDER_EMAIL', value: '' },
+        { id: '5', key: 'RECONCILE_THRESHOLD', value: '0.99' }
+      ];
     }
     return [{ id: '1', key: '', value: '' }];
   };
 
   const [envVariables, setEnvVariables] = useState<EnvVariable[]>(
-    getDefaultEnvVariables('validator')
+    getDefaultEnvVariables(selectedModule || 'validator')
   );
   const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>({
-    module: 'validator'
+    module: (selectedModule as 'validator' | 'reconciliator' | 'migrator') || 'validator'
   });
   const [dragOver, setDragOver] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
