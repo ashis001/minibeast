@@ -31,6 +31,9 @@ interface MigrationExecution {
   startTime: string;
   endTime?: string;
   logs: LogEntry[];
+  source?: { name: string; type: string };
+  destination?: { name: string; type: string };
+  tables?: string[];
 }
 
 const MigrationActivityLog = () => {
@@ -105,12 +108,30 @@ const MigrationActivityLog = () => {
             const statusData = await statusResponse.json();
             
             if (statusData.success) {
+              // Format logs if they exist in localStorage
+              const formattedLogs = (job.logs || []).map((log: any) => {
+                if (typeof log === 'object' && log.timestamp && log.message) {
+                  return {
+                    timestamp: log.timestamp,
+                    message: log.message,
+                    level: (log.message?.includes('ERROR') ? 'ERROR' :
+                           log.message?.includes('WARN') ? 'WARN' :
+                           log.message?.includes('INFO') ? 'INFO' : 'DEBUG') as 'INFO' | 'ERROR' | 'WARN' | 'DEBUG',
+                    source: 'ECS'
+                  };
+                }
+                return log;
+              }).filter(Boolean);
+              
               return {
                 jobId: job.jobId,
                 status: statusData.status || job.status || 'SUCCEEDED',
                 startTime: job.startTime || new Date().toISOString(),
                 endTime: statusData.endTime || job.endTime,
-                logs: job.logs || []
+                logs: formattedLogs,
+                source: job.source,
+                destination: job.destination,
+                tables: job.tables
               };
             }
           } catch (err) {
@@ -118,12 +139,30 @@ const MigrationActivityLog = () => {
           }
           
           // Fallback: if backend call fails, assume old migrations are completed
+          // Format logs if they exist in localStorage
+          const formattedLogs = (job.logs || []).map((log: any) => {
+            if (typeof log === 'object' && log.timestamp && log.message) {
+              return {
+                timestamp: log.timestamp,
+                message: log.message,
+                level: (log.message?.includes('ERROR') ? 'ERROR' :
+                       log.message?.includes('WARN') ? 'WARN' :
+                       log.message?.includes('INFO') ? 'INFO' : 'DEBUG') as 'INFO' | 'ERROR' | 'WARN' | 'DEBUG',
+                source: 'ECS'
+              };
+            }
+            return log;
+          }).filter(Boolean);
+          
           return {
             jobId: job.jobId,
             status: job.status === 'RUNNING' ? 'SUCCEEDED' : job.status,
             startTime: job.startTime || new Date().toISOString(),
             endTime: job.endTime,
-            logs: job.logs || []
+            logs: formattedLogs,
+            source: job.source,
+            destination: job.destination,
+            tables: job.tables
           };
         })
       );
@@ -429,38 +468,52 @@ const MigrationActivityLog = () => {
             {isProgressExpanded && (
               <CardContent className="space-y-4">
                 {/* Migration Path */}
-                <div className="flex items-center justify-between bg-slate-900 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">🐬</div>
-                    <div>
-                      <p className="text-white font-semibold">MySQL Source</p>
-                      <p className="text-xs text-slate-400">Source Database</p>
+                {selectedExecutionData.source && selectedExecutionData.destination && (
+                  <div className="flex items-center justify-between bg-slate-900 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">
+                        {selectedExecutionData.source.type === 'mysql' ? '🐬' :
+                         selectedExecutionData.source.type === 'postgresql' ? '🐘' :
+                         selectedExecutionData.source.type === 'oracle' ? '🔮' :
+                         selectedExecutionData.source.type === 'bigquery' ? '📊' : '🗄️'}
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold">{selectedExecutionData.source.name}</p>
+                        <p className="text-xs text-slate-400">Source Database</p>
+                      </div>
+                    </div>
+                    
+                    <ArrowRight className="h-6 w-6 text-slate-500" />
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">
+                        {selectedExecutionData.destination.type === 'snowflake' ? '❄️' :
+                         selectedExecutionData.destination.type === 'postgresql' ? '🐘' :
+                         selectedExecutionData.destination.type === 'mysql' ? '🐬' :
+                         selectedExecutionData.destination.type === 'bigquery' ? '📊' : '🗄️'}
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold">{selectedExecutionData.destination.name}</p>
+                        <p className="text-xs text-slate-400">Target Database</p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <ArrowRight className="h-6 w-6 text-slate-500" />
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">❄️</div>
-                    <div>
-                      <p className="text-white font-semibold">Snowflake Destination</p>
-                      <p className="text-xs text-slate-400">Target Database</p>
-                    </div>
-                  </div>
-                </div>
+                )}
 
-                {/* Overall Progress Bar */}
-                <div className="bg-slate-900 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <p className="text-sm text-slate-300 font-semibold">Overall Progress</p>
-                    <p className="text-2xl font-bold text-white">85%</p>
+                {/* Overall Progress Bar - Only show for RUNNING */}
+                {selectedExecutionData.status === 'RUNNING' && (
+                  <div className="bg-slate-900 rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="text-sm text-slate-300 font-semibold">Overall Progress</p>
+                      <p className="text-2xl font-bold text-white">Processing...</p>
+                    </div>
+                    <Progress value={0} className="h-3" />
+                    <div className="flex justify-between text-xs text-slate-400 mt-2">
+                      <span>Migration in progress</span>
+                      <span>Check logs for details</span>
+                    </div>
                   </div>
-                  <Progress value={85} className="h-3" />
-                  <div className="flex justify-between text-xs text-slate-400 mt-2">
-                    <span>850 / 1,004 rows migrated</span>
-                    <span>~2 mins remaining</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Progress Stats */}
                 <div className="grid grid-cols-3 gap-4">
@@ -479,9 +532,10 @@ const MigrationActivityLog = () => {
                   <div className="bg-slate-900 rounded-lg p-3">
                     <p className="text-xs text-slate-400 mb-1">Duration</p>
                     <p className="text-sm text-white font-semibold">
-                      {selectedExecutionData.endTime 
+                      {selectedExecutionData.status === 'RUNNING' ? 'Running...' :
+                       selectedExecutionData.endTime 
                         ? `${Math.round((new Date(selectedExecutionData.endTime).getTime() - new Date(selectedExecutionData.startTime).getTime()) / 1000)}s`
-                        : 'Running...'}
+                        : 'N/A'}
                     </p>
                   </div>
                 </div>
