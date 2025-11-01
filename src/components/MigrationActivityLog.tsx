@@ -140,12 +140,9 @@ const MigrationActivityLog = () => {
       
       setExecutions(executionsData);
       
-      // Only auto-select if there's a RUNNING migration
+      // Auto-select the first migration (most recent) by default
       if (!selectedExecution && executionsData.length > 0) {
-        const runningMigration = executionsData.find(exec => exec.status === 'RUNNING');
-        if (runningMigration) {
-          setSelectedExecution(runningMigration.jobId);
-        }
+        setSelectedExecution(executionsData[0].jobId);
       }
     } catch (error) {
       console.error('Failed to fetch executions:', error);
