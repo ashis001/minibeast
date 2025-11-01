@@ -123,36 +123,49 @@ const MigrationActivityLog = () => {
       const data = await response.json();
       
       if (data.success) {
-        setExecutions(prev => prev.map(exec => {
-          if (exec.executionArn === executionArn) {
-            const newLogs = data.logs || [];
-            
-            if (isInitialLoad) {
-              if (newLogs.length > 0) {
-                setLastLogTimestamp(newLogs[newLogs.length - 1].timestamp);
-              }
-              console.log(`📥 Initial load: ${newLogs.length} logs`);
-              return { ...exec, logs: newLogs, taskArn: data.taskArn };
-            } else {
-              if (newLogs.length > 0) {
-                const existingLogs = exec.logs || [];
-                const existingTimestamps = new Set(existingLogs.map(log => log.timestamp));
-                const uniqueNewLogs = newLogs.filter((log: any) => 
-                  !existingTimestamps.has(new Date(log.timestamp).toISOString())
-                );
+        const newLogs = data.logs || [];
+        
+        if (isInitialLoad) {
+          // Initial load - replace logs
+          if (newLogs.length > 0) {
+            setLastLogTimestamp(newLogs[newLogs.length - 1].timestamp);
+          }
+          console.log(`📥 Initial load: ${newLogs.length} logs`);
+          
+          setExecutions(prev => prev.map(exec => 
+            exec.executionArn === executionArn 
+              ? { ...exec, logs: newLogs, taskArn: data.taskArn }
+              : exec
+          ));
+        } else {
+          // Incremental load - only append NEW logs
+          if (newLogs.length > 0) {
+            const currentExec = executions.find(e => e.executionArn === executionArn);
+            if (currentExec) {
+              const existingLogs = currentExec.logs || [];
+              const existingTimestamps = new Set(existingLogs.map(log => log.timestamp));
+              const uniqueNewLogs = newLogs.filter((log: any) => 
+                !existingTimestamps.has(log.timestamp)
+              );
+              
+              if (uniqueNewLogs.length > 0) {
+                const combinedLogs = [...existingLogs, ...uniqueNewLogs];
+                setLastLogTimestamp(uniqueNewLogs[uniqueNewLogs.length - 1].timestamp);
+                console.log(`📝 Appended ${uniqueNewLogs.length} new logs (total: ${combinedLogs.length})`);
                 
-                if (uniqueNewLogs.length > 0) {
-                  const combinedLogs = [...existingLogs, ...uniqueNewLogs];
-                  setLastLogTimestamp(uniqueNewLogs[uniqueNewLogs.length - 1].timestamp);
-                  console.log(`📝 Appended ${uniqueNewLogs.length} new unique logs`);
-                  return { ...exec, logs: combinedLogs, taskArn: data.taskArn };
-                }
+                // ONLY update state if we have new logs
+                setExecutions(prev => prev.map(exec => 
+                  exec.executionArn === executionArn 
+                    ? { ...exec, logs: combinedLogs, taskArn: data.taskArn }
+                    : exec
+                ));
+              } else {
+                console.log('✅ No new logs to append');
+                // Don't update state if no new logs
               }
-              return { ...exec, taskArn: data.taskArn };
             }
           }
-          return exec;
-        }));
+        }
         
         // Update localStorage with logs
         const historyJson = localStorage.getItem('migrationHistory');
@@ -238,8 +251,8 @@ const MigrationActivityLog = () => {
         return;
       }
 
-      console.log('🔄 Auto-refreshing migration:', selectedExecution);
-      fetchExecutions();
+      console.log('🔄 Auto-refreshing logs:', selectedExecution);
+      // Only fetch incremental logs, NOT executions (prevents flickering)
       fetchLogs(selectedExecution, false);
     }, 5000);
 
@@ -268,7 +281,7 @@ const MigrationActivityLog = () => {
     setAutoRefreshStartTime(Date.now());
     setRemainingTime(60);
     if (selectedExecution) {
-      fetchExecutions();
+      // Only fetch logs on resume, not full executions
       fetchLogs(selectedExecution, false);
     }
     console.log('▶️ Auto-refresh resumed - new 60 second timer started');
