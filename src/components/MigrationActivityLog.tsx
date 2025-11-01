@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
 import { 
   RefreshCw, 
   CheckCircle, 
@@ -10,11 +9,7 @@ import {
   Terminal,
   Activity,
   Download,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Database,
-  ArrowRight
+  Clock
 } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 
@@ -50,7 +45,6 @@ const MigrationActivityLog = () => {
   const itemsPerPage = 5;
   const logsEndRef = useRef<HTMLDivElement>(null);
   const previousLogCountRef = useRef<number>(0);
-  const [isProgressExpanded, setIsProgressExpanded] = useState(true);
 
   // Auto-scroll to bottom when new logs arrive
   const scrollToBottom = () => {
@@ -413,116 +407,21 @@ const MigrationActivityLog = () => {
           </div>
         </div>
 
-        {/* Collapsible Progress Section */}
-        {selectedExecutionData && (
-          <Card className="bg-slate-800 border-slate-700 mb-6">
-            <CardHeader 
-              className="cursor-pointer hover:bg-slate-750 transition-colors"
-              onClick={() => setIsProgressExpanded(!isProgressExpanded)}
-            >
-              <CardTitle className="text-white flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Migration Progress
-                </div>
-                {isProgressExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-              </CardTitle>
-            </CardHeader>
-            {isProgressExpanded && (
-              <CardContent className="space-y-4">
-                {/* Migration Path */}
-                {selectedExecutionData.source && selectedExecutionData.destination && (
-                  <div className="flex items-center justify-between bg-slate-900 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">
-                        {selectedExecutionData.source.type === 'mysql' ? '🐬' :
-                         selectedExecutionData.source.type === 'postgresql' ? '🐘' :
-                         selectedExecutionData.source.type === 'oracle' ? '🔮' :
-                         selectedExecutionData.source.type === 'bigquery' ? '📊' : '🗄️'}
-                      </div>
-                      <div>
-                        <p className="text-white font-semibold">{selectedExecutionData.source.name}</p>
-                        <p className="text-xs text-slate-400">Source Database</p>
-                      </div>
-                    </div>
-                    
-                    <ArrowRight className="h-6 w-6 text-slate-500" />
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">
-                        {selectedExecutionData.destination.type === 'snowflake' ? '❄️' :
-                         selectedExecutionData.destination.type === 'postgresql' ? '🐘' :
-                         selectedExecutionData.destination.type === 'mysql' ? '🐬' :
-                         selectedExecutionData.destination.type === 'bigquery' ? '📊' : '🗄️'}
-                      </div>
-                      <div>
-                        <p className="text-white font-semibold">{selectedExecutionData.destination.name}</p>
-                        <p className="text-xs text-slate-400">Target Database</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Overall Progress Bar - Only show for RUNNING */}
-                {selectedExecutionData.status === 'RUNNING' && (
-                  <div className="bg-slate-900 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <p className="text-sm text-slate-300 font-semibold">Overall Progress</p>
-                      <p className="text-2xl font-bold text-white">Processing...</p>
-                    </div>
-                    <Progress value={0} className="h-3" />
-                    <div className="flex justify-between text-xs text-slate-400 mt-2">
-                      <span>Migration in progress</span>
-                      <span>Check logs for details</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Progress Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-slate-900 rounded-lg p-3">
-                    <p className="text-xs text-slate-400 mb-1">Status</p>
-                    <Badge className={`${getStatusColor(selectedExecutionData.status)} text-white`}>
-                      {selectedExecutionData.status}
-                    </Badge>
-                  </div>
-                  <div className="bg-slate-900 rounded-lg p-3">
-                    <p className="text-xs text-slate-400 mb-1">Started</p>
-                    <p className="text-sm text-white font-semibold">
-                      {new Date(selectedExecutionData.startTime).toLocaleTimeString()}
-                    </p>
-                  </div>
-                  <div className="bg-slate-900 rounded-lg p-3">
-                    <p className="text-xs text-slate-400 mb-1">Duration</p>
-                    <p className="text-sm text-white font-semibold">
-                      {selectedExecutionData.status === 'RUNNING' ? 'Running...' :
-                       selectedExecutionData.endTime 
-                        ? `${Math.round((new Date(selectedExecutionData.endTime).getTime() - new Date(selectedExecutionData.startTime).getTime()) / 1000)}s`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Log Count */}
-                <div className="bg-slate-900 rounded-lg p-3">
-                  <p className="text-xs text-slate-400 mb-1">Total Logs</p>
-                  <p className="text-lg text-white font-semibold">
-                    {selectedExecutionData.logs.length} entries
-                  </p>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Executions List */}
           <div className="lg:col-span-1">
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Recent Migrations
+                <CardTitle className="text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Recent Migrations
+                  </div>
+                  {executions.length > 0 && (
+                    <span className="text-xs text-slate-400">
+                      {executions.length} total
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col h-[520px]">
@@ -551,34 +450,28 @@ const MigrationActivityLog = () => {
                         }`}
                         onClick={() => setSelectedExecution(execution.jobId)}
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className={`${getStatusColor(execution.status)} text-white`}>
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon(execution.status)}
-                              {execution.status}
-                            </div>
-                          </Badge>
-                          {isLatest && (
-                            <Badge className="bg-orange-500 text-white text-xs">
-                              LATEST
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${getStatusColor(execution.status)} text-white`}>
+                              <div className="flex items-center gap-1">
+                                {getStatusIcon(execution.status)}
+                                {execution.status}
+                              </div>
                             </Badge>
-                          )}
+                            {isLatest && (
+                              <Badge className="bg-orange-500 text-white text-xs">
+                                LATEST
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-400">
+                            {new Date(execution.startTime).toLocaleTimeString()}
+                          </span>
                         </div>
-                        
-                        <p className="text-xs text-slate-400 mb-1">
-                          {new Date(execution.startTime).toLocaleTimeString()}
-                        </p>
                         
                         <p className="text-sm text-slate-300 truncate">
                           {execution.jobId}
                         </p>
-                        
-                        {isLatest && autoRefresh && selectedExecution === execution.jobId && (
-                          <p className="text-xs text-brand-green/80 mt-1 flex items-center gap-1">
-                            <div className="w-2 h-2 bg-brand-green/80 rounded-full animate-pulse"></div>
-                            Auto-refreshing
-                          </p>
-                        )}
                       </div>
                     );
                   })
