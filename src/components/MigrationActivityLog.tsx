@@ -146,11 +146,18 @@ const MigrationActivityLog = () => {
   // Fetch logs for specific execution
   const fetchLogs = async (jobId: string, isInitialLoad = false) => {
     try {
+      const selectedExec = executions.find(exec => exec.jobId === jobId);
       let url = `/api/migrate/logs/${encodeURIComponent(jobId)}`;
       
       if (!isInitialLoad && lastLogTimestamp) {
         const timestamp = new Date(lastLogTimestamp).getTime();
         url += `?incremental=true&startTime=${timestamp}`;
+      }
+      
+      // Pass migration start time to filter old logs from previous runs
+      if (selectedExec?.startTime) {
+        const separator = url.includes('?') ? '&' : '?';
+        url += `${separator}migrationStartTime=${encodeURIComponent(selectedExec.startTime)}`;
       }
       
       const response = await fetch(url);

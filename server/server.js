@@ -586,6 +586,7 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
     const { jobId } = req.params;
     const startTime = req.query.startTime;
     const isIncremental = req.query.incremental === 'true';
+    const migrationStartTime = req.query.migrationStartTime; // Migration start timestamp from frontend
     
     console.log('📋 Fetching migration logs for job:', jobId);
     if (isIncremental && startTime) {
@@ -656,10 +657,16 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
             };
             
             if (isIncremental && startTime) {
+              // Incremental: fetch logs after last timestamp
               logParams.startTime = parseInt(startTime) + 1;
               logParams.startFromHead = false;
+            } else if (migrationStartTime) {
+              // Initial load: only get logs from when THIS migration started
+              logParams.startTime = new Date(migrationStartTime).getTime();
+              logParams.startFromHead = true;
+              console.log(`📅 Filtering logs from migration start: ${migrationStartTime}`);
             } else {
-              // Get logs from last hour for initial load
+              // Fallback: get logs from last hour
               logParams.startTime = Date.now() - (60 * 60 * 1000);
             }
             
