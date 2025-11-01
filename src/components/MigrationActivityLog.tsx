@@ -84,27 +84,58 @@ const MigrationActivityLog = () => {
     return () => clearInterval(timer);
   }, [autoRefresh, autoRefreshStartTime, isPaused]);
 
-  // Fetch executions from localStorage (jobs that have been started)
+  // Fetch executions from localStorage and verify status from backend
   const fetchExecutions = async () => {
     try {
       // Get migration history from localStorage
       const historyJson = localStorage.getItem('migrationHistory');
       const history = historyJson ? JSON.parse(historyJson) : [];
       
-      // Transform to execution format
-      const executionsData = history.map((job: any) => ({
-        jobId: job.jobId,
-        status: job.status || 'RUNNING',
-        startTime: job.startTime || new Date().toISOString(),
-        endTime: job.endTime,
-        logs: job.logs || []
-      }));
+      if (history.length === 0) {
+        setExecutions([]);
+        return;
+      }
+      
+      // Verify status for each migration from backend
+      const executionsData = await Promise.all(
+        history.map(async (job: any) => {
+          try {
+            // Fetch actual status from backend
+            const statusResponse = await fetch(`/api/migrate/status/${job.jobId}`);
+            const statusData = await statusResponse.json();
+            
+            if (statusData.success) {
+              return {
+                jobId: job.jobId,
+                status: statusData.status || job.status || 'SUCCEEDED',
+                startTime: job.startTime || new Date().toISOString(),
+                endTime: statusData.endTime || job.endTime,
+                logs: job.logs || []
+              };
+            }
+          } catch (err) {
+            console.error(`Failed to fetch status for ${job.jobId}:`, err);
+          }
+          
+          // Fallback: if backend call fails, assume old migrations are completed
+          return {
+            jobId: job.jobId,
+            status: job.status === 'RUNNING' ? 'SUCCEEDED' : job.status,
+            startTime: job.startTime || new Date().toISOString(),
+            endTime: job.endTime,
+            logs: job.logs || []
+          };
+        })
+      );
       
       setExecutions(executionsData);
       
-      // Auto-select the most recent execution if none selected
+      // Only auto-select if there's a RUNNING migration
       if (!selectedExecution && executionsData.length > 0) {
-        setSelectedExecution(executionsData[0].jobId);
+        const runningMigration = executionsData.find(exec => exec.status === 'RUNNING');
+        if (runningMigration) {
+          setSelectedExecution(runningMigration.jobId);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch executions:', error);
