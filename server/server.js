@@ -618,12 +618,15 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
     let logs = [];
     
     try {
-      // Try multiple possible log group names - prioritize actual AWS log group
+      // Get task definition family from resources
+      const taskDefFamily = resourcesData.taskDefinition || resourcesData.taskDefinitionFamily;
+      
+      // Try multiple possible log group names based on actual deployment
       const possibleLogGroups = [
-        '/ecs/minibeat-migrator-repo-deploy-1',  // Actual AWS log group (FIRST PRIORITY)
-        resourcesData.logGroups?.ecsTask,
-        `/ecs/${resourcesData.taskDefinition || 'minibeat-migrator-task'}`,
-        `/aws/ecs/${resourcesData.taskDefinition || 'minibeat-migrator-task'}`
+        resourcesData.logGroups?.ecsTask,  // From aws-resources.json
+        `/ecs/${taskDefFamily}`,  // Standard pattern
+        '/ecs/minibeat-migrator-repo-deploy-1',  // Fallback
+        `/aws/ecs/${taskDefFamily}`
       ].filter(Boolean);
       
       console.log('🔍 Trying log groups for job:', jobId);
@@ -753,15 +756,15 @@ app.get('/api/migrate/status/:jobId', async (req, res) => {
       });
     }
     
-    // Map Step Function status to our status
-    let status = 'running';
+    // Map Step Function status to frontend format (UPPERCASE)
+    let status = 'RUNNING';
     let progress = 50; // Default progress for running
     
     if (execution.status === 'SUCCEEDED') {
-      status = 'completed';
+      status = 'SUCCEEDED';
       progress = 100;
     } else if (execution.status === 'FAILED' || execution.status === 'TIMED_OUT' || execution.status === 'ABORTED') {
-      status = 'failed';
+      status = 'FAILED';
       progress = 0;
     }
     
