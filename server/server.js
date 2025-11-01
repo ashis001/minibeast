@@ -580,112 +580,174 @@ app.post('/api/migrate/start', async (req, res) => {
   }
 });
 
-// Get migration CloudWatch logs (using same mechanism as validator)
-app.get('/api/migrate/logs/:jobId', async (req, res) => {
+// Migrator Activity Log API endpoints
+app.get('/api/migrate/executions', async (req, res) => {
   try {
-    const { jobId } = req.params;
+    console.log('📊 Fetching migrator Step Function executions...');
+    
+    const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
+    const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
+    
+    if (!fs.existsSync(resourcesFile) || !fs.existsSync(deploymentFile)) {
+      return res.json({
+        success: true,
+        executions: []
+      });
+    }
+    
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const stepFunctionArn = resourcesData.stepFunctionArn;
+    const awsConfig = deploymentData.awsConfig;
+    
+    console.log('📋 Migrator AWS Resources loaded:', {
+      stepFunctionArn,
+      region: awsConfig.region
+    });
+    
+    const AWS = require('aws-sdk');
+    const stepfunctions = new AWS.StepFunctions({
+      accessKeyId: awsConfig.accessKey,
+      secretAccessKey: awsConfig.secretKey,
+      region: awsConfig.region
+    });
+    
+    // Fetch recent executions from Step Functions
+    const executions = await stepfunctions.listExecutions({
+      stateMachineArn: stepFunctionArn,
+      maxResults: 50,
+      statusFilter: undefined // Get all statuses
+    }).promise();
+    
+    console.log(`✅ Found ${executions.executions.length} migration executions`);
+    
+    // Format executions for frontend
+    const formattedExecutions = executions.executions.map(exec => ({
+      executionArn: exec.executionArn,
+      status: exec.status,
+      startTime: exec.startDate,
+      endTime: exec.stopDate,
+      logs: []
+    }));
+    
+    res.json({
+      success: true,
+      executions: formattedExecutions
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to fetch migrator executions:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      executions: []
+    });
+  }
+});
+
+// Get migration CloudWatch logs (EXACT validator mechanism)
+app.get('/api/migrate/logs/:executionArn', async (req, res) => {
+  try {
+    const executionArn = decodeURIComponent(req.params.executionArn);
     const startTime = req.query.startTime;
     const isIncremental = req.query.incremental === 'true';
-    const migrationStartTime = req.query.migrationStartTime; // Migration start timestamp from frontend
     
-    console.log('📋 Fetching migration logs for job:', jobId);
+    console.log('📋 Fetching logs for migration execution:', executionArn);
     if (isIncremental && startTime) {
       console.log('🔄 Incremental fetch from:', new Date(parseInt(startTime)).toISOString());
     }
     
-    // Load migrator deployment details
     const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
-    const deploymentFile = path.join(moduleDir, 'deployment.json');
     const resourcesFile = path.join(moduleDir, 'aws-resources.json');
+    const deploymentFile = path.join(moduleDir, 'deployment.json');
     
-    let deploymentData, resourcesData;
-    let awsCredentials, region;
-    
-    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
-      console.warn('⚠️ Migrator deployment files not found - using fallback credentials');
-      
-      // Fallback: Use AWS credentials from Settings/Connections
-      const connectionsFile = path.join(__dirname, 'connections.json');
-      if (!fs.existsSync(connectionsFile)) {
-        return res.json({
-          success: false,
-          error: 'No AWS credentials found. Configure connections in Settings.',
-          logs: []
-        });
-      }
-      
-      const connections = JSON.parse(fs.readFileSync(connectionsFile, 'utf8'));
-      const awsConnection = connections.find(c => c.type === 'aws');
-      
-      if (!awsConnection) {
-        return res.json({
-          success: false,
-          error: 'No AWS connection found. Configure AWS in Settings > Connections.',
-          logs: []
-        });
-      }
-      
-      awsCredentials = {
-        accessKeyId: awsConnection.config.accessKey,
-        secretAccessKey: awsConnection.config.secretKey
-      };
-      region = awsConnection.config.region || 'ap-south-1';
-      
-      console.log('✅ Using AWS credentials from connections');
-    } else {
-      deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
-      resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
-      
-      awsCredentials = {
-        accessKeyId: deploymentData.awsConfig.accessKey,
-        secretAccessKey: deploymentData.awsConfig.secretKey
-      };
-      region = resourcesData.region;
+    if (!fs.existsSync(resourcesFile) || !fs.existsSync(deploymentFile)) {
+      return res.json({
+        success: true,
+        logs: [],
+        taskArn: null
+      });
     }
     
-    // Prepare AWS CloudWatch Logs client
-    const cloudwatchLogs = new AWS.CloudWatchLogs({
-      ...awsCredentials,
-      region: region
+    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    const awsConfig = deploymentData.awsConfig;
+    
+    const AWS = require('aws-sdk');
+    const stepfunctions = new AWS.StepFunctions({
+      accessKeyId: awsConfig.accessKey,
+      secretAccessKey: awsConfig.secretKey,
+      region: awsConfig.region
     });
     
+    const cloudwatchLogs = new AWS.CloudWatchLogs({
+      accessKeyId: awsConfig.accessKey,
+      secretAccessKey: awsConfig.secretKey,
+      region: awsConfig.region
+    });
+    
+    // Get execution details from Step Function
+    const execution = await stepfunctions.describeExecution({
+      executionArn: executionArn
+    }).promise();
+    
     let logs = [];
+    let taskArn = null;
     
     try {
-      // Get task definition family from resources (if available)
-      const taskDefFamily = resourcesData?.taskDefinition || resourcesData?.taskDefinitionFamily;
+      // Try to get ECS task logs using the actual log group from aws-resources.json
+      const possibleLogGroups = resourcesData.logGroups?.possibleEcsLogs || [
+        resourcesData.logGroups?.ecsTask,
+        resourcesData.logGroups?.ecsTaskAlt,
+        '/ecs/minibeat-migrator-repo-deploy-1'
+      ];
       
-      // Try multiple possible log group names
-      const possibleLogGroups = [
-        resourcesData?.logGroups?.ecsTask,  // From aws-resources.json
-        '/ecs/minibeat-migrator-repo-deploy-1',  // Known log group (PRIORITY)
-        taskDefFamily ? `/ecs/${taskDefFamily}` : null,  // Standard pattern
-        taskDefFamily ? `/aws/ecs/${taskDefFamily}` : null
-      ].filter(Boolean);
-      
-      console.log('🔍 Trying log groups for job:', jobId);
+      console.log('🔍 Trying log groups for execution:', executionArn.split(':').pop());
       console.log('📋 Available log groups:', possibleLogGroups);
       
-      // Try each possible log group
-      for (const logGroupName of possibleLogGroups) {
+      // Extract execution time to find the right log stream
+      const executionStartTime = new Date(execution.startDate);
+      const executionEndTime = execution.stopDate ? new Date(execution.stopDate) : new Date();
+      
+      console.log(`🕐 Execution time range: ${executionStartTime.toISOString()} - ${executionEndTime.toISOString()}`);
+      
+      // Try each possible log group until we find one with logs
+      for (const logGroupName of possibleLogGroups.filter(Boolean)) {
         try {
           console.log(`📋 Checking log group: ${logGroupName}`);
           
-          // Get recent log streams
+          // Get log streams that overlap with the execution time
           const streams = await cloudwatchLogs.describeLogStreams({
             logGroupName: logGroupName,
             orderBy: 'LastEventTime',
             descending: true,
-            limit: 5  // Check last 5 streams
+            limit: 20 // Check more streams to find the right one
           }).promise();
           
           console.log(`✅ Found ${streams.logStreams.length} streams in ${logGroupName}`);
           
-          if (streams.logStreams.length > 0) {
-            // Use the most recent stream
-            const targetStream = streams.logStreams[0];
-            console.log(`📋 Using stream: ${targetStream.logStreamName}`);
+          // Find the stream that was active during this execution
+          let targetStream = null;
+          for (const stream of streams.logStreams) {
+            const streamStart = new Date(stream.firstEventTime || stream.creationTime);
+            const streamEnd = new Date(stream.lastEventTime || Date.now());
             
+            // Check if this stream overlaps with the execution time
+            if (streamStart <= executionEndTime && streamEnd >= executionStartTime) {
+              targetStream = stream;
+              console.log(`🎯 Found matching stream: ${stream.logStreamName} (${streamStart.toISOString()} - ${streamEnd.toISOString()})`);
+              break;
+            }
+          }
+          
+          // If no specific stream found, use the most recent one
+          if (!targetStream && streams.logStreams.length > 0) {
+            targetStream = streams.logStreams[0];
+            console.log(`📋 Using most recent stream: ${targetStream.logStreamName}`);
+          }
+            
+          if (targetStream) {
             let logParams = {
               logGroupName: logGroupName,
               logStreamName: targetStream.logStreamName,
@@ -694,25 +756,37 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
             };
             
             if (isIncremental && startTime) {
-              // Incremental: fetch logs after last timestamp
+              // Incremental load - get logs after last timestamp
               logParams.startTime = parseInt(startTime) + 1;
               logParams.startFromHead = false;
-            } else if (migrationStartTime) {
-              // Initial load: only get logs from when THIS migration started
-              logParams.startTime = new Date(migrationStartTime).getTime();
-              logParams.startFromHead = true;
-              console.log(`📅 Filtering logs from migration start: ${migrationStartTime}`);
             } else {
-              // Fallback: get logs from last hour
-              logParams.startTime = Date.now() - (60 * 60 * 1000);
+              // Initial load - get logs from execution start time
+              logParams.startTime = executionStartTime.getTime();
+              logParams.startFromHead = true;
             }
             
             const logEvents = await cloudwatchLogs.getLogEvents(logParams).promise();
             
-            logs = logEvents.events.map(event => ({
-              timestamp: event.timestamp,
-              message: event.message.trim()
-            }));
+            // Format logs with level detection
+            logs = logEvents.events.map(event => {
+              const message = event.message.trim();
+              let level = 'INFO';
+              
+              if (message.includes('ERROR') || message.includes('❌')) {
+                level = 'ERROR';
+              } else if (message.includes('WARN') || message.includes('⚠️')) {
+                level = 'WARN';
+              } else if (message.includes('DEBUG')) {
+                level = 'DEBUG';
+              }
+              
+              return {
+                timestamp: event.timestamp,
+                message: message,
+                level: level,
+                source: 'cloudwatch'
+              };
+            });
             
             console.log(`✅ Retrieved ${logs.length} log entries from ${logGroupName}`);
             break; // Found logs, stop searching
@@ -728,12 +802,13 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
       }
       
     } catch (logError) {
-      console.log('⚠️ Could not fetch logs:', logError.message);
+      console.error('⚠️ Could not fetch logs:', logError.message);
     }
     
     res.json({
       success: true,
-      logs: logs
+      logs: logs,
+      taskArn: taskArn
     });
     
   } catch (error) {

@@ -21,14 +21,12 @@ interface LogEntry {
 }
 
 interface MigrationExecution {
-  jobId: string;
+  executionArn: string;
   status: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'TIMED_OUT';
   startTime: string;
   endTime?: string;
+  taskArn?: string;
   logs: LogEntry[];
-  source?: { name: string; type: string };
-  destination?: { name: string; type: string };
-  tables?: string[];
 }
 
 const MigrationActivityLog = () => {
@@ -53,7 +51,7 @@ const MigrationActivityLog = () => {
 
   useEffect(() => {
     // Only scroll when NEW logs are added, not on every refresh
-    const selectedExec = executions.find(exec => exec.jobId === selectedExecution);
+    const selectedExec = executions.find(exec => exec.executionArn === selectedExecution);
     const currentLogCount = selectedExec?.logs?.length || 0;
     
     if (currentLogCount > previousLogCountRef.current && currentLogCount > 0) {
@@ -81,62 +79,29 @@ const MigrationActivityLog = () => {
     return () => clearInterval(timer);
   }, [autoRefresh, autoRefreshStartTime, isPaused]);
 
-  // Fetch executions from localStorage and verify status from backend
+  // Fetch executions from Step Functions (EXACT validator mechanism)
   const fetchExecutions = async () => {
     try {
-      // Get migration history from localStorage
-      const historyJson = localStorage.getItem('migrationHistory');
-      const history = historyJson ? JSON.parse(historyJson) : [];
+      const response = await fetch('/api/migrate/executions');
+      const data = await response.json();
       
-      if (history.length === 0) {
-        setExecutions([]);
-        return;
-      }
-      
-      // Verify status for each migration from backend
-      const executionsData = await Promise.all(
-        history.map(async (job: any) => {
-          try {
-            // Fetch actual status from backend
-            const statusResponse = await fetch(`/api/migrate/status/${job.jobId}`);
-            const statusData = await statusResponse.json();
-            
-            if (statusData.success) {
-              // Don't load logs from localStorage - they will be fetched fresh from CloudWatch
-              return {
-                jobId: job.jobId,
-                status: statusData.status || job.status || 'SUCCEEDED',
-                startTime: job.startTime || new Date().toISOString(),
-                endTime: statusData.endTime || job.endTime,
-                logs: [], // Start with empty logs, will be fetched from backend
-                source: job.source,
-                destination: job.destination,
-                tables: job.tables
-              };
-            }
-          } catch (err) {
-            console.error(`Failed to fetch status for ${job.jobId}:`, err);
-          }
-          
-          // Fallback: if backend call fails, assume old migrations are completed
-          return {
-            jobId: job.jobId,
-            status: job.status === 'RUNNING' ? 'SUCCEEDED' : job.status,
-            startTime: job.startTime || new Date().toISOString(),
-            endTime: job.endTime,
-            logs: [], // Start with empty logs, will be fetched from backend
-            source: job.source,
-            destination: job.destination,
-            tables: job.tables
-          };
-        })
-      );
-      
-      setExecutions(executionsData);
-      
-      // Auto-select the first migration (most recent) by default
-      if (!selectedExecution && executionsData.length > 0) {
-        setSelectedExecution(executionsData[0].jobId);
+      if (data.success) {
+        // Preserve existing logs when updating executions to prevent flickering
+        setExecutions(prev => {
+          return data.executions.map((newExec: MigrationExecution) => {
+            const existingExec = prev.find(e => e.executionArn === newExec.executionArn);
+            // Keep existing logs if they exist, otherwise use new logs
+            return {
+              ...newExec,
+              logs: existingExec?.logs || newExec.logs || []
+            };
+          });
+        });
+        
+        // Auto-select the most recent execution if none selected
+        if (!selectedExecution && data.executions.length > 0) {
+          setSelectedExecution(data.executions[0].executionArn);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch executions:', error);
@@ -144,20 +109,14 @@ const MigrationActivityLog = () => {
   };
 
   // Fetch logs for specific execution
-  const fetchLogs = async (jobId: string, isInitialLoad = false) => {
+  const fetchLogs = async (executionArn: string, isInitialLoad = false) => {
     try {
-      const selectedExec = executions.find(exec => exec.jobId === jobId);
-      let url = `/api/migrate/logs/${encodeURIComponent(jobId)}`;
+      let url = `/api/migrate/logs/${encodeURIComponent(executionArn)}`;
       
       if (!isInitialLoad && lastLogTimestamp) {
+        // For incremental load, send the last timestamp
         const timestamp = new Date(lastLogTimestamp).getTime();
         url += `?incremental=true&startTime=${timestamp}`;
-      }
-      
-      // Pass migration start time to filter old logs from previous runs
-      if (selectedExec?.startTime) {
-        const separator = url.includes('?') ? '&' : '?';
-        url += `${separator}migrationStartTime=${encodeURIComponent(selectedExec.startTime)}`;
       }
       
       const response = await fetch(url);
@@ -165,7 +124,7 @@ const MigrationActivityLog = () => {
       
       if (data.success) {
         setExecutions(prev => prev.map(exec => {
-          if (exec.jobId === jobId) {
+          if (exec.executionArn === executionArn) {
             const newLogs = data.logs || [];
             
             if (isInitialLoad) {
@@ -173,18 +132,7 @@ const MigrationActivityLog = () => {
                 setLastLogTimestamp(newLogs[newLogs.length - 1].timestamp);
               }
               console.log(`📥 Initial load: ${newLogs.length} logs`);
-              
-              // Parse logs as LogEntry format
-              const formattedLogs = newLogs.map((log: any) => ({
-                timestamp: new Date(log.timestamp).toISOString(),
-                message: log.message,
-                level: log.message.includes('ERROR') ? 'ERROR' as const :
-                       log.message.includes('WARN') ? 'WARN' as const :
-                       log.message.includes('INFO') ? 'INFO' as const : 'DEBUG' as const,
-                source: 'ECS'
-              }));
-              
-              return { ...exec, logs: formattedLogs };
+              return { ...exec, logs: newLogs, taskArn: data.taskArn };
             } else {
               if (newLogs.length > 0) {
                 const existingLogs = exec.logs || [];
@@ -194,22 +142,13 @@ const MigrationActivityLog = () => {
                 );
                 
                 if (uniqueNewLogs.length > 0) {
-                  const formattedNewLogs = uniqueNewLogs.map((log: any) => ({
-                    timestamp: new Date(log.timestamp).toISOString(),
-                    message: log.message,
-                    level: log.message.includes('ERROR') ? 'ERROR' as const :
-                           log.message.includes('WARN') ? 'WARN' as const :
-                           log.message.includes('INFO') ? 'INFO' as const : 'DEBUG' as const,
-                    source: 'ECS'
-                  }));
-                  
-                  const combinedLogs = [...existingLogs, ...formattedNewLogs];
+                  const combinedLogs = [...existingLogs, ...uniqueNewLogs];
                   setLastLogTimestamp(uniqueNewLogs[uniqueNewLogs.length - 1].timestamp);
                   console.log(`📝 Appended ${uniqueNewLogs.length} new unique logs`);
-                  return { ...exec, logs: combinedLogs };
+                  return { ...exec, logs: combinedLogs, taskArn: data.taskArn };
                 }
               }
-              return exec;
+              return { ...exec, taskArn: data.taskArn };
             }
           }
           return exec;
@@ -219,7 +158,7 @@ const MigrationActivityLog = () => {
         const historyJson = localStorage.getItem('migrationHistory');
         const history = historyJson ? JSON.parse(historyJson) : [];
         const updatedHistory = history.map((job: any) => {
-          if (job.jobId === jobId) {
+          if (job.executionArn === executionArn) {
             return { ...job, logs: data.logs };
           }
           return job;
@@ -247,7 +186,7 @@ const MigrationActivityLog = () => {
 
   // Watch for execution status changes and stop auto-refresh when complete
   useEffect(() => {
-    const selectedData = executions.find(exec => exec.jobId === selectedExecution);
+    const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
     
     // Stop auto-refresh immediately if status is not RUNNING
     if (selectedData && selectedData.status !== 'RUNNING') {
@@ -271,8 +210,8 @@ const MigrationActivityLog = () => {
     const sortedExecutions = [...executions].sort((a, b) => 
       new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
     );
-    const latestExecution = sortedExecutions[0];
-    const isLatestExecution = selectedExecution === latestExecution?.jobId;
+    const latestExecutionArn = sortedExecutions[0]?.executionArn;
+    const isLatestExecution = selectedExecution === latestExecutionArn;
     
     if (!isLatestExecution) {
       console.log('🚫 Not auto-refreshing - this is not the latest execution');
@@ -311,7 +250,7 @@ const MigrationActivityLog = () => {
   }, [autoRefresh, selectedExecution]);
 
   const handleResume = () => {
-    const selectedData = executions.find(exec => exec.jobId === selectedExecution);
+    const selectedData = executions.find(exec => exec.executionArn === selectedExecution);
     
     if (selectedData && selectedData.status !== 'RUNNING') {
       toast({
@@ -335,13 +274,13 @@ const MigrationActivityLog = () => {
     console.log('▶️ Auto-refresh resumed - new 60 second timer started');
   };
 
-  const selectedExecutionData = executions.find(exec => exec.jobId === selectedExecution);
+  const selectedExecutionData = executions.find(exec => exec.executionArn === selectedExecution);
   
   const sortedExecutions = [...executions].sort((a, b) => 
     new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
   );
-  const latestExecutionId = sortedExecutions[0]?.jobId;
-  const isLatestExecution = selectedExecution === latestExecutionId;
+  const latestExecutionArn = sortedExecutions[0]?.executionArn;
+  const isLatestExecution = selectedExecution === latestExecutionArn;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -377,14 +316,14 @@ const MigrationActivityLog = () => {
     if (!selectedExecutionData) return;
     
     const logsText = selectedExecutionData.logs
-      .map(log => `[${log.timestamp}] ${log.level} - ${log.message}`)
+      .map(log => `[${new Date(log.timestamp).toISOString()}] ${log.level} - ${log.message}`)
       .join('\n');
     
     const blob = new Blob([logsText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `migration-logs-${selectedExecutionData.jobId}.txt`;
+    a.download = `migration-logs-${selectedExecutionData.executionArn.split(':').pop()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -449,13 +388,13 @@ const MigrationActivityLog = () => {
                     const isLatest = globalIndex === 0;
                     return (
                       <div
-                        key={execution.jobId}
+                        key={execution.executionArn}
                         className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedExecution === execution.jobId
+                          selectedExecution === execution.executionArn
                             ? 'bg-slate-700 border-blue-500'
                             : 'bg-slate-900 border-slate-600 hover:bg-slate-700'
                         }`}
-                        onClick={() => setSelectedExecution(execution.jobId)}
+                        onClick={() => setSelectedExecution(execution.executionArn)}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -477,8 +416,21 @@ const MigrationActivityLog = () => {
                         </div>
                         
                         <p className="text-sm text-slate-300 truncate">
-                          {execution.jobId}
+                          {execution.executionArn.split(':').pop()}
                         </p>
+                        
+                        {execution.taskArn && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Task: {execution.taskArn.split('/').pop()}
+                          </p>
+                        )}
+                        
+                        {isLatest && autoRefresh && selectedExecution === execution.executionArn && (
+                          <p className="text-xs text-brand-green/80 mt-1 flex items-center gap-1">
+                            <div className="w-2 h-2 bg-brand-green/80 rounded-full animate-pulse"></div>
+                            Auto-refreshing
+                          </p>
+                        )}
                       </div>
                     );
                   })
