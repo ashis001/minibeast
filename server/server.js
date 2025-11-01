@@ -598,35 +598,69 @@ app.get('/api/migrate/logs/:jobId', async (req, res) => {
     const deploymentFile = path.join(moduleDir, 'deployment.json');
     const resourcesFile = path.join(moduleDir, 'aws-resources.json');
     
-    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
-      return res.json({
-        success: true,
-        logs: []
-      });
-    }
+    let deploymentData, resourcesData;
+    let awsCredentials, region;
     
-    const deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
-    const resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+    if (!fs.existsSync(deploymentFile) || !fs.existsSync(resourcesFile)) {
+      console.warn('⚠️ Migrator deployment files not found - using fallback credentials');
+      
+      // Fallback: Use AWS credentials from Settings/Connections
+      const connectionsFile = path.join(__dirname, 'connections.json');
+      if (!fs.existsSync(connectionsFile)) {
+        return res.json({
+          success: false,
+          error: 'No AWS credentials found. Configure connections in Settings.',
+          logs: []
+        });
+      }
+      
+      const connections = JSON.parse(fs.readFileSync(connectionsFile, 'utf8'));
+      const awsConnection = connections.find(c => c.type === 'aws');
+      
+      if (!awsConnection) {
+        return res.json({
+          success: false,
+          error: 'No AWS connection found. Configure AWS in Settings > Connections.',
+          logs: []
+        });
+      }
+      
+      awsCredentials = {
+        accessKeyId: awsConnection.config.accessKey,
+        secretAccessKey: awsConnection.config.secretKey
+      };
+      region = awsConnection.config.region || 'ap-south-1';
+      
+      console.log('✅ Using AWS credentials from connections');
+    } else {
+      deploymentData = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+      resourcesData = JSON.parse(fs.readFileSync(resourcesFile, 'utf8'));
+      
+      awsCredentials = {
+        accessKeyId: deploymentData.awsConfig.accessKey,
+        secretAccessKey: deploymentData.awsConfig.secretKey
+      };
+      region = resourcesData.region;
+    }
     
     // Prepare AWS CloudWatch Logs client
     const cloudwatchLogs = new AWS.CloudWatchLogs({
-      accessKeyId: deploymentData.awsConfig.accessKey,
-      secretAccessKey: deploymentData.awsConfig.secretKey,
-      region: resourcesData.region
+      ...awsCredentials,
+      region: region
     });
     
     let logs = [];
     
     try {
-      // Get task definition family from resources
-      const taskDefFamily = resourcesData.taskDefinition || resourcesData.taskDefinitionFamily;
+      // Get task definition family from resources (if available)
+      const taskDefFamily = resourcesData?.taskDefinition || resourcesData?.taskDefinitionFamily;
       
-      // Try multiple possible log group names based on actual deployment
+      // Try multiple possible log group names
       const possibleLogGroups = [
-        resourcesData.logGroups?.ecsTask,  // From aws-resources.json
-        `/ecs/${taskDefFamily}`,  // Standard pattern
-        '/ecs/minibeat-migrator-repo-deploy-1',  // Fallback
-        `/aws/ecs/${taskDefFamily}`
+        resourcesData?.logGroups?.ecsTask,  // From aws-resources.json
+        '/ecs/minibeat-migrator-repo-deploy-1',  // Known log group (PRIORITY)
+        taskDefFamily ? `/ecs/${taskDefFamily}` : null,  // Standard pattern
+        taskDefFamily ? `/aws/ecs/${taskDefFamily}` : null
       ].filter(Boolean);
       
       console.log('🔍 Trying log groups for job:', jobId);
