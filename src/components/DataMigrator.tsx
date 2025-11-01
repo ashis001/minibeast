@@ -941,12 +941,13 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                           
                           localStorage.setItem('migrationHistory', JSON.stringify(history));
                           
-                          // Navigate to Activity Log immediately
+                          // Navigate to Activity Log immediately - no polling or animation
                           if (onNavigateToActivityLog) {
                             onNavigateToActivityLog();
-                            return; // Don't start polling here, Activity Log will handle it
+                            return; // Activity Log will handle all polling and log fetching
                           }
                           
+                          // Only poll if NOT navigating to Activity Log (fallback for old behavior)
                           // Initial log fetch
                           const initialLogsResponse = await fetch(`/api/migrate/logs/${data.jobId}`);
                           const initialLogsData = await initialLogsResponse.json();

@@ -108,27 +108,13 @@ const MigrationActivityLog = () => {
             const statusData = await statusResponse.json();
             
             if (statusData.success) {
-              // Format logs if they exist in localStorage
-              const formattedLogs = (job.logs || []).map((log: any) => {
-                if (typeof log === 'object' && log.timestamp && log.message) {
-                  return {
-                    timestamp: log.timestamp,
-                    message: log.message,
-                    level: (log.message?.includes('ERROR') ? 'ERROR' :
-                           log.message?.includes('WARN') ? 'WARN' :
-                           log.message?.includes('INFO') ? 'INFO' : 'DEBUG') as 'INFO' | 'ERROR' | 'WARN' | 'DEBUG',
-                    source: 'ECS'
-                  };
-                }
-                return log;
-              }).filter(Boolean);
-              
+              // Don't load logs from localStorage - they will be fetched fresh from CloudWatch
               return {
                 jobId: job.jobId,
                 status: statusData.status || job.status || 'SUCCEEDED',
                 startTime: job.startTime || new Date().toISOString(),
                 endTime: statusData.endTime || job.endTime,
-                logs: formattedLogs,
+                logs: [], // Start with empty logs, will be fetched from backend
                 source: job.source,
                 destination: job.destination,
                 tables: job.tables
@@ -139,27 +125,12 @@ const MigrationActivityLog = () => {
           }
           
           // Fallback: if backend call fails, assume old migrations are completed
-          // Format logs if they exist in localStorage
-          const formattedLogs = (job.logs || []).map((log: any) => {
-            if (typeof log === 'object' && log.timestamp && log.message) {
-              return {
-                timestamp: log.timestamp,
-                message: log.message,
-                level: (log.message?.includes('ERROR') ? 'ERROR' :
-                       log.message?.includes('WARN') ? 'WARN' :
-                       log.message?.includes('INFO') ? 'INFO' : 'DEBUG') as 'INFO' | 'ERROR' | 'WARN' | 'DEBUG',
-                source: 'ECS'
-              };
-            }
-            return log;
-          }).filter(Boolean);
-          
           return {
             jobId: job.jobId,
             status: job.status === 'RUNNING' ? 'SUCCEEDED' : job.status,
             startTime: job.startTime || new Date().toISOString(),
             endTime: job.endTime,
-            logs: formattedLogs,
+            logs: [], // Start with empty logs, will be fetched from backend
             source: job.source,
             destination: job.destination,
             tables: job.tables
@@ -278,21 +249,16 @@ const MigrationActivityLog = () => {
 
   // Watch for execution status changes and stop auto-refresh when complete
   useEffect(() => {
-    if (!autoRefresh || !selectedExecution) return;
-    
     const selectedData = executions.find(exec => exec.jobId === selectedExecution);
     
-    if (selectedData && (selectedData.status === 'FAILED' || selectedData.status === 'SUCCEEDED')) {
-      console.log(`🛑 Auto-refresh stopped - execution ${selectedData.status}`);
-      setAutoRefresh(false);
-      setIsPaused(true);
-      setAutoRefreshStartTime(null);
-      
-      toast({
-        title: "Auto-refresh stopped",
-        description: `Migration ${selectedData.status.toLowerCase()}. Auto-refresh stopped automatically.`,
-        duration: 4000,
-      });
+    // Stop auto-refresh immediately if status is not RUNNING
+    if (selectedData && selectedData.status !== 'RUNNING') {
+      if (autoRefresh) {
+        console.log(`🛑 Auto-refresh stopped - execution ${selectedData.status}`);
+        setAutoRefresh(false);
+        setIsPaused(true);
+        setAutoRefreshStartTime(null);
+      }
     }
   }, [executions, selectedExecution, autoRefresh]);
 
