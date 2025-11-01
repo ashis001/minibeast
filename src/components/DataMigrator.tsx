@@ -909,9 +909,6 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
 
                         const data = await response.json();
                         if (data.success && data.jobId) {
-                          setMigrationJobId(data.jobId);
-                          setMigrationLogs([]);
-                          setLastLogTimestamp(null);
                           console.log('✅ Migration started:', data.jobId);
                           
                           // Store migration in history array
@@ -941,11 +938,16 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                           
                           localStorage.setItem('migrationHistory', JSON.stringify(history));
                           
-                          // Navigate to Activity Log immediately - no polling or animation
+                          // Navigate to Activity Log IMMEDIATELY - NO state updates, NO UI rendering
                           if (onNavigateToActivityLog) {
                             onNavigateToActivityLog();
-                            return; // Activity Log will handle all polling and log fetching
+                            return; // Exit immediately - Activity Log handles everything
                           }
+                          
+                          // Only run below code if NOT using Activity Log (legacy/fallback)
+                          setMigrationJobId(data.jobId);
+                          setMigrationLogs([]);
+                          setLastLogTimestamp(null);
                           
                           // Only poll if NOT navigating to Activity Log (fallback for old behavior)
                           // Initial log fetch
