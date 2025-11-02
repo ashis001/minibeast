@@ -1161,22 +1161,25 @@ function executeSnowflakeQuery(connection, query) {
 // BigQuery tables endpoint
 app.post('/api/bigquery/tables', async (req, res) => {
   try {
-    const { projectId, datasetId, keyFilename } = req.body;
+    const { project_id, dataset, credentials_json } = req.body;
     
-    console.log(`📊 Fetching BigQuery tables: ${projectId}.${datasetId}`);
+    console.log(`📊 Fetching BigQuery tables: ${project_id}.${dataset}`);
     
     const { BigQuery } = require('@google-cloud/bigquery');
     
+    // Parse credentials JSON
+    const credentials = JSON.parse(credentials_json);
+    
     // Initialize BigQuery client
     const bigquery = new BigQuery({
-      projectId: projectId,
-      keyFilename: keyFilename
+      projectId: project_id,
+      credentials: credentials
     });
     
     // Query to get all tables in the dataset
     const query = `
       SELECT table_name, row_count, size_bytes
-      FROM \`${projectId}.${datasetId}.INFORMATION_SCHEMA.TABLES\`
+      FROM \`${project_id}.${dataset}.INFORMATION_SCHEMA.TABLES\`
       WHERE table_type = 'BASE TABLE'
       ORDER BY table_name
     `;
@@ -1191,12 +1194,12 @@ app.post('/api/bigquery/tables', async (req, res) => {
       exists: true
     }));
     
-    console.log(`✅ Found ${tables.length} tables in ${projectId}.${datasetId}`);
+    console.log(`✅ Found ${tables.length} tables in ${project_id}.${dataset}`);
     
     res.json({
       success: true,
       tables: tables,
-      message: `Found ${tables.length} tables in ${projectId}.${datasetId}`
+      message: `Found ${tables.length} tables in ${project_id}.${dataset}`
     });
     
   } catch (error) {

@@ -272,7 +272,14 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const totalSize = selectedTablesData.reduce((sum, t) => sum + t.sizeGB, 0);
 
   const getConnectionIcon = (type: string) => {
-    return <DatabaseIcon type={type} className="w-10 h-10" />;
+    const icons: { [key: string]: string } = {
+      'PostgreSQL': '🐘',
+      'Snowflake': '❄️',
+      'MySQL': '🐬',
+      'BigQuery': '📊',
+      'Oracle': '🔴'
+    };
+    return <span className="text-3xl">{icons[type] || '🗄️'}</span>;
   };
 
   const renderStepper = () => {
