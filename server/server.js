@@ -727,27 +727,19 @@ app.get('/api/migrate/logs/:executionArn', async (req, res) => {
           
           console.log(`✅ Found ${streams.logStreams.length} streams in ${logGroupName}`);
           
-          // Find the stream that was active during this execution
-          let targetStream = null;
-          for (const stream of streams.logStreams) {
-            const streamStart = new Date(stream.firstEventTime || stream.creationTime);
-            const streamEnd = new Date(stream.lastEventTime || Date.now());
-            
-            // Check if this stream overlaps with the execution time
-            if (streamStart <= executionEndTime && streamEnd >= executionStartTime) {
-              targetStream = stream;
-              console.log(`🎯 Found matching stream: ${stream.logStreamName} (${streamStart.toISOString()} - ${streamEnd.toISOString()})`);
-              break;
-            }
-          }
-          
-          // If no specific stream found, use the most recent one
-          if (!targetStream && streams.logStreams.length > 0) {
-            targetStream = streams.logStreams[0];
+          // Use the most recent stream (logs will be filtered by execution time)
+          if (streams.logStreams.length > 0) {
+            const targetStream = streams.logStreams[0];
             console.log(`📋 Using most recent stream: ${targetStream.logStreamName}`);
-          }
             
-          if (targetStream) {
+            if (targetStream.firstEventTime) {
+              console.log(`📅 Stream first event: ${new Date(targetStream.firstEventTime).toISOString()}`);
+            }
+            if (targetStream.lastEventTime) {
+              console.log(`📅 Stream last event: ${new Date(targetStream.lastEventTime).toISOString()}`);
+            }
+            console.log(`🕐 Execution time: ${executionStartTime.toISOString()} - ${executionEndTime.toISOString()}`);
+            
             let logParams = {
               logGroupName: logGroupName,
               logStreamName: targetStream.logStreamName,
