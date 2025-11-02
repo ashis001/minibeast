@@ -1177,11 +1177,18 @@ app.post('/api/bigquery/tables', async (req, res) => {
     });
     
     // Query to get all tables in the dataset
+    // BigQuery INFORMATION_SCHEMA.TABLES doesn't have row_count/size_bytes
+    // Use TABLE_STORAGE for storage info
     const query = `
-      SELECT table_name, row_count, size_bytes
-      FROM \`${project_id}.${dataset}.INFORMATION_SCHEMA.TABLES\`
-      WHERE table_type = 'BASE TABLE'
-      ORDER BY table_name
+      SELECT 
+        t.table_name,
+        COALESCE(ts.row_count, 0) as row_count,
+        COALESCE(ts.total_logical_bytes, 0) as size_bytes
+      FROM \`${project_id}.${dataset}.INFORMATION_SCHEMA.TABLES\` t
+      LEFT JOIN \`${project_id}.${dataset}.INFORMATION_SCHEMA.TABLE_STORAGE\` ts
+        ON t.table_name = ts.table_name
+      WHERE t.table_type = 'BASE TABLE'
+      ORDER BY t.table_name
     `;
     
     const [rows] = await bigquery.query({ query });
@@ -1190,7 +1197,7 @@ app.post('/api/bigquery/tables', async (req, res) => {
     const tables = rows.map(row => ({
       name: row.table_name,
       rowCount: parseInt(row.row_count || 0),
-      sizeGB: parseFloat((row.size_bytes / (1024 * 1024 * 1024)).toFixed(2)),
+      sizeGB: parseFloat((parseInt(row.size_bytes || 0) / (1024 * 1024 * 1024)).toFixed(2)),
       exists: true
     }));
     
