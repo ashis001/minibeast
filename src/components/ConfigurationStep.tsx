@@ -245,26 +245,40 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
     setBigqueryStatus('testing');
     setTesting(true);
     try {
-      // For now, just simulate success since backend isn't implemented yet
-      setTimeout(() => {
+      const response = await fetch('/api/test-bigquery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bigqueryConfig),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
         setBigqueryStatus('success');
         setBigqueryConfigSaved(true);
         localStorage.setItem('bigqueryConfig', JSON.stringify(bigqueryConfig));
+        window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "BigQuery Connection Successful",
           description: "Configuration saved successfully",
         });
-        setTesting(false);
-      }, 1500);
+      } else {
+        setBigqueryStatus('error');
+        toast({
+          title: "BigQuery Connection Failed",
+          description: data.message || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       setBigqueryStatus('error');
       toast({
         title: "BigQuery Connection Failed",
-        description: "Could not connect to the server.",
+        description: "Could not connect to the server. Is it running?",
         variant: "destructive",
       });
-      setTesting(false);
     }
+    setTesting(false);
   };
 
   // Load saved configurations on component mount from server

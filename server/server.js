@@ -421,6 +421,42 @@ app.post('/api/test-snowflake', (req, res) => {
   });
 });
 
+// Test BigQuery connection
+app.post('/api/test-bigquery', async (req, res) => {
+  const { project_id, dataset, credentials_json } = req.body;
+
+  if (!project_id || !credentials_json) {
+    return res.status(400).json({ success: false, message: 'Missing BigQuery credentials.' });
+  }
+
+  try {
+    const { BigQuery } = require('@google-cloud/bigquery');
+    
+    // Parse credentials JSON
+    const credentials = JSON.parse(credentials_json);
+    
+    // Initialize BigQuery client
+    const bigquery = new BigQuery({
+      projectId: project_id,
+      credentials: credentials
+    });
+    
+    // Test connection with a simple query
+    const query = 'SELECT 1 as test';
+    await bigquery.query({ query });
+    
+    console.log('✅ Successfully connected to BigQuery');
+    
+    // Save to connections.json
+    saveConnectionToFile('bigquery', { project_id, dataset, credentials_json });
+    
+    res.json({ success: true, message: 'BigQuery connection successful.' });
+  } catch (error) {
+    console.error('❌ BigQuery connection failed:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Test MySQL connection
 app.post('/api/test-mysql', async (req, res) => {
   const { host, port, username, password, database } = req.body;
