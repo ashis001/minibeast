@@ -100,7 +100,10 @@ const MigrationActivityLog = () => {
         
         // Auto-select the most recent execution if none selected
         if (!selectedExecution && data.executions.length > 0) {
-          setSelectedExecution(data.executions[0].executionArn);
+          const firstExecution = data.executions[0].executionArn;
+          setSelectedExecution(firstExecution);
+          // Immediately fetch logs for auto-selected execution to avoid race condition
+          setTimeout(() => fetchLogs(firstExecution, true), 100);
         }
       }
     } catch (error) {
