@@ -1176,37 +1176,41 @@ app.post('/api/bigquery/tables', async (req, res) => {
       credentials: credentials
     });
     
-    // Query to get all tables in the dataset
-    // BigQuery INFORMATION_SCHEMA.TABLES doesn't have row_count/size_bytes
-    // Use TABLE_STORAGE for storage info
-    const query = `
-      SELECT 
-        t.table_name,
-        COALESCE(ts.row_count, 0) as row_count,
-        COALESCE(ts.total_logical_bytes, 0) as size_bytes
-      FROM \`${project_id}.${dataset}.INFORMATION_SCHEMA.TABLES\` t
-      LEFT JOIN \`${project_id}.${dataset}.INFORMATION_SCHEMA.TABLE_STORAGE\` ts
-        ON t.table_name = ts.table_name
-      WHERE t.table_type = 'BASE TABLE'
-      ORDER BY t.table_name
-    `;
+    // Use BigQuery client API to list tables instead of INFORMATION_SCHEMA
+    // This is simpler and avoids region/location issues
+    const [tables] = await bigquery
+      .dataset(dataset)
+      .getTables();
     
-    const [rows] = await bigquery.query({ query });
+    // Get metadata for each table
+    const tableMetadata = await Promise.all(
+      tables.map(async (table) => {
+        try {
+          const [metadata] = await table.getMetadata();
+          return {
+            name: table.id,
+            rowCount: parseInt(metadata.numRows || 0),
+            sizeGB: parseFloat((parseInt(metadata.numBytes || 0) / (1024 * 1024 * 1024)).toFixed(2)),
+            exists: true
+          };
+        } catch (error) {
+          console.error(`Error getting metadata for table ${table.id}:`, error.message);
+          return {
+            name: table.id,
+            rowCount: 0,
+            sizeGB: 0,
+            exists: true
+          };
+        }
+      })
+    );
     
-    // Format the results
-    const tables = rows.map(row => ({
-      name: row.table_name,
-      rowCount: parseInt(row.row_count || 0),
-      sizeGB: parseFloat((parseInt(row.size_bytes || 0) / (1024 * 1024 * 1024)).toFixed(2)),
-      exists: true
-    }));
-    
-    console.log(`✅ Found ${tables.length} tables in ${project_id}.${dataset}`);
+    console.log(`✅ Found ${tableMetadata.length} tables in ${project_id}.${dataset}`);
     
     res.json({
       success: true,
-      tables: tables,
-      message: `Found ${tables.length} tables in ${project_id}.${dataset}`
+      tables: tableMetadata,
+      message: `Found ${tableMetadata.length} tables in ${project_id}.${dataset}`
     });
     
   } catch (error) {
