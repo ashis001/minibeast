@@ -200,49 +200,69 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
         return;
       }
 
+      console.log('🔍 Loading tables for:', selectedSource.type, selectedSource.id);
       setLoadingTables(true);
       try {
         // Get connection config from localStorage
         const configKey = `${selectedSource.id}Config`;
+        console.log('📦 Looking for config key:', configKey);
         const configStr = localStorage.getItem(configKey);
+        
         if (!configStr) {
-          console.error('No config found for', selectedSource.id);
+          console.error('❌ No config found for', selectedSource.id);
+          toast({
+            title: "Configuration Missing",
+            description: `No configuration found for ${selectedSource.name}. Please configure in Settings → Connections.`,
+            variant: "destructive"
+          });
           setLoadingTables(false);
           return;
         }
 
         const config = JSON.parse(configStr);
+        console.log('✅ Config loaded:', config);
         
         // Call appropriate API based on connection type
         let response;
+        let apiUrl = '';
+        
         if (selectedSource.type === 'Snowflake') {
-          response = await fetch('/api/snowflake/tables', {
+          apiUrl = '/api/snowflake/tables';
+          response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
         } else if (selectedSource.type === 'PostgreSQL') {
-          response = await fetch('/api/postgres/tables', {
+          apiUrl = '/api/postgres/tables';
+          response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
         } else if (selectedSource.type === 'MySQL') {
-          response = await fetch('/api/mysql/tables', {
+          apiUrl = '/api/mysql/tables';
+          response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
         } else if (selectedSource.type === 'BigQuery') {
-          response = await fetch('/api/bigquery/tables', {
+          apiUrl = '/api/bigquery/tables';
+          console.log('📊 Calling BigQuery API with config:', config);
+          response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
         }
 
+        console.log('🌐 API Response status:', response?.status);
+        
         if (response && response.ok) {
           const data = await response.json();
+          console.log('📥 API Response data:', data);
+          
           if (data.success && data.tables) {
             // Transform API response to TableInfo format
             const tableList: TableInfo[] = data.tables.map((t: any) => ({
@@ -251,17 +271,42 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
               sizeGB: parseFloat(t.sizeGB || t.size_gb || 0),
               lastUpdated: t.lastUpdated || t.last_updated || 'Unknown'
             }));
+            console.log('✅ Loaded', tableList.length, 'tables');
             setTables(tableList);
+            toast({
+              title: "Tables Loaded",
+              description: `Found ${tableList.length} tables in ${selectedSource.database || selectedSource.name}`
+            });
+          } else {
+            console.warn('⚠️ API returned success but no tables:', data);
+            toast({
+              title: "No Tables Found",
+              description: data.message || 'No tables found in this database.',
+              variant: "destructive"
+            });
           }
+        } else {
+          const errorData = response ? await response.json() : null;
+          console.error('❌ API Error:', response?.status, errorData);
+          toast({
+            title: "Failed to Load Tables",
+            description: errorData?.message || `Error ${response?.status}: Could not fetch tables`,
+            variant: "destructive"
+          });
         }
       } catch (error) {
-        console.error('Failed to load tables:', error);
+        console.error('❌ Exception loading tables:', error);
+        toast({
+          title: "Error Loading Tables",
+          description: error instanceof Error ? error.message : 'Unknown error occurred',
+          variant: "destructive"
+        });
       }
       setLoadingTables(false);
     };
 
     loadTablesFromSource();
-  }, [selectedSource]);
+  }, [selectedSource, toast]);
 
   const filteredTables = tables.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
