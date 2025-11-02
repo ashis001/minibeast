@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { DatabaseIcon } from './DatabaseIcon';
 import { 
   Database, 
   ArrowRight, 
@@ -17,7 +18,8 @@ import {
   Clock,
   Zap,
   HardDrive,
-  AlertCircle
+  AlertCircle,
+  ArrowRightLeft
 } from 'lucide-react';
 
 interface Connection {
@@ -270,18 +272,12 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const totalSize = selectedTablesData.reduce((sum, t) => sum + t.sizeGB, 0);
 
   const getConnectionIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      'PostgreSQL': '📊',
-      'Snowflake': '❄️',
-      'MySQL': '🐬',
-      'BigQuery': '🌩️'
-    };
-    return icons[type] || '💾';
+    return <DatabaseIcon type={type} className="w-10 h-10" />;
   };
 
-  const renderStepIndicator = () => (
+  const renderStepper = () => (
     <div className="mb-8">
-      <div className="flex items-center justify-between max-w-3xl mx-auto">
+      <div className="flex items-center justify-between">
         {[1, 2, 3, 4, 5].map((step) => (
           <React.Fragment key={step}>
             <div className="flex flex-col items-center">
@@ -838,7 +834,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
     <div className="max-w-4xl mx-auto">
       {!migrationStarted ? (
         <>
-          {renderStepIndicator()}
+          {renderStepper()}
           
           <Card className="bg-slate-900 border-slate-800">
             <CardContent className="p-8">
