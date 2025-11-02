@@ -1158,6 +1158,56 @@ function executeSnowflakeQuery(connection, query) {
   });
 }
 
+// BigQuery tables endpoint
+app.post('/api/bigquery/tables', async (req, res) => {
+  try {
+    const { projectId, datasetId, keyFilename } = req.body;
+    
+    console.log(`📊 Fetching BigQuery tables: ${projectId}.${datasetId}`);
+    
+    const { BigQuery } = require('@google-cloud/bigquery');
+    
+    // Initialize BigQuery client
+    const bigquery = new BigQuery({
+      projectId: projectId,
+      keyFilename: keyFilename
+    });
+    
+    // Query to get all tables in the dataset
+    const query = `
+      SELECT table_name, row_count, size_bytes
+      FROM \`${projectId}.${datasetId}.INFORMATION_SCHEMA.TABLES\`
+      WHERE table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `;
+    
+    const [rows] = await bigquery.query({ query });
+    
+    // Format the results
+    const tables = rows.map(row => ({
+      name: row.table_name,
+      rowCount: parseInt(row.row_count || 0),
+      sizeGB: parseFloat((row.size_bytes / (1024 * 1024 * 1024)).toFixed(2)),
+      exists: true
+    }));
+    
+    console.log(`✅ Found ${tables.length} tables in ${projectId}.${datasetId}`);
+    
+    res.json({
+      success: true,
+      tables: tables,
+      message: `Found ${tables.length} tables in ${projectId}.${datasetId}`
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching BigQuery tables:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 app.post('/api/snowflake/tables', async (req, res) => {
   let connection;
   try {

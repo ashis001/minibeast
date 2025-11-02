@@ -231,6 +231,12 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
+        } else if (selectedSource.type === 'BigQuery') {
+          response = await fetch('/api/bigquery/tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+          });
         }
 
         if (response && response.ok) {
