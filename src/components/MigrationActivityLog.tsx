@@ -217,26 +217,44 @@ const MigrationActivityLog = () => {
 
   // Periodic execution status check - update status from RUNNING to SUCCEEDED/FAILED
   useEffect(() => {
-    // Check if there are any RUNNING executions
-    const hasRunningExecutions = executions.some(exec => exec.status === 'RUNNING');
-    
-    if (!hasRunningExecutions) {
-      console.log('✅ No RUNNING executions, skipping status check');
-      return;
-    }
-
     console.log('🔄 Starting execution status check interval');
     
-    const statusInterval = setInterval(() => {
-      console.log('🔍 Checking execution status updates...');
-      fetchExecutions();
-    }, 10000); // Check every 10 seconds
+    const statusInterval = setInterval(async () => {
+      // Fetch latest executions to check status
+      try {
+        const response = await fetch('/api/migrate/executions');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Check if any executions are RUNNING
+          const hasRunning = data.executions.some((exec: MigrationExecution) => exec.status === 'RUNNING');
+          
+          if (hasRunning) {
+            console.log('🔍 Found RUNNING executions, updating status...');
+            // Update executions state with fresh data
+            setExecutions(prev => {
+              return data.executions.map((newExec: MigrationExecution) => {
+                const existingExec = prev.find(e => e.executionArn === newExec.executionArn);
+                return {
+                  ...newExec,
+                  logs: existingExec?.logs || newExec.logs || []
+                };
+              });
+            });
+          } else {
+            console.log('✅ No RUNNING executions found');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Status check failed:', error);
+      }
+    }, 5000); // Check every 5 seconds
 
     return () => {
       console.log('🛑 Clearing execution status check interval');
       clearInterval(statusInterval);
     };
-  }, [executions]);
+  }, []); // Empty dependency array - runs once on mount
 
   // Smart auto-refresh - only for the latest execution with 60-second timeout
   useEffect(() => {
