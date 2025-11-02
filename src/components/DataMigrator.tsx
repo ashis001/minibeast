@@ -275,37 +275,78 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
     return <DatabaseIcon type={type} className="w-10 h-10" />;
   };
 
-  const renderStepper = () => (
-    <div className="mb-8">
-      <div className="flex items-center justify-between">
-        {[1, 2, 3, 4, 5].map((step) => (
-          <React.Fragment key={step}>
-            <div className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                step < currentStep ? 'bg-green-500 text-white' :
-                step === currentStep ? 'bg-blue-500 text-white' :
-                'bg-slate-700 text-slate-400'
-              }`}>
-                {step < currentStep ? <CheckCircle className="h-5 w-5" /> : step}
-              </div>
-              <span className="text-xs mt-2 text-slate-400">
-                {step === 1 && 'Source'}
-                {step === 2 && 'Destination'}
-                {step === 3 && 'Tables'}
-                {step === 4 && 'Configure'}
-                {step === 5 && 'Review'}
-              </span>
-            </div>
-            {step < 5 && (
-              <div className={`flex-1 h-1 mx-2 ${
-                step < currentStep ? 'bg-green-500' : 'bg-slate-700'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
+  const renderStepper = () => {
+    const steps = [
+      { num: 1, label: 'Source', icon: Database },
+      { num: 2, label: 'Destination', icon: ArrowRightLeft },
+      { num: 3, label: 'Tables', icon: Database },
+      { num: 4, label: 'Configure', icon: Zap },
+      { num: 5, label: 'Review', icon: CheckCircle }
+    ];
+
+    return (
+      <div className="mb-10">
+        <div className="flex items-center justify-between">
+          {steps.map((step, idx) => {
+            const Icon = step.icon;
+            const isCompleted = step.num < currentStep;
+            const isCurrent = step.num === currentStep;
+            const isUpcoming = step.num > currentStep;
+
+            return (
+              <React.Fragment key={step.num}>
+                <div className="flex flex-col items-center relative">
+                  {/* Step Circle */}
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
+                    isCompleted 
+                      ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/50' :
+                    isCurrent 
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/50 ring-4 ring-blue-500/20' :
+                    'bg-slate-800 text-slate-500 border-2 border-slate-700'
+                  }`}>
+                    {isCompleted ? (
+                      <CheckCircle className="h-7 w-7" />
+                    ) : (
+                      <Icon className="h-6 w-6" />
+                    )}
+                  </div>
+                  
+                  {/* Step Label */}
+                  <span className={`text-sm mt-3 font-medium transition-all ${
+                    isCurrent ? 'text-blue-400' :
+                    isCompleted ? 'text-green-400' :
+                    'text-slate-500'
+                  }`}>
+                    {step.label}
+                  </span>
+                  
+                  {/* Step Number */}
+                  <span className={`text-xs mt-1 ${
+                    isCurrent ? 'text-blue-300' :
+                    isCompleted ? 'text-green-300' :
+                    'text-slate-600'
+                  }`}>
+                    Step {step.num}
+                  </span>
+                </div>
+                
+                {/* Connector Line */}
+                {idx < steps.length - 1 && (
+                  <div className="flex-1 h-1 mx-4 relative">
+                    <div className={`absolute inset-0 rounded-full transition-all duration-500 ${
+                      step.num < currentStep 
+                        ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                        : 'bg-slate-700'
+                    }`} />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -344,31 +385,43 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
           {connections.map((conn) => (
             <Card 
             key={conn.id}
-            className={`bg-slate-800 border-2 cursor-pointer transition-all ${
+            className={`group cursor-pointer transition-all duration-300 ${
               selectedSource?.id === conn.id 
-                ? 'border-blue-500' 
-                : 'border-slate-700 hover:border-slate-600'
+                ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/10 border-2 border-blue-500 shadow-lg shadow-blue-500/20' 
+                : 'bg-slate-800/50 border-2 border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800'
             }`}
             onClick={() => setSelectedSource(conn)}
           >
-            <CardContent className="p-4">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{getConnectionIcon(conn.type)}</span>
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-xl ${
+                    selectedSource?.id === conn.id
+                      ? 'bg-blue-500/20'
+                      : 'bg-slate-700/50 group-hover:bg-slate-700'
+                  }`}>
+                    {getConnectionIcon(conn.type)}
+                  </div>
                   <div>
-                    <h3 className="text-white font-semibold">{conn.name}</h3>
-                    <p className="text-slate-400 text-sm">
-                      {conn.host || conn.account} • {conn.database}
+                    <h3 className="text-white font-semibold text-lg">{conn.name}</h3>
+                    <p className="text-slate-400 text-sm flex items-center gap-2">
+                      <Database className="h-3 w-3" />
+                      {conn.database}
+                      {(conn.host || conn.account) && (
+                        <span className="text-slate-500">• {conn.host || conn.account}</span>
+                      )}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-green-500 text-white">
-                    <CheckCircle className="h-3 w-3 mr-1" />
+                  <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                     Connected
                   </Badge>
                   {selectedSource?.id === conn.id && (
-                    <CheckCircle className="h-6 w-6 text-blue-500" />
+                    <div className="bg-blue-500 rounded-full p-1">
+                      <CheckCircle className="h-5 w-5 text-white" />
+                    </div>
                   )}
                 </div>
               </div>
@@ -385,12 +438,64 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-white mb-2">Select Destination Connection</h2>
         <p className="text-slate-400">Choose where to migrate the data to</p>
+        
+        {/* Visual Pipeline Flow */}
         {selectedSource && (
-          <div className="mt-3 p-3 bg-slate-800 rounded-lg border border-slate-700">
-            <span className="text-slate-400 text-sm">Source: </span>
-            <span className="text-white font-medium">
-              {getConnectionIcon(selectedSource.type)} {selectedSource.name} → {selectedSource.database}
-            </span>
+          <div className="mt-6 mb-6">
+            <div className="flex items-center justify-center gap-4">
+              {/* Source Card */}
+              <div className="flex-1 max-w-xs">
+                <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      {getConnectionIcon(selectedSource.type)}
+                      <div>
+                        <p className="text-xs text-blue-400 font-medium">SOURCE</p>
+                        <h4 className="text-white font-semibold text-sm">{selectedSource.name}</h4>
+                        <p className="text-slate-400 text-xs">{selectedSource.database}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Animated Arrow */}
+              <div className="flex items-center gap-2">
+                <div className="h-0.5 w-12 bg-gradient-to-r from-blue-500 to-green-500 animate-pulse"></div>
+                <ArrowRightLeft className="h-6 w-6 text-green-500 animate-pulse" />
+                <div className="h-0.5 w-12 bg-gradient-to-r from-green-500 to-blue-500 animate-pulse"></div>
+              </div>
+              
+              {/* Destination Placeholder */}
+              <div className="flex-1 max-w-xs">
+                {selectedDestination ? (
+                  <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        {getConnectionIcon(selectedDestination.type)}
+                        <div>
+                          <p className="text-xs text-green-400 font-medium">DESTINATION</p>
+                          <h4 className="text-white font-semibold text-sm">{selectedDestination.name}</h4>
+                          <p className="text-slate-400 text-xs">{selectedDestination.database}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="bg-slate-800 border-slate-700 border-dashed">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Database className="h-10 w-10 text-slate-600" />
+                        <div>
+                          <p className="text-xs text-slate-500 font-medium">DESTINATION</p>
+                          <h4 className="text-slate-500 font-semibold text-sm">Select below</h4>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -401,31 +506,43 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
           .map((conn) => (
             <Card 
               key={conn.id}
-              className={`bg-slate-800 border-2 cursor-pointer transition-all ${
+              className={`group cursor-pointer transition-all duration-300 ${
                 selectedDestination?.id === conn.id 
-                  ? 'border-blue-500' 
-                  : 'border-slate-700 hover:border-slate-600'
+                  ? 'bg-gradient-to-r from-green-500/20 to-green-600/10 border-2 border-green-500 shadow-lg shadow-green-500/20' 
+                  : 'bg-slate-800/50 border-2 border-slate-700/50 hover:border-green-500/50 hover:bg-slate-800'
               }`}
               onClick={() => setSelectedDestination(conn)}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{getConnectionIcon(conn.type)}</span>
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl ${
+                      selectedDestination?.id === conn.id
+                        ? 'bg-green-500/20'
+                        : 'bg-slate-700/50 group-hover:bg-slate-700'
+                    }`}>
+                      {getConnectionIcon(conn.type)}
+                    </div>
                     <div>
-                      <h3 className="text-white font-semibold">{conn.name}</h3>
-                      <p className="text-slate-400 text-sm">
-                        {conn.host || conn.account} • {conn.database}
+                      <h3 className="text-white font-semibold text-lg">{conn.name}</h3>
+                      <p className="text-slate-400 text-sm flex items-center gap-2">
+                        <Database className="h-3 w-3" />
+                        {conn.database}
+                        {(conn.host || conn.account) && (
+                          <span className="text-slate-500">• {conn.host || conn.account}</span>
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge className="bg-green-500 text-white">
-                      <CheckCircle className="h-3 w-3 mr-1" />
+                    <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                       Connected
                     </Badge>
                     {selectedDestination?.id === conn.id && (
-                      <CheckCircle className="h-6 w-6 text-blue-500" />
+                      <div className="bg-green-500 rounded-full p-1">
+                        <CheckCircle className="h-5 w-5 text-white" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -461,32 +578,58 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
         />
       </div>
 
-      {selectedTables.length > 0 && (
-        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-blue-400">
-              {selectedTables.length} tables selected • {totalRows.toLocaleString()} rows • ~{totalSize.toFixed(1)} GB
-            </span>
+      {/* Bulk Actions Bar */}
+      <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedTables(filteredTables.map(t => t.name))}
+            className="text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
+          >
+            Select All ({filteredTables.length})
+          </Button>
+          {selectedTables.length > 0 && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setSelectedTables([])}
-              className="text-blue-400 hover:text-blue-300"
+              className="text-slate-400 border-slate-700 hover:bg-slate-700"
             >
               Clear All
             </Button>
-          </div>
+          )}
         </div>
-      )}
+        {selectedTables.length > 0 && (
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-blue-400" />
+              <span className="text-blue-400 font-semibold">{selectedTables.length}</span>
+              <span className="text-slate-400">tables</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-green-400" />
+              <span className="text-green-400 font-semibold">{totalRows.toLocaleString()}</span>
+              <span className="text-slate-400">rows</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              <span className="text-yellow-400 font-semibold">~{totalSize.toFixed(1)}</span>
+              <span className="text-slate-400">GB</span>
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* Table Cards */}
       <div className="space-y-3">
         {filteredTables.map((table) => (
           <Card
             key={table.name}
-            className={`bg-slate-800 border-2 cursor-pointer transition-all ${
+            className={`group cursor-pointer transition-all duration-300 ${
               selectedTables.includes(table.name)
-                ? 'border-blue-500'
-                : 'border-slate-700 hover:border-slate-600'
+                ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/10 border-2 border-blue-500 shadow-lg shadow-blue-500/20'
+                : 'bg-slate-800/50 border-2 border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800'
             }`}
             onClick={() => {
               setSelectedTables(prev =>
@@ -498,22 +641,40 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedTables.includes(table.name)}
-                    onChange={() => {}}
-                    className="w-4 h-4"
-                  />
+                <div className="flex items-center gap-4">
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                    selectedTables.includes(table.name)
+                      ? 'bg-blue-500 border-blue-500'
+                      : 'border-slate-600 group-hover:border-blue-500'
+                  }`}>
+                    {selectedTables.includes(table.name) && (
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    )}
+                  </div>
+                  <Database className="h-8 w-8 text-slate-600" />
                   <div>
                     <h3 className="text-white font-semibold">{table.name}</h3>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
-                      <span>📊 {table.rowCount.toLocaleString()} rows</span>
-                      <span>💾 {table.sizeGB.toFixed(2)} GB</span>
-                      <span>🕒 Updated {table.lastUpdated}</span>
+                    <div className="flex items-center gap-4 mt-1 text-xs">
+                      <span className="flex items-center gap-1 text-blue-400">
+                        <HardDrive className="h-3 w-3" />
+                        {table.rowCount.toLocaleString()} rows
+                      </span>
+                      <span className="flex items-center gap-1 text-green-400">
+                        <Zap className="h-3 w-3" />
+                        {table.sizeGB.toFixed(2)} GB
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-500">
+                        <Clock className="h-3 w-3" />
+                        {table.lastUpdated}
+                      </span>
                     </div>
                   </div>
                 </div>
+                {selectedTables.includes(table.name) && (
+                  <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    Selected
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
