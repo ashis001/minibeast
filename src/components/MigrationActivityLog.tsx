@@ -225,25 +225,21 @@ const MigrationActivityLog = () => {
         const response = await fetch('/api/migrate/executions');
         const data = await response.json();
         
-        if (data.success) {
-          // Check if any executions are RUNNING
+        if (data.success && data.executions.length > 0) {
           const hasRunning = data.executions.some((exec: MigrationExecution) => exec.status === 'RUNNING');
           
-          if (hasRunning) {
-            console.log('🔍 Found RUNNING executions, updating status...');
-            // Update executions state with fresh data
-            setExecutions(prev => {
-              return data.executions.map((newExec: MigrationExecution) => {
-                const existingExec = prev.find(e => e.executionArn === newExec.executionArn);
-                return {
-                  ...newExec,
-                  logs: existingExec?.logs || newExec.logs || []
-                };
-              });
+          console.log(`🔍 Status check: ${hasRunning ? 'RUNNING executions found' : 'All executions completed'}, updating...`);
+          
+          // ALWAYS update state with fresh data (not just when RUNNING)
+          setExecutions(prev => {
+            return data.executions.map((newExec: MigrationExecution) => {
+              const existingExec = prev.find(e => e.executionArn === newExec.executionArn);
+              return {
+                ...newExec,
+                logs: existingExec?.logs || newExec.logs || []
+              };
             });
-          } else {
-            console.log('✅ No RUNNING executions found');
-          }
+          });
         }
       } catch (error) {
         console.error('❌ Status check failed:', error);
