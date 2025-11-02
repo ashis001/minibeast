@@ -215,6 +215,29 @@ const MigrationActivityLog = () => {
     }
   }, [executions, selectedExecution, autoRefresh]);
 
+  // Periodic execution status check - update status from RUNNING to SUCCEEDED/FAILED
+  useEffect(() => {
+    // Check if there are any RUNNING executions
+    const hasRunningExecutions = executions.some(exec => exec.status === 'RUNNING');
+    
+    if (!hasRunningExecutions) {
+      console.log('✅ No RUNNING executions, skipping status check');
+      return;
+    }
+
+    console.log('🔄 Starting execution status check interval');
+    
+    const statusInterval = setInterval(() => {
+      console.log('🔍 Checking execution status updates...');
+      fetchExecutions();
+    }, 10000); // Check every 10 seconds
+
+    return () => {
+      console.log('🛑 Clearing execution status check interval');
+      clearInterval(statusInterval);
+    };
+  }, [executions]);
+
   // Smart auto-refresh - only for the latest execution with 60-second timeout
   useEffect(() => {
     if (!autoRefresh || !selectedExecution || executions.length === 0) return;
