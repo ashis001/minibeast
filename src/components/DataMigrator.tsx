@@ -69,6 +69,10 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const [batchSize, setBatchSize] = useState(50000);
   const [useS3Staging, setUseS3Staging] = useState(false);
   
+  // Incremental load settings (simple - no auto-fetch)
+  const [loadType, setLoadType] = useState<'full' | 'incremental'>('full');
+  const [incrementalColumns, setIncrementalColumns] = useState<Record<string, string>>({});
+  
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
     const loadConnections = () => {
@@ -622,6 +626,39 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
         </div>
       </div>
 
+      {/* Load Type Toggle */}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Load Type</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Button
+              variant={loadType === 'full' ? 'default' : 'outline'}
+              onClick={() => {
+                setLoadType('full');
+                setIncrementalColumns({});
+              }}
+              className={loadType === 'full' ? 'bg-blue-500 hover:bg-blue-600' : ''}
+            >
+              📦 Full Load
+            </Button>
+            <Button
+              variant={loadType === 'incremental' ? 'default' : 'outline'}
+              onClick={() => setLoadType('incremental')}
+              className={loadType === 'incremental' ? 'bg-green-500 hover:bg-green-600' : ''}
+            >
+              📈 Incremental Load
+            </Button>
+          </div>
+          {loadType === 'incremental' && (
+            <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded text-sm">
+              <p className="text-blue-400">💡 <strong>Incremental Load:</strong> Enter the column name (e.g., updated_at, created_at, id) for each table below</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
         <Input
@@ -727,6 +764,25 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                   </Badge>
                 )}
               </div>
+              
+              {/* Incremental Column Input (Manual) */}
+              {loadType === 'incremental' && selectedTables.includes(table.name) && (
+                <div className="mt-3 pt-3 border-t border-slate-700" onClick={(e) => e.stopPropagation()}>
+                  <Label className="text-slate-300 text-sm">Incremental Column Name:</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., updated_at, created_at, id"
+                    className="mt-2 bg-slate-900 border-slate-600 text-white"
+                    value={incrementalColumns[table.name] || ''}
+                    onChange={(e) => {
+                      setIncrementalColumns(prev => ({
+                        ...prev,
+                        [table.name]: e.target.value
+                      }));
+                    }}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
