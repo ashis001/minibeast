@@ -791,7 +791,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
 
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle className="text-white">📊 Estimated Migration Time</CardTitle>
+          <CardTitle className="text-white">📊 Migration Configuration</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -810,16 +810,6 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">S3 Staging:</span>
               <span className="text-white font-semibold">{useS3Staging ? 'Enabled' : 'Disabled'}</span>
-            </div>
-            <div className="border-t border-slate-700 pt-3 mt-3">
-              <div className="flex justify-between">
-                <span className="text-white font-semibold">⏱️ Estimated time:</span>
-                <span className="text-green-400 font-bold">8-12 minutes</span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-white font-semibold">💰 Estimated cost:</span>
-                <span className="text-green-400 font-bold">~$0.15</span>
-              </div>
             </div>
           </div>
         </CardContent>
@@ -876,15 +866,19 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
           </div>
 
           <div className="border-t border-slate-700 pt-4">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-slate-400">Total:</span>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Total rows:</span>
               <span className="text-white font-semibold">
-                {totalRows.toLocaleString()} rows
+                {totalRows.toLocaleString()}
               </span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Estimated time:</span>
-              <span className="text-green-400 font-semibold">8-12 minutes</span>
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-slate-400">Workers:</span>
+              <span className="text-white font-semibold">{numWorkers} parallel</span>
+            </div>
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-slate-400">Batch size:</span>
+              <span className="text-white font-semibold">{batchSize.toLocaleString()} rows</span>
             </div>
           </div>
         </CardContent>
