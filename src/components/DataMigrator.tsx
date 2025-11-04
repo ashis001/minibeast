@@ -64,6 +64,11 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const [lastLogTimestamp, setLastLogTimestamp] = useState<number | null>(null);
   const [migrationStatus, setMigrationStatus] = useState<'running' | 'completed' | 'failed'>('running');
   
+  // Performance settings state
+  const [numWorkers, setNumWorkers] = useState(4);
+  const [batchSize, setBatchSize] = useState(50000);
+  const [useS3Staging, setUseS3Staging] = useState(false);
+  
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
     const loadConnections = () => {
@@ -273,10 +278,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
             }));
             console.log('✅ Loaded', tableList.length, 'tables');
             setTables(tableList);
-            toast({
-              title: "Tables Loaded",
-              description: `Found ${tableList.length} tables in ${selectedSource.database || selectedSource.name}`
-            });
+            // Toast removed as per user request
           } else {
             console.warn('⚠️ API returned success but no tables:', data);
             toast({
@@ -314,7 +316,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
 
   const selectedTablesData = tables.filter(t => selectedTables.includes(t.name));
   const totalRows = selectedTablesData.reduce((sum, t) => sum + t.rowCount, 0);
-  const totalSize = selectedTablesData.reduce((sum, t) => sum + t.sizeGB, 0);
+  // Size display removed as it's inaccurate
 
   const getConnectionIcon = (type: string) => {
     const icons: { [key: string]: string } = {
@@ -666,8 +668,8 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
             </div>
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-yellow-400" />
-              <span className="text-yellow-400 font-semibold">~{totalSize.toFixed(1)}</span>
-              <span className="text-slate-400">GB</span>
+              <span className="text-yellow-400 font-semibold">{selectedTables.length}</span>
+              <span className="text-slate-400">tables selected</span>
             </div>
           </div>
         )}
@@ -711,10 +713,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                         <HardDrive className="h-3 w-3" />
                         {table.rowCount.toLocaleString()} rows
                       </span>
-                      <span className="flex items-center gap-1 text-green-400">
-                        <Zap className="h-3 w-3" />
-                        {table.sizeGB.toFixed(2)} GB
-                      </span>
+                      {/* Size removed - inaccurate */}
                       <span className="flex items-center gap-1 text-slate-500">
                         <Clock className="h-3 w-3" />
                         {table.lastUpdated}
@@ -749,9 +748,13 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
         <CardContent className="space-y-4">
           <div>
             <Label className="text-white">Parallel Workers</Label>
-            <select className="w-full mt-2 p-2 bg-slate-900 border border-slate-700 rounded text-white">
+            <select 
+              className="w-full mt-2 p-2 bg-slate-900 border border-slate-700 rounded text-white"
+              value={numWorkers}
+              onChange={(e) => setNumWorkers(parseInt(e.target.value))}
+            >
               <option value="2">2 workers</option>
-              <option value="4" selected>4 workers (Recommended)</option>
+              <option value="4">4 workers (Recommended)</option>
               <option value="8">8 workers</option>
             </select>
             <p className="text-sm text-slate-400 mt-1">More workers = faster migration</p>
@@ -759,16 +762,26 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
 
           <div>
             <Label className="text-white">Batch Size</Label>
-            <select className="w-full mt-2 p-2 bg-slate-900 border border-slate-700 rounded text-white">
+            <select 
+              className="w-full mt-2 p-2 bg-slate-900 border border-slate-700 rounded text-white"
+              value={batchSize}
+              onChange={(e) => setBatchSize(parseInt(e.target.value))}
+            >
               <option value="10000">10,000 rows</option>
-              <option value="50000" selected>50,000 rows (Recommended)</option>
+              <option value="50000">50,000 rows (Recommended)</option>
               <option value="100000">100,000 rows</option>
             </select>
             <p className="text-sm text-slate-400 mt-1">Rows per batch</p>
           </div>
 
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="s3-staging" defaultChecked className="w-4 h-4" />
+            <input 
+              type="checkbox" 
+              id="s3-staging" 
+              checked={useS3Staging}
+              onChange={(e) => setUseS3Staging(e.target.checked)}
+              className="w-4 h-4" 
+            />
             <Label htmlFor="s3-staging" className="text-white">
               Use S3 Staging (10x faster for Snowflake)
             </Label>
@@ -788,11 +801,15 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">Workers:</span>
-              <span className="text-white font-semibold">4 parallel</span>
+              <span className="text-white font-semibold">{numWorkers} parallel</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">Batch size:</span>
-              <span className="text-white font-semibold">50,000 rows</span>
+              <span className="text-white font-semibold">{batchSize.toLocaleString()} rows</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">S3 Staging:</span>
+              <span className="text-white font-semibold">{useS3Staging ? 'Enabled' : 'Disabled'}</span>
             </div>
             <div className="border-t border-slate-700 pt-3 mt-3">
               <div className="flex justify-between">
@@ -851,7 +868,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                 <div key={table.name} className="flex justify-between text-sm">
                   <span className="text-white">• {table.name}</span>
                   <span className="text-slate-400">
-                    {table.rowCount.toLocaleString()} rows, {table.sizeGB.toFixed(2)} GB
+                    {table.rowCount.toLocaleString()} rows
                   </span>
                 </div>
               ))}
@@ -862,7 +879,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
             <div className="flex justify-between text-sm mb-2">
               <span className="text-slate-400">Total:</span>
               <span className="text-white font-semibold">
-                {totalRows.toLocaleString()} rows • ~{totalSize.toFixed(1)} GB
+                {totalRows.toLocaleString()} rows
               </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -1119,6 +1136,9 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                               config: destConfig,
                             },
                             tables: selectedTables,
+                            numWorkers: numWorkers,
+                            batchSize: batchSize,
+                            useS3Staging: useS3Staging,
                           }),
                         });
 
