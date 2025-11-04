@@ -69,9 +69,11 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const [batchSize, setBatchSize] = useState(50000);
   const [useS3Staging, setUseS3Staging] = useState(false);
   
-  // Incremental load settings (simple - no auto-fetch)
+  // Incremental load settings
   const [loadType, setLoadType] = useState<'full' | 'incremental'>('full');
   const [incrementalColumns, setIncrementalColumns] = useState<Record<string, string>>({});
+  const [tableColumns, setTableColumns] = useState<Record<string, string[]>>({});
+  const [fetchingColumns, setFetchingColumns] = useState<Record<string, boolean>>({});
   
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
@@ -313,6 +315,63 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
 
     loadTablesFromSource();
   }, [selectedSource, toast]);
+
+  // Auto-fetch columns for selected tables in incremental mode
+  useEffect(() => {
+    const fetchColumnsForTables = async () => {
+      if (loadType !== 'incremental' || selectedTables.length === 0 || !selectedSource) return;
+
+      const configKey = `${selectedSource.id}Config`;
+      const configStr = localStorage.getItem(configKey);
+      if (!configStr) return;
+
+      const config = JSON.parse(configStr);
+
+      // Fetch columns for each selected table that doesn't have columns yet
+      for (const tableName of selectedTables) {
+        if (tableColumns[tableName] || fetchingColumns[tableName]) continue;
+
+        setFetchingColumns(prev => ({ ...prev, [tableName]: true }));
+
+        try {
+          let apiUrl = '';
+          if (selectedSource.type === 'Snowflake') {
+            apiUrl = '/api/snowflake/columns';
+          } else if (selectedSource.type === 'MySQL') {
+            apiUrl = '/api/mysql/columns';
+          } else if (selectedSource.type === 'PostgreSQL') {
+            apiUrl = '/api/postgres/columns';
+          } else if (selectedSource.type === 'BigQuery') {
+            apiUrl = '/api/bigquery/columns';
+          }
+
+          if (apiUrl) {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...config, table: tableName })
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && data.columns) {
+                setTableColumns(prev => ({
+                  ...prev,
+                  [tableName]: data.columns
+                }));
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch columns for ${tableName}:`, error);
+        } finally {
+          setFetchingColumns(prev => ({ ...prev, [tableName]: false }));
+        }
+      }
+    };
+
+    fetchColumnsForTables();
+  }, [loadType, selectedTables, selectedSource, tableColumns, fetchingColumns]);
 
   const filteredTables = tables.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -765,22 +824,35 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                 )}
               </div>
               
-              {/* Incremental Column Input (Manual) */}
+              {/* Incremental Column Dropdown (Auto-fetched) */}
               {loadType === 'incremental' && selectedTables.includes(table.name) && (
                 <div className="mt-3 pt-3 border-t border-slate-700" onClick={(e) => e.stopPropagation()}>
-                  <Label className="text-slate-300 text-sm">Incremental Column Name:</Label>
-                  <Input
-                    type="text"
-                    placeholder="e.g., updated_at, created_at, id"
-                    className="mt-2 bg-slate-900 border-slate-600 text-white"
-                    value={incrementalColumns[table.name] || ''}
-                    onChange={(e) => {
-                      setIncrementalColumns(prev => ({
-                        ...prev,
-                        [table.name]: e.target.value
-                      }));
-                    }}
-                  />
+                  <Label className="text-slate-300 text-sm">Incremental Column:</Label>
+                  {fetchingColumns[table.name] ? (
+                    <div className="mt-2 p-2 bg-slate-900 border border-slate-600 rounded text-slate-400 text-sm">
+                      Loading columns...
+                    </div>
+                  ) : tableColumns[table.name] && tableColumns[table.name].length > 0 ? (
+                    <select
+                      className="w-full mt-2 p-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                      value={incrementalColumns[table.name] || ''}
+                      onChange={(e) => {
+                        setIncrementalColumns(prev => ({
+                          ...prev,
+                          [table.name]: e.target.value
+                        }));
+                      }}
+                    >
+                      <option value="">-- Select incremental column --</option>
+                      {tableColumns[table.name].map(col => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="mt-2 p-2 bg-slate-900 border border-slate-600 rounded text-slate-400 text-sm">
+                      No columns available
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

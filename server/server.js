@@ -3897,6 +3897,122 @@ app.post('/api/validation-summary', async (req, res) => {
   }
 });
 
+// Column fetching APIs for incremental load dropdown
+app.post('/api/snowflake/columns', async (req, res) => {
+  let connection;
+  try {
+    const { account, username, password, database, schema, warehouse, role, table } = req.body;
+    
+    connection = createSnowflakeConnection({
+      account, username, password, database, schema, warehouse, role
+    });
+    
+    await new Promise((resolve, reject) => {
+      connection.connect((err, conn) => {
+        if (err) reject(err);
+        else resolve(conn);
+      });
+    });
+    
+    const query = `
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = '${schema}' 
+      AND TABLE_CATALOG = '${database}'
+      AND TABLE_NAME = '${table}'
+      ORDER BY ORDINAL_POSITION
+    `;
+    
+    const rows = await executeSnowflakeQuery(connection, query);
+    const columns = rows.map(row => row.COLUMN_NAME);
+    
+    connection.destroy();
+    res.json({ success: true, columns });
+  } catch (error) {
+    if (connection) connection.destroy();
+    console.error('Error fetching Snowflake columns:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/mysql/columns', async (req, res) => {
+  try {
+    const { host, port, username, password, database, table } = req.body;
+    const mysql = require('mysql2/promise');
+    
+    const connection = await mysql.createConnection({
+      host, port, user: username, password, database
+    });
+    
+    const [rows] = await connection.execute(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? 
+       ORDER BY ORDINAL_POSITION`,
+      [database, table]
+    );
+    
+    const columns = rows.map(row => row.COLUMN_NAME);
+    await connection.end();
+    
+    res.json({ success: true, columns });
+  } catch (error) {
+    console.error('Error fetching MySQL columns:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/postgres/columns', async (req, res) => {
+  try {
+    const { host, port, username, password, database, schema, table } = req.body;
+    const { Client } = require('pg');
+    
+    const client = new Client({
+      host, port, user: username, password, database
+    });
+    
+    await client.connect();
+    
+    const result = await client.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_schema = $1 AND table_name = $2 
+       ORDER BY ordinal_position`,
+      [schema || 'public', table]
+    );
+    
+    const columns = result.rows.map(row => row.column_name);
+    await client.end();
+    
+    res.json({ success: true, columns });
+  } catch (error) {
+    console.error('Error fetching PostgreSQL columns:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/bigquery/columns', async (req, res) => {
+  try {
+    const { project_id, dataset, credentials_json, table } = req.body;
+    const { BigQuery } = require('@google-cloud/bigquery');
+    
+    const credentials = JSON.parse(credentials_json);
+    const bigquery = new BigQuery({
+      projectId: project_id,
+      credentials: credentials
+    });
+    
+    const datasetRef = bigquery.dataset(dataset);
+    const tableRef = datasetRef.table(table);
+    const [metadata] = await tableRef.getMetadata();
+    
+    const columns = metadata.schema.fields.map(field => field.name);
+    
+    res.json({ success: true, columns });
+  } catch (error) {
+    console.error('Error fetching BigQuery columns:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });
