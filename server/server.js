@@ -545,10 +545,16 @@ app.post('/api/migrate/start', async (req, res) => {
     console.log(`📦 Container name: ${containerName}`);
     
     // Extract database and schema from configs
-    const sourceDatabase = source.config.database || source.type;
-    const sourceSchema = source.config.schema || 'public';
-    const destDatabase = destination.config.database || destination.type;
-    const destSchema = destination.config.schema || 'public';
+    // For BigQuery, use dataset field instead of schema
+    const sourceDatabase = source.config.database || source.config.project_id || source.type;
+    const sourceSchema = source.type === 'BigQuery' 
+      ? (source.config.dataset || 'public')
+      : (source.config.schema || 'public');
+    
+    const destDatabase = destination.config.database || destination.config.project_id || destination.type;
+    const destSchema = destination.type === 'BigQuery'
+      ? (destination.config.dataset || 'public')
+      : (destination.config.schema || 'public');
     
     // Prepare container overrides with environment variables
     const containerOverrides = {
