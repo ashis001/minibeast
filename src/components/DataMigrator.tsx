@@ -76,6 +76,9 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   const [fetchingColumns, setFetchingColumns] = useState<Record<string, boolean>>({});
   const [recommendedColumns, setRecommendedColumns] = useState<Record<string, string>>({});
   
+  // CDC mode settings
+  const [cdcMode, setCdcMode] = useState(false);
+  
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
     const loadConnections = () => {
@@ -758,6 +761,41 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
         </CardContent>
       </Card>
 
+      {/* CDC Mode */}
+      <Card className="mb-6 bg-slate-900 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            📊 CDC Mode (Change Data Capture)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="cdcMode"
+              checked={cdcMode}
+              onChange={(e) => setCdcMode(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+            />
+            <label htmlFor="cdcMode" className="text-slate-300 cursor-pointer">
+              Enable CDC metadata tracking
+            </label>
+          </div>
+          {cdcMode && (
+            <div className="mt-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded text-sm">
+              <p className="text-purple-400 mb-2">✨ <strong>CDC Mode adds 4 metadata columns:</strong></p>
+              <ul className="text-slate-400 space-y-1 ml-4">
+                <li>• <code className="text-purple-300">_minibeast_operation</code> - INSERT/UPDATE/DELETE</li>
+                <li>• <code className="text-purple-300">_minibeast_timestamp</code> - Migration timestamp</li>
+                <li>• <code className="text-purple-300">_minibeast_source_ts</code> - Source timestamp</li>
+                <li>• <code className="text-purple-300">_minibeast_batch_id</code> - Batch identifier</li>
+              </ul>
+              <p className="text-yellow-400 mt-2">💡 All row changes are tracked. No duplicates issue!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
         <Input
@@ -1333,6 +1371,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                             useS3Staging: useS3Staging,
                             loadType: loadType,
                             incrementalColumns: incrementalColumns,
+                            cdcMode: cdcMode,
                           }),
                         });
 
