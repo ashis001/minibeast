@@ -72,8 +72,9 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   // Incremental load settings
   const [loadType, setLoadType] = useState<'full' | 'incremental'>('full');
   const [incrementalColumns, setIncrementalColumns] = useState<Record<string, string>>({});
-  const [tableColumns, setTableColumns] = useState<Record<string, string[]>>({});
+  const [tableColumns, setTableColumns] = useState<Record<string, Array<{name: string, type: string}>>>({});
   const [fetchingColumns, setFetchingColumns] = useState<Record<string, boolean>>({});
+  const [recommendedColumns, setRecommendedColumns] = useState<Record<string, string>>({});
   
   // Fetch connections from localStorage (Settings/Connections)
   useEffect(() => {
@@ -359,6 +360,45 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                   ...prev,
                   [tableName]: data.columns
                 }));
+                
+                // Auto-detect best incremental column
+                const timestampColumns = data.columns.filter((col: any) => 
+                  col.type.toUpperCase().includes('TIMESTAMP') ||
+                  col.type.toUpperCase().includes('DATETIME') ||
+                  col.type.toUpperCase().includes('DATE')
+                );
+                
+                // Priority: updated_at > modified_at > last_modified > created_at
+                const priorityNames = ['updated_at', 'modified_at', 'last_modified', 'created_at'];
+                let recommended = null;
+                
+                for (const priority of priorityNames) {
+                  const found = timestampColumns.find((col: any) => 
+                    col.name.toLowerCase() === priority
+                  );
+                  if (found) {
+                    recommended = found.name;
+                    break;
+                  }
+                }
+                
+                // If no priority match, use first timestamp column
+                if (!recommended && timestampColumns.length > 0) {
+                  recommended = timestampColumns[0].name;
+                }
+                
+                if (recommended) {
+                  setRecommendedColumns(prev => ({
+                    ...prev,
+                    [tableName]: recommended
+                  }));
+                  
+                  // Auto-select recommended column
+                  setIncrementalColumns(prev => ({
+                    ...prev,
+                    [tableName]: recommended
+                  }));
+                }
               }
             }
           }
@@ -371,7 +411,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
     };
 
     fetchColumnsForTables();
-  }, [loadType, selectedTables, selectedSource, tableColumns, fetchingColumns]);
+  }, [loadType, selectedTables, selectedSource]);
 
   const filteredTables = tables.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -833,21 +873,51 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                       Loading columns...
                     </div>
                   ) : tableColumns[table.name] && tableColumns[table.name].length > 0 ? (
-                    <select
-                      className="w-full mt-2 p-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
-                      value={incrementalColumns[table.name] || ''}
-                      onChange={(e) => {
-                        setIncrementalColumns(prev => ({
-                          ...prev,
-                          [table.name]: e.target.value
-                        }));
-                      }}
-                    >
-                      <option value="">-- Select incremental column --</option>
-                      {tableColumns[table.name].map(col => (
-                        <option key={col} value={col}>{col}</option>
-                      ))}
-                    </select>
+                    <>
+                      {recommendedColumns[table.name] && (
+                        <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded text-sm text-green-400 flex items-center gap-2">
+                          <span className="text-lg">✨</span>
+                          <span>Auto-selected: <strong>{recommendedColumns[table.name]}</strong> (timestamp column)</span>
+                        </div>
+                      )}
+                      <select
+                        className="w-full mt-2 p-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                        value={incrementalColumns[table.name] || ''}
+                        onChange={(e) => {
+                          setIncrementalColumns(prev => ({
+                            ...prev,
+                            [table.name]: e.target.value
+                          }));
+                        }}
+                      >
+                        <option value="">-- Select incremental column --</option>
+                        {tableColumns[table.name].map(col => {
+                          const isTimestamp = col.type.toUpperCase().includes('TIMESTAMP') ||
+                            col.type.toUpperCase().includes('DATETIME') ||
+                            col.type.toUpperCase().includes('DATE');
+                          const isNumeric = col.type.toUpperCase().includes('INT') ||
+                            col.type.toUpperCase().includes('NUMBER') ||
+                            col.type.toUpperCase().includes('NUMERIC');
+                          
+                          let badge = '';
+                          if (isTimestamp) badge = '📅';
+                          else if (isNumeric) badge = '🔢';
+                          else badge = '⚠️';
+                          
+                          return (
+                            <option key={col.name} value={col.name}>
+                              {badge} {col.name} ({col.type})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {incrementalColumns[table.name] && !incrementalColumns[table.name].toLowerCase().includes('updated') && 
+                       !incrementalColumns[table.name].toLowerCase().includes('modified') && (
+                        <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-sm text-yellow-400">
+                          💡 Tip: Columns like 'updated_at' or 'modified_at' capture both new and updated records
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="mt-2 p-2 bg-slate-900 border border-slate-600 rounded text-slate-400 text-sm">
                       No columns available

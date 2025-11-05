@@ -3915,7 +3915,7 @@ app.post('/api/snowflake/columns', async (req, res) => {
     });
     
     const query = `
-      SELECT COLUMN_NAME 
+      SELECT COLUMN_NAME, DATA_TYPE 
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_SCHEMA = '${schema}' 
       AND TABLE_CATALOG = '${database}'
@@ -3924,7 +3924,10 @@ app.post('/api/snowflake/columns', async (req, res) => {
     `;
     
     const rows = await executeSnowflakeQuery(connection, query);
-    const columns = rows.map(row => row.COLUMN_NAME);
+    const columns = rows.map(row => ({
+      name: row.COLUMN_NAME,
+      type: row.DATA_TYPE
+    }));
     
     connection.destroy();
     res.json({ success: true, columns });
@@ -3945,13 +3948,16 @@ app.post('/api/mysql/columns', async (req, res) => {
     });
     
     const [rows] = await connection.execute(
-      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+      `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? 
        ORDER BY ORDINAL_POSITION`,
       [database, table]
     );
     
-    const columns = rows.map(row => row.COLUMN_NAME);
+    const columns = rows.map(row => ({
+      name: row.COLUMN_NAME,
+      type: row.DATA_TYPE
+    }));
     await connection.end();
     
     res.json({ success: true, columns });
@@ -3973,13 +3979,16 @@ app.post('/api/postgres/columns', async (req, res) => {
     await client.connect();
     
     const result = await client.query(
-      `SELECT column_name FROM information_schema.columns 
+      `SELECT column_name, data_type FROM information_schema.columns 
        WHERE table_schema = $1 AND table_name = $2 
        ORDER BY ordinal_position`,
       [schema || 'public', table]
     );
     
-    const columns = result.rows.map(row => row.column_name);
+    const columns = result.rows.map(row => ({
+      name: row.column_name,
+      type: row.data_type
+    }));
     await client.end();
     
     res.json({ success: true, columns });
@@ -4004,7 +4013,10 @@ app.post('/api/bigquery/columns', async (req, res) => {
     const tableRef = datasetRef.table(table);
     const [metadata] = await tableRef.getMetadata();
     
-    const columns = metadata.schema.fields.map(field => field.name);
+    const columns = metadata.schema.fields.map(field => ({
+      name: field.name,
+      type: field.type
+    }));
     
     res.json({ success: true, columns });
   } catch (error) {
