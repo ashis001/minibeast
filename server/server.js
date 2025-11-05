@@ -504,7 +504,7 @@ app.get('/api/connections', (req, res) => {
 // Start migration via deployed Migrator Step Function
 app.post('/api/migrate/start', async (req, res) => {
   try {
-    const { source, destination, tables, numWorkers, batchSize, useS3Staging } = req.body;
+    const { source, destination, tables, numWorkers, batchSize, useS3Staging, loadType, incrementalColumns } = req.body;
     
     // Load migrator deployment details
     const moduleDir = path.join(__dirname, 'deployments/modules/migrator');
@@ -577,7 +577,9 @@ app.post('/api/migrate/start', async (req, res) => {
             { Name: 'TABLES', Value: JSON.stringify(tables) },
             { Name: 'NUM_WORKERS', Value: String(numWorkers || 4) },
             { Name: 'BATCH_SIZE', Value: String(batchSize || 50000) },
-            { Name: 'USE_S3_STAGING', Value: String(useS3Staging || false) }
+            { Name: 'USE_S3_STAGING', Value: String(useS3Staging || false) },
+            { Name: 'LOAD_TYPE', Value: loadType || 'full' },
+            { Name: 'INCREMENTAL_COLUMNS', Value: JSON.stringify(incrementalColumns || {}) }
           ]
         }
       ]

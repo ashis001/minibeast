@@ -1331,6 +1331,8 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
                             numWorkers: numWorkers,
                             batchSize: batchSize,
                             useS3Staging: useS3Staging,
+                            loadType: loadType,
+                            incrementalColumns: incrementalColumns,
                           }),
                         });
 
