@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, TestTube, CheckCircle, AlertCircle, Database, Play, Save, Loader2 } from "lucide-react";
+import { Sparkles, TestTube, CheckCircle, AlertCircle, Database, Play, Save, Loader2, History, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AIValidationGeneratorProps {
@@ -26,6 +26,12 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
   const [geminiConfigured, setGeminiConfigured] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [healingLog, setHealingLog] = useState<string[]>([]);
+  const [aiHistory, setAiHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [activating, setActivating] = useState<string | null>(null);
+  const [expandedSQL, setExpandedSQL] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     // Check if Gemini is configured
@@ -36,6 +42,9 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
       setDatabase(snowflakeConfig.database || "");
       setSchema(snowflakeConfig.schema || "");
     }
+    
+    // Load AI history
+    loadAIHistory();
   }, [snowflakeConfig]);
 
   const checkGeminiConfig = async () => {
@@ -47,6 +56,100 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
       }
     } catch (error) {
       console.error('Failed to check Gemini config:', error);
+    }
+  };
+
+  const loadAIHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch('/api/ai-validations');
+      const data = await response.json();
+      
+      if (data.success) {
+        setAiHistory(data.validations || []);
+      }
+    } catch (error) {
+      console.error('Failed to load AI history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    setActivating(id);
+    
+    try {
+      const response = await fetch('/api/toggle-ai-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id,
+          isActive: !currentStatus,
+          snowflakeConfig
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setAiHistory(prev => prev.map(v => 
+          v.id === id ? { ...v, isActive: !currentStatus } : v
+        ));
+        
+        toast({
+          title: !currentStatus ? "✅ Validation Activated" : "⏸️ Validation Deactivated",
+          description: !currentStatus 
+            ? "Validation is now active in View Validations" 
+            : "Validation has been deactivated",
+        });
+        await loadAIHistory();
+      } else {
+        toast({
+          title: "Toggle Failed",
+          description: data.message || "Failed to toggle validation",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Toggle Failed",
+        description: "Could not connect to the server",
+        variant: "destructive",
+      });
+    } finally {
+      setActivating(null);
+    }
+  };
+
+  const handleDeleteValidation = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this validation?')) return;
+    
+    try {
+      const response = await fetch('/api/delete-ai-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setAiHistory(prev => prev.filter(v => v.id !== id));
+        toast({
+          title: "🗑️ Deleted",
+          description: "Validation removed from history",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete validation",
+        variant: "destructive",
+      });
     }
   };
 
@@ -359,8 +462,11 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
         setHealingLog(prev => [...prev, `✅ Saved to AI Validation History successfully!`]);
         toast({
           title: "💾 Saved to AI History",
-          description: "Validation auto-saved! You can activate it from AI Validation History",
+          description: "Validation auto-saved! Scroll down to activate it.",
         });
+        
+        // Reload history to show the new validation
+        await loadAIHistory();
         
         if (!sql) {
           // Only clear form on manual save
@@ -636,6 +742,149 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           </CardContent>
         </Card>
       )}
+
+      {/* AI Validation History */}
+      <Card className="bg-slate-900 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <History className="h-5 w-5" />
+            AI Validation History
+          </CardTitle>
+          <CardDescription>
+            Previously generated validations. Activate to add them to View Validations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-slate-400" />
+              <p className="text-slate-400 mt-2">Loading history...</p>
+            </div>
+          ) : aiHistory.length === 0 ? (
+            <div className="text-center py-8">
+              <History className="h-12 w-12 mx-auto text-slate-600 mb-2" />
+              <p className="text-slate-400">No AI validations generated yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {aiHistory
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((validation) => (
+                <Card key={validation.id} className="bg-slate-800 border-slate-700">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-white text-lg">
+                          {validation.prompt}
+                        </CardTitle>
+                        <CardDescription className="mt-2">
+                          {validation.database}.{validation.schema}
+                          {validation.testResult && (
+                            <span className="ml-3">
+                              {validation.testResult.rowCount || 0} validation(s)
+                            </span>
+                          )}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {validation.isActive ? (
+                          <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm rounded-full border border-green-500/30">
+                            ✓ Active
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-slate-600/20 text-slate-400 text-sm rounded-full border border-slate-600/30">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* SQL Query */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-slate-300">Generated SQL</Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpandedSQL(expandedSQL === validation.id ? null : validation.id)}
+                          className="text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          {expandedSQL === validation.id ? 'Hide' : 'View'}
+                        </Button>
+                      </div>
+                      {expandedSQL === validation.id && (
+                        <div className="bg-slate-950 p-3 rounded border border-slate-700 overflow-x-auto">
+                          <pre className="text-xs text-slate-300 font-mono">{validation.sql}</pre>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        onClick={() => handleToggleActive(validation.id, validation.isActive)}
+                        disabled={activating === validation.id}
+                        className={validation.isActive ? "bg-yellow-600 hover:bg-yellow-700" : "bg-green-600 hover:bg-green-700"}
+                        size="sm"
+                      >
+                        {activating === validation.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Play className="h-3 w-3 mr-1" />
+                        )}
+                        {validation.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteValidation(validation.id)}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+
+                    {/* Created Date */}
+                    <p className="text-xs text-slate-500 pt-2">
+                      Created: {new Date(validation.createdAt).toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Pagination */}
+              {aiHistory.length > itemsPerPage && (
+                <div className="flex items-center justify-between pt-4">
+                  <p className="text-sm text-slate-400">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, aiHistory.length)} of {aiHistory.length}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(aiHistory.length / itemsPerPage), prev + 1))}
+                      disabled={currentPage >= Math.ceil(aiHistory.length / itemsPerPage)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

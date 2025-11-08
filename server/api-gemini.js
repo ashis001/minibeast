@@ -456,20 +456,21 @@ router.post('/toggle-ai-validation', async (req, res) => {
 
           // Insert into Snowflake config table
           const insertSQL = `
-            INSERT INTO ${snowflakeConfig.database}.${snowflakeConfig.schema}.MINIBEAST_VALIDATION_CONFIG
-            (ID, ENTITY, DESCRIPTION, SQL_QUERY, CREATED_BY, SOURCE)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO ${snowflakeConfig.database}.${snowflakeConfig.schema}.TBL_VALIDATING_TEST_CASES
+            (VALIDATION_DESCRIPTION, VALIDATION_QUERY, OPERATOR, EXPECTED_OUTCOME, VALIDATED_BY, ENTITY, IS_ACTIVE)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
           `;
 
           conn.execute({
             sqlText: insertSQL,
             binds: [
-              validation.id,
-              'AI_GENERATED',
               validation.prompt,
               validation.sql,
-              'AI',
-              'AI_GENERATOR'
+              '=',
+              '0',
+              'AI_SYSTEM',
+              'AI_GENERATED',
+              true
             ],
             complete: (err, stmt, rows) => {
               connection.destroy();
@@ -498,13 +499,14 @@ router.post('/toggle-ai-validation', async (req, res) => {
           if (err) return reject(err);
 
           const deleteSQL = `
-            DELETE FROM ${snowflakeConfig.database}.${snowflakeConfig.schema}.MINIBEAST_VALIDATION_CONFIG
-            WHERE ID = ?
+            UPDATE ${snowflakeConfig.database}.${snowflakeConfig.schema}.TBL_VALIDATING_TEST_CASES
+            SET IS_ACTIVE = FALSE, UPDATED_DATE = CURRENT_TIMESTAMP()
+            WHERE VALIDATION_DESCRIPTION = ? AND ENTITY = 'AI_GENERATED'
           `;
 
           conn.execute({
             sqlText: deleteSQL,
-            binds: [validation.id],
+            binds: [validation.prompt],
             complete: (err, stmt, rows) => {
               connection.destroy();
               if (err) return reject(err);
