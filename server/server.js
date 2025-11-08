@@ -37,6 +37,10 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// API Routes
+const geminiRoutes = require('./api-gemini');
+app.use('/api', geminiRoutes);
+
 // Helper functions for managing connections.json
 function getConnectionsFilePath() {
   const deploymentsDir = path.join(__dirname, 'deployments');
@@ -48,16 +52,33 @@ function getConnectionsFilePath() {
 
 function loadConnections() {
   const filePath = getConnectionsFilePath();
-  if (!fs.existsSync(filePath)) {
-    return {};
-  }
+  
+  // Also load Gemini config from configs/gemini.json
+  let geminiConfig = null;
   try {
-    const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
+    const geminiPath = path.join(__dirname, 'configs/gemini.json');
+    if (fs.existsSync(geminiPath)) {
+      geminiConfig = JSON.parse(fs.readFileSync(geminiPath, 'utf8'));
+    }
   } catch (error) {
-    console.error('Error loading connections.json:', error.message);
-    return {};
+    console.log('No Gemini config found');
   }
+  let connections = {};
+  if (fs.existsSync(filePath)) {
+    try {
+      const data = fs.readFileSync(filePath, 'utf8');
+      connections = JSON.parse(data);
+    } catch (error) {
+      console.error('Error loading connections.json:', error.message);
+    }
+  }
+  
+  // Add Gemini config if available
+  if (geminiConfig) {
+    connections.gemini = geminiConfig;
+  }
+  
+  return connections;
 }
 
 function saveConnectionToFile(type, config) {

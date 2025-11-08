@@ -47,6 +47,8 @@ import ValidationSummary from "./ValidationSummary";
 import LicenseInfo from "./LicenseInfo";
 import DataMigrator from "./DataMigrator";
 import MigrationActivityLog from "./MigrationActivityLog";
+import AIValidationGenerator from "./AIValidationGenerator";
+import AIValidationHistory from "./AIValidationHistory";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -234,8 +236,17 @@ const Dashboard = () => {
       id: "validator",
       module: "validator",
       children: [
-        { icon: Zap, label: "Add Validation", id: "add-validation" },
+        { 
+          icon: Zap, 
+          label: "Add Validation", 
+          id: "add-validation-parent",
+          children: [
+            { icon: Upload, label: "Manual Validation", id: "add-validation" },
+            { icon: Sparkles, label: "AI Validation", id: "ai-validation" },
+          ]
+        },
         { icon: Eye, label: "View Validations", id: "view-validations" },
+        { icon: Sparkles, label: "AI Validation History", id: "ai-validation-history" },
         { icon: Activity, label: "Activity Logs", id: "activity-logs" },
         { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
       ]
@@ -584,6 +595,10 @@ const Dashboard = () => {
       );
     } else if (currentView === 'add-validation') {
       return <ValidationStep onNext={() => setCurrentView('home')} snowflakeConfig={snowflakeConfig} />;
+    } else if (currentView === 'ai-validation') {
+      return <AIValidationGenerator onNext={() => setCurrentView('ai-validation-history')} snowflakeConfig={snowflakeConfig} />;
+    } else if (currentView === 'ai-validation-history') {
+      return <AIValidationHistory snowflakeConfig={snowflakeConfig} />;
     } else if (currentView === 'view-validations') {
       return <ViewValidations 
         snowflakeConfig={snowflakeConfig} 
@@ -677,26 +692,77 @@ const Dashboard = () => {
                           <div className="ml-6 mt-1 space-y-1">
                             {item.children.map((child: any, childIndex) => {
                               const isDisabled = child.requiresConnection && !connectionsConfigured;
+                              const hasNestedChildren = child.children && child.children.length > 0;
+                              
                               return (
-                                <SidebarMenuItem key={childIndex}>
-                                  <SidebarMenuButton
-                                    onClick={() => !isDisabled && handleMenuClick(child.id, false, child.requiresConnection)}
-                                    disabled={isDisabled}
-                                    className={`w-full justify-start transition-all duration-200 ${
-                                      isDisabled
-                                        ? "cursor-not-allowed opacity-50 text-slate-500 hover:bg-slate-800/50"
-                                        : currentView === child.id
-                                        ? "cursor-pointer bg-brand-green text-white hover:bg-brand-green"
-                                        : "cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800"
-                                    }`}
-                                  >
-                                    <child.icon className="h-4 w-4" />
-                                    <span>{child.label}</span>
-                                    {isDisabled && (
-                                      <Lock className="h-3 w-3 ml-auto text-orange-400" />
-                                    )}
-                                  </SidebarMenuButton>
-                                </SidebarMenuItem>
+                                <React.Fragment key={childIndex}>
+                                  <SidebarMenuItem>
+                                    <SidebarMenuButton
+                                      onClick={() => !isDisabled && handleMenuClick(child.id, hasNestedChildren, child.requiresConnection)}
+                                      disabled={isDisabled}
+                                      className={`w-full justify-start transition-all duration-200 ${
+                                        isDisabled
+                                          ? "cursor-not-allowed opacity-50 text-slate-500 hover:bg-slate-800/50"
+                                          : currentView === child.id
+                                          ? "cursor-pointer bg-brand-green text-white hover:bg-brand-green"
+                                          : "cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800"
+                                      }`}
+                                    >
+                                      <child.icon className="h-4 w-4" />
+                                      <span>{child.label}</span>
+                                      {isDisabled && (
+                                        <Lock className="h-3 w-3 ml-auto text-orange-400" />
+                                      )}
+                                      {hasNestedChildren && (
+                                        <span className="ml-auto">
+                                          {expandedMenus.includes(child.id) ? (
+                                            <ChevronDown className="h-4 w-4" />
+                                          ) : (
+                                            <ChevronRight className="h-4 w-4" />
+                                          )}
+                                        </span>
+                                      )}
+                                    </SidebarMenuButton>
+                                  </SidebarMenuItem>
+                                  
+                                  {/* Nested children (level 2) */}
+                                  {hasNestedChildren && (
+                                    <div 
+                                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                        expandedMenus.includes(child.id) 
+                                          ? 'max-h-96 opacity-100' 
+                                          : 'max-h-0 opacity-0'
+                                      }`}
+                                    >
+                                      <div className="ml-6 mt-1 space-y-1">
+                                        {child.children.map((nestedChild: any, nestedIndex: number) => {
+                                          const nestedDisabled = nestedChild.requiresConnection && !connectionsConfigured;
+                                          return (
+                                            <SidebarMenuItem key={nestedIndex}>
+                                              <SidebarMenuButton
+                                                onClick={() => !nestedDisabled && handleMenuClick(nestedChild.id, false, nestedChild.requiresConnection)}
+                                                disabled={nestedDisabled}
+                                                className={`w-full justify-start transition-all duration-200 ${
+                                                  nestedDisabled
+                                                    ? "cursor-not-allowed opacity-50 text-slate-500 hover:bg-slate-800/50"
+                                                    : currentView === nestedChild.id
+                                                    ? "cursor-pointer bg-brand-green text-white hover:bg-brand-green"
+                                                    : "cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800"
+                                                }`}
+                                              >
+                                                <nestedChild.icon className="h-4 w-4" />
+                                                <span>{nestedChild.label}</span>
+                                                {nestedDisabled && (
+                                                  <Lock className="h-3 w-3 ml-auto text-orange-400" />
+                                                )}
+                                              </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </React.Fragment>
                               );
                             })}
                           </div>

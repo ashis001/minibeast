@@ -51,6 +51,9 @@ next-env.d.ts
 
 # deployments folder - contains sensitive AWS credentials
 
+# AI configurations - contains Gemini API keys
+/server/configs
+/server/ai-validations
 
 # server node_modules
 /server/node_modules

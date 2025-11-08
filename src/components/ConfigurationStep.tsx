@@ -65,12 +65,18 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
     credentials_json: ''
   });
 
+  const [geminiConfig, setGeminiConfig] = useState({
+    api_key: ''
+  });
+
   const [mysqlStatus, setMysqlStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [postgresStatus, setPostgresStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [bigqueryStatus, setBigqueryStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [geminiStatus, setGeminiStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [mysqlConfigSaved, setMysqlConfigSaved] = useState(false);
   const [postgresConfigSaved, setPostgresConfigSaved] = useState(false);
   const [bigqueryConfigSaved, setBigqueryConfigSaved] = useState(false);
+  const [geminiConfigSaved, setGeminiConfigSaved] = useState(false);
 
   const testAWSConnection = async () => {
     setAwsStatus('testing');
@@ -281,6 +287,44 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
     setTesting(false);
   };
 
+  const testGeminiConnection = async () => {
+    setGeminiStatus('testing');
+    setTesting(true);
+    try {
+      const response = await fetch('/api/test-gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(geminiConfig),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setGeminiStatus('success');
+        setGeminiConfigSaved(true);
+        toast({
+          title: "Gemini AI Connection Successful",
+          description: "API key validated successfully",
+        });
+      } else {
+        setGeminiStatus('error');
+        toast({
+          title: "Gemini AI Connection Failed",
+          description: data.message || "Invalid API key",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setGeminiStatus('error');
+      toast({
+        title: "Gemini AI Connection Failed",
+        description: "Could not connect to the server",
+        variant: "destructive",
+      });
+    }
+    setTesting(false);
+  };
+
   // Load saved configurations on component mount from server
   useEffect(() => {
     const loadConnectionsFromServer = async () => {
@@ -289,7 +333,7 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
         const data = await response.json();
         
         if (data.success && data.connections) {
-          const { aws, snowflake, mysql, postgres, bigquery } = data.connections;
+          const { aws, snowflake, mysql, postgres, bigquery, gemini } = data.connections;
           
           if (aws) {
             setAwsConfig(aws);
@@ -324,6 +368,12 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
             setBigqueryStatus('success');
             setBigqueryConfigSaved(true);
             localStorage.setItem('bigqueryConfig', JSON.stringify(bigquery));
+          }
+          
+          if (gemini) {
+            setGeminiConfig(gemini);
+            setGeminiStatus('success');
+            setGeminiConfigSaved(true);
           }
           
           console.log('✅ Loaded connections from server');
@@ -914,6 +964,85 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
                 >
                   <TestTube className="h-4 w-4 mr-2" />
                   {bigqueryStatus === 'testing' ? 'Testing Connection...' : 'Test BigQuery Connection'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {(!selectedService || selectedService === 'gemini') && (
+          <TabsContent value="gemini">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  ✨ Google Gemini AI Configuration
+                  {geminiStatus === 'success' && <CheckCircle className="h-5 w-5 text-accent" />}
+                  {geminiStatus === 'error' && <AlertCircle className="h-5 w-5 text-destructive" />}
+                </CardTitle>
+                <CardDescription>Configure your Gemini AI API for validation generation</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {geminiConfigSaved && (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 text-green-400">
+                      <CheckCircle className="h-5 w-5" />
+                      <p className="font-medium">Gemini AI is configured and ready</p>
+                    </div>
+                    <p className="text-sm text-slate-400 mt-1">
+                      You can now use AI to generate validation test cases
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="gemini-api-key">Gemini API Key</Label>
+                  <div className="relative">
+                    <Input
+                      id="gemini-api-key"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your Gemini API key"
+                      value={geminiConfig.api_key}
+                      onChange={(e) => setGeminiConfig(prev => ({ ...prev, api_key: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Get your API key from{' '}
+                    <a 
+                      href="https://aistudio.google.com/app/apikey" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Google AI Studio
+                    </a>
+                  </p>
+                </div>
+
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-purple-400 mb-2">🤖 AI Features</h4>
+                  <ul className="text-sm text-slate-400 space-y-1">
+                    <li>• Generate validation test cases automatically</li>
+                    <li>• Smart SQL query generation for data quality checks</li>
+                    <li>• Preview and test queries before saving</li>
+                    <li>• AI-powered validation history</li>
+                  </ul>
+                </div>
+
+                <Button 
+                  onClick={testGeminiConnection}
+                  disabled={testing || !geminiConfig.api_key}
+                  className="w-full"
+                  variant={geminiStatus === 'success' ? 'default' : 'outline'}
+                >
+                  <TestTube className="h-4 w-4 mr-2" />
+                  {geminiStatus === 'testing' ? 'Testing API Key...' : 'Test & Save Gemini API Key'}
                 </Button>
               </CardContent>
             </Card>

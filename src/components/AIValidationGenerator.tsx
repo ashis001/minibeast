@@ -1,0 +1,448 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkles, TestTube, CheckCircle, AlertCircle, Database, Play, Save, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface AIValidationGeneratorProps {
+  onNext: () => void;
+  snowflakeConfig: any;
+}
+
+const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGeneratorProps) => {
+  const { toast } = useToast();
+  const [prompt, setPrompt] = useState("");
+  const [database, setDatabase] = useState("");
+  const [schema, setSchema] = useState("");
+  const [tables, setTables] = useState<string[]>([]);
+  const [generatedSQL, setGeneratedSQL] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [geminiConfigured, setGeminiConfigured] = useState(false);
+
+  useEffect(() => {
+    // Check if Gemini is configured
+    checkGeminiConfig();
+    
+    // Load Snowflake config
+    if (snowflakeConfig) {
+      setDatabase(snowflakeConfig.database || "");
+      setSchema(snowflakeConfig.schema || "");
+    }
+  }, [snowflakeConfig]);
+
+  const checkGeminiConfig = async () => {
+    try {
+      const response = await fetch('/api/connections');
+      const data = await response.json();
+      if (data.success && data.connections?.gemini) {
+        setGeminiConfigured(true);
+      }
+    } catch (error) {
+      console.error('Failed to check Gemini config:', error);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast({
+        title: "Prompt Required",
+        description: "Please describe what you want to validate",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGenerating(true);
+    setGeneratedSQL("");
+    setTestResult(null);
+
+    try {
+      const response = await fetch('/api/generate-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          database,
+          schema,
+          tables: tables.length > 0 ? tables : undefined
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setGeneratedSQL(data.sql);
+        toast({
+          title: "✨ Validation Generated",
+          description: "AI has generated your validation query",
+        });
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: data.message || "Failed to generate validation",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Could not connect to the server",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleTestQuery = async () => {
+    if (!generatedSQL.trim()) {
+      toast({
+        title: "No Query to Test",
+        description: "Please generate a validation query first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      const response = await fetch('/api/test-query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: generatedSQL,
+          snowflakeConfig
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({
+          success: true,
+          results: data.results,
+          rowCount: data.rowCount
+        });
+        toast({
+          title: "✅ Query Executed Successfully",
+          description: `Returned ${data.rowCount} row(s)`,
+        });
+      } else {
+        setTestResult({
+          success: false,
+          error: data.message || "Query execution failed"
+        });
+        toast({
+          title: "Query Failed",
+          description: data.message || "Failed to execute query",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        error: "Could not connect to the server"
+      });
+      toast({
+        title: "Test Failed",
+        description: "Could not connect to the server",
+        variant: "destructive",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSaveToHistory = async () => {
+    if (!generatedSQL.trim() || !testResult?.success) {
+      toast({
+        title: "Cannot Save",
+        description: "Please test the query successfully before saving",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/save-ai-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          sql: generatedSQL,
+          database,
+          schema,
+          testResult: testResult.results
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "💾 Saved to AI History",
+          description: "You can activate it from AI Validation History",
+        });
+        // Clear form
+        setPrompt("");
+        setGeneratedSQL("");
+        setTestResult(null);
+      } else {
+        toast({
+          title: "Save Failed",
+          description: data.message || "Failed to save validation",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Could not connect to the server",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!geminiConfigured) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <Card className="bg-slate-900 border-slate-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-400">
+              <AlertCircle className="h-6 w-6" />
+              Gemini AI Not Configured
+            </CardTitle>
+            <CardDescription>
+              Please configure your Gemini API key in Settings before using AI validation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.href = '/#/settings'} className="w-full">
+              Go to Settings → AI Models
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+          <Sparkles className="h-7 w-7 text-white" />
+        </div>
+        <div>
+          <h1 className="text-4xl font-bold text-white">AI Validation Generator</h1>
+          <p className="text-slate-400 mt-1 text-lg">Generate validation queries with AI</p>
+        </div>
+      </div>
+
+      {/* Generator Form */}
+      <Card className="bg-slate-900 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Validation Details
+          </CardTitle>
+          <CardDescription>Describe what you want to validate</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="database">Database</Label>
+              <Input
+                id="database"
+                value={database}
+                onChange={(e) => setDatabase(e.target.value)}
+                placeholder="WARNER_BASE"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="schema">Schema</Label>
+              <Input
+                id="schema"
+                value={schema}
+                onChange={(e) => setSchema(e.target.value)}
+                placeholder="APS"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tables">Tables (optional, comma-separated)</Label>
+            <Input
+              id="tables"
+              value={tables.join(", ")}
+              onChange={(e) => setTables(e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
+              placeholder="RESERVATIONS, EVENTS, CUSTOMERS"
+              className="bg-slate-800 border-slate-700 text-white"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="prompt">What do you want to validate?</Label>
+            <textarea
+              id="prompt"
+              className="w-full min-h-[120px] p-3 rounded-md border border-slate-700 bg-slate-800 text-white"
+              placeholder="Example: Check if all reservations in staging match base table, with a threshold of 50 mismatches as warning"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+          </div>
+
+          <Button 
+            onClick={handleGenerate}
+            disabled={generating || !prompt.trim()}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Validation Query
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Generated Query */}
+      {generatedSQL && (
+        <Card className="bg-slate-900 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              Generated Query
+            </CardTitle>
+            <CardDescription>Review and test the AI-generated validation</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 overflow-x-auto">
+              <pre className="text-sm text-slate-300 font-mono">{generatedSQL}</pre>
+            </div>
+
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleTestQuery}
+                disabled={testing}
+                variant="outline"
+                className="flex-1"
+              >
+                {testing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Test Query
+                  </>
+                )}
+              </Button>
+
+              <Button 
+                onClick={handleSaveToHistory}
+                disabled={!testResult?.success}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save to History
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Test Results */}
+      {testResult && (
+        <Card className={`border-2 ${testResult.success ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'}`}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {testResult.success ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-green-400">Query Test Successful</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5 text-red-400" />
+                  <span className="text-red-400">Query Test Failed</span>
+                </>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {testResult.success ? (
+              <div className="space-y-3">
+                <p className="text-sm text-slate-400">
+                  Query returned {testResult.rowCount} row(s)
+                </p>
+                {testResult.results && testResult.results.length > 0 && (
+                  <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          {Object.keys(testResult.results[0]).map((key) => (
+                            <th key={key} className="text-left p-2 text-slate-300 font-semibold">
+                              {key}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {testResult.results.map((row: any, idx: number) => (
+                          <tr key={idx} className="border-b border-slate-800">
+                            {Object.values(row).map((value: any, vidx: number) => (
+                              <td key={vidx} className="p-2 text-slate-400">
+                                {value === 0 ? (
+                                  <span className="text-green-400 font-semibold">✓ Pass</span>
+                                ) : value === 1 ? (
+                                  <span className="text-red-400 font-semibold">✗ Fail</span>
+                                ) : value === 2 ? (
+                                  <span className="text-yellow-400 font-semibold">⚠ Warning</span>
+                                ) : (
+                                  String(value)
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/50">
+                <p className="text-red-400 text-sm font-mono">{testResult.error}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default AIValidationGenerator;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Cloud, Database, Server, Workflow, Lock, CheckCircle2 } from "lucide-react";
+import { Cloud, Database, Server, Workflow, Lock, CheckCircle2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Badge } from './ui/badge';
 import ConfigurationStep from './ConfigurationStep';
@@ -79,6 +79,18 @@ const ConnectionsSettings = () => {
       color: 'amber',
       services: [
         { id: 'dbt', name: 'dbt (Data Build Tool)', logo: '🛠️', isActive: false, comingSoon: true, color: 'orange' },
+      ]
+    },
+    {
+      id: 'ai',
+      title: 'AI Models',
+      description: 'Generative AI for validation and insights',
+      icon: Sparkles,
+      color: 'pink',
+      services: [
+        { id: 'gemini', name: 'Google Gemini', logo: '✨', isActive: true, comingSoon: false, color: 'purple' },
+        { id: 'openai', name: 'OpenAI GPT', logo: '🤖', isActive: false, comingSoon: true, color: 'green' },
+        { id: 'claude', name: 'Anthropic Claude', logo: '🧠', isActive: false, comingSoon: true, color: 'orange' },
       ]
     },
   ];
@@ -187,7 +199,7 @@ const ConnectionsSettings = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white">
-                    Configure {selectedService === 'aws' ? 'AWS' : selectedService === 'snowflake' ? 'Snowflake' : selectedService === 'mysql' ? 'MySQL' : selectedService === 'postgresql' ? 'PostgreSQL' : selectedService === 'bigquery' ? 'BigQuery' : selectedService?.toUpperCase()}
+                    Configure {selectedService === 'aws' ? 'AWS' : selectedService === 'snowflake' ? 'Snowflake' : selectedService === 'mysql' ? 'MySQL' : selectedService === 'postgresql' ? 'PostgreSQL' : selectedService === 'bigquery' ? 'BigQuery' : selectedService === 'gemini' ? 'Google Gemini' : selectedService?.toUpperCase()}
                   </h2>
                   <p className="text-slate-400 text-sm">Set up your connection credentials</p>
                 </div>
