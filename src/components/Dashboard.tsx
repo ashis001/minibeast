@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Rocket,
   Upload,
+  Hammer,
   TrendingUp,
   Users,
   Clock,
@@ -241,12 +242,11 @@ const Dashboard = () => {
           label: "Add Validation", 
           id: "add-validation-parent",
           children: [
-            { icon: Upload, label: "Manual Validation", id: "add-validation" },
+            { icon: Hammer, label: "Manual Validation", id: "add-validation" },
             { icon: Sparkles, label: "AI Validation", id: "ai-validation" },
           ]
         },
         { icon: Eye, label: "View Validations", id: "view-validations" },
-        { icon: Sparkles, label: "AI Validation History", id: "ai-validation-history" },
         { icon: Activity, label: "Activity Logs", id: "activity-logs" },
         { icon: BarChart3, label: "Validation Summary", id: "validation-summary" },
       ]
