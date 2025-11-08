@@ -159,23 +159,40 @@ router.post('/generate-validation', async (req, res) => {
     
     if (previousError && previousSQL) {
       // Self-healing mode - fix the previous query
+      const actualTableName = tables && tables.length > 0 ? tables[0] : 'UNSPECIFIED';
+      const fullTableName = `${database}.${schema}.${actualTableName}`;
+      
+      let tableInfo = '';
+      if (tableColumns && tableColumns.length > 0) {
+        const columnList = tableColumns.map(c => `- ${c.name} (${c.type})`).join('\n');
+        tableInfo = `\n\nAVAILABLE TABLE SCHEMA:\nTable: ${fullTableName}\nColumns:\n${columnList}\n\n⚠️ CRITICAL: You MUST use ONLY this exact table name. DO NOT reference any other tables.`;
+      }
+      
       systemPrompt = `You are an expert SQL data validation engineer. The previous query failed with an error.
 
 PREVIOUS QUERY:
 ${previousSQL}
 
 ERROR:
-${previousError}
+${previousError}${tableInfo}
 
 Fix the query by:
-1. Using the exact column names provided in the table schema
-2. Ensure all column names are correctly spelled and exist
-3. Keep the same validation logic but fix the column references
+1. Use ONLY the exact table name: ${fullTableName}
+2. DO NOT invent or reference tables like TABLE_A, TABLE_B, or any other table
+3. Use only the exact column names from the schema above
+4. Keep the same validation logic but fix the table and column references
 
 ONLY output the corrected SQL query, nothing else.`;
     } else {
       // Normal generation mode
-      const columnsInfo = tableColumns ? `\n\nACTUAL TABLE COLUMNS:\n${tableColumns.map(c => `- ${c.name} (${c.type}) ${c.nullable ? 'NULL' : 'NOT NULL'}`).join('\n')}\n\n⚠️ IMPORTANT: You MUST use ONLY these exact column names. Do not assume or invent column names.` : '';
+      const actualTableName = tables && tables.length > 0 ? tables[0] : 'UNSPECIFIED_TABLE';
+      const fullTableName = `${database}.${schema}.${actualTableName}`;
+      
+      let columnsInfo = '';
+      if (tableColumns && tableColumns.length > 0) {
+        const columnList = tableColumns.map(c => `- ${c.name} (${c.type}) ${c.nullable ? 'NULL' : 'NOT NULL'}`).join('\n');
+        columnsInfo = `\n\nACTUAL TABLE SCHEMA:\nTable: ${fullTableName}\nColumns:\n${columnList}\n\n⚠️ CRITICAL RULES:\n1. You MUST use ONLY the table name: ${fullTableName}\n2. DO NOT invent table names like TABLE_A, TABLE_B, BASE_TABLE, STAGING_TABLE, etc.\n3. Use ONLY the exact column names listed above\n4. If you need to compare data, use different conditions on the SAME table`;
+      }
       
       systemPrompt = `You are an expert SQL data validation engineer. Generate Snowflake SQL validation queries based on user requirements.
 
@@ -202,7 +219,9 @@ WHERE [validation condition]
 
 Database: ${database}
 Schema: ${schema}
-Available Tables: ${tables ? tables.join(', ') : 'Not specified'}${columnsInfo}
+Table to validate: ${fullTableName}${columnsInfo}
+
+⚠️ IMPORTANT: Use ONLY the table ${fullTableName} in your queries. Do NOT reference any other tables.
 
 Generate production-quality validation queries. Include appropriate thresholds where needed.`;
     }

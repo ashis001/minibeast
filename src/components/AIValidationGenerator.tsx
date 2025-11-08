@@ -52,15 +52,35 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
 
   const fetchTableSchema = async (table: string) => {
     try {
+      // Parse fully qualified table name (e.g., "TESTING.MIGRATED.RESERVATION" -> "RESERVATION")
+      let actualTableName = table;
+      let actualDatabase = database;
+      let actualSchema = schema;
+      
+      const parts = table.split('.');
+      if (parts.length === 3) {
+        actualDatabase = parts[0];
+        actualSchema = parts[1];
+        actualTableName = parts[2];
+        setDatabase(actualDatabase);
+        setSchema(actualSchema);
+      } else if (parts.length === 2) {
+        actualSchema = parts[0];
+        actualTableName = parts[1];
+        setSchema(actualSchema);
+      } else {
+        actualTableName = parts[0];
+      }
+      
       const response = await fetch('/api/get-table-schema', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tableName: table,
-          database,
-          schema,
+          tableName: actualTableName,
+          database: actualDatabase,
+          schema: actualSchema,
           snowflakeConfig
         }),
       });
@@ -97,11 +117,17 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
 
     // Fetch table schema if table name is provided
     let columns = tableColumns;
+    let parsedTableName = tableName;
+    
     if (tableName && !isRetry) {
       setHealingLog(prev => [...prev, `📋 Fetching schema for table: ${tableName}...`]);
       columns = await fetchTableSchema(tableName);
       if (columns) {
         setHealingLog(prev => [...prev, `✅ Found ${columns.length} columns`]);
+        
+        // Extract just the table name if fully qualified
+        const parts = tableName.split('.');
+        parsedTableName = parts[parts.length - 1];
       }
     }
 
@@ -121,7 +147,7 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           prompt,
           database,
           schema,
-          tables: tables.length > 0 ? tables : undefined,
+          tables: parsedTableName ? [parsedTableName] : (tables.length > 0 ? tables : undefined),
           tableColumns: columns,
           previousError: isRetry ? previousError : undefined,
           previousSQL: isRetry ? previousSQL : undefined
@@ -199,9 +225,12 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
         setHealingLog(prev => [...prev, `❌ Test failed: ${errorMessage}`]);
         
         if (retryCount < 3) {
-          setRetryCount(prev => prev + 1);
+          const newRetryCount = retryCount + 1;
+          setRetryCount(newRetryCount);
           setTestResult(null);
           setTesting(false);
+          
+          setHealingLog(prev => [...prev, `⏳ Retry attempt ${newRetryCount}/3...`]);
           
           // Self-heal: Ask AI to fix the query
           await handleGenerate(true, errorMessage, sql);
