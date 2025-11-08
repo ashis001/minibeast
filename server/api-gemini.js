@@ -64,10 +64,81 @@ router.post('/test-gemini', async (req, res) => {
   }
 });
 
-// Generate AI validation using Gemini
+// Get table schema from Snowflake
+router.post('/get-table-schema', async (req, res) => {
+  try {
+    const { tableName, database, schema, snowflakeConfig } = req.body;
+
+    if (!tableName || !snowflakeConfig) {
+      return res.status(400).json({
+        success: false,
+        message: 'Table name and Snowflake config are required'
+      });
+    }
+
+    const snowflake = require('snowflake-sdk');
+    
+    const connection = snowflake.createConnection({
+      account: snowflakeConfig.account,
+      username: snowflakeConfig.username,
+      password: snowflakeConfig.password,
+      warehouse: snowflakeConfig.warehouse,
+      database: snowflakeConfig.database,
+      schema: snowflakeConfig.schema,
+      role: snowflakeConfig.role
+    });
+
+    return new Promise((resolve, reject) => {
+      connection.connect((err, conn) => {
+        if (err) {
+          return res.status(400).json({
+            success: false,
+            message: err.message
+          });
+        }
+
+        const describeSQL = `DESCRIBE TABLE ${database || snowflakeConfig.database}.${schema || snowflakeConfig.schema}.${tableName}`;
+
+        conn.execute({
+          sqlText: describeSQL,
+          complete: (err, stmt, rows) => {
+            connection.destroy();
+            
+            if (err) {
+              return res.status(400).json({
+                success: false,
+                message: err.message
+              });
+            }
+
+            const columns = rows.map(row => ({
+              name: row.name,
+              type: row.type,
+              nullable: row['null?'] === 'Y'
+            }));
+
+            return res.json({
+              success: true,
+              columns,
+              tableName
+            });
+          }
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Get table schema error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to get table schema'
+    });
+  }
+});
+
+// Generate AI validation using Gemini with self-healing
 router.post('/generate-validation', async (req, res) => {
   try {
-    const { prompt, database, schema, tables } = req.body;
+    const { prompt, database, schema, tables, tableColumns, previousError, previousSQL } = req.body;
 
     // Load Gemini config
     const configDir = path.join(__dirname, 'configs');
@@ -84,7 +155,29 @@ router.post('/generate-validation', async (req, res) => {
       });
     }
 
-    const systemPrompt = `You are an expert SQL data validation engineer. Generate Snowflake SQL validation queries based on user requirements.
+    let systemPrompt;
+    
+    if (previousError && previousSQL) {
+      // Self-healing mode - fix the previous query
+      systemPrompt = `You are an expert SQL data validation engineer. The previous query failed with an error.
+
+PREVIOUS QUERY:
+${previousSQL}
+
+ERROR:
+${previousError}
+
+Fix the query by:
+1. Using the exact column names provided in the table schema
+2. Ensure all column names are correctly spelled and exist
+3. Keep the same validation logic but fix the column references
+
+ONLY output the corrected SQL query, nothing else.`;
+    } else {
+      // Normal generation mode
+      const columnsInfo = tableColumns ? `\n\nACTUAL TABLE COLUMNS:\n${tableColumns.map(c => `- ${c.name} (${c.type}) ${c.nullable ? 'NULL' : 'NOT NULL'}`).join('\n')}\n\n⚠️ IMPORTANT: You MUST use ONLY these exact column names. Do not assume or invent column names.` : '';
+      
+      systemPrompt = `You are an expert SQL data validation engineer. Generate Snowflake SQL validation queries based on user requirements.
 
 IMPORTANT: Follow this exact pattern for validation queries:
 
@@ -109,9 +202,10 @@ WHERE [validation condition]
 
 Database: ${database}
 Schema: ${schema}
-Available Tables: ${tables ? tables.join(', ') : 'Not specified'}
+Available Tables: ${tables ? tables.join(', ') : 'Not specified'}${columnsInfo}
 
 Generate production-quality validation queries. Include appropriate thresholds where needed.`;
+    }
 
     const fetch = (await import('node-fetch')).default;
     const response = await fetch(

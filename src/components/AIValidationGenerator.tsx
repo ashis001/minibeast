@@ -17,11 +17,15 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
   const [database, setDatabase] = useState("");
   const [schema, setSchema] = useState("");
   const [tables, setTables] = useState<string[]>([]);
+  const [tableName, setTableName] = useState("");
+  const [tableColumns, setTableColumns] = useState<any[]>([]);
   const [generatedSQL, setGeneratedSQL] = useState("");
   const [generating, setGenerating] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [geminiConfigured, setGeminiConfigured] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [healingLog, setHealingLog] = useState<string[]>([]);
 
   useEffect(() => {
     // Check if Gemini is configured
@@ -46,8 +50,35 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
     }
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) {
+  const fetchTableSchema = async (table: string) => {
+    try {
+      const response = await fetch('/api/get-table-schema', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tableName: table,
+          database,
+          schema,
+          snowflakeConfig
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setTableColumns(data.columns);
+        return data.columns;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch table schema:', error);
+      return null;
+    }
+  };
+
+  const handleGenerate = async (isRetry = false, previousError = '', previousSQL = '') => {
+    if (!prompt.trim() && !isRetry) {
       toast({
         title: "Prompt Required",
         description: "Please describe what you want to validate",
@@ -57,10 +88,30 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
     }
 
     setGenerating(true);
-    setGeneratedSQL("");
-    setTestResult(null);
+    if (!isRetry) {
+      setGeneratedSQL("");
+      setTestResult(null);
+      setRetryCount(0);
+      setHealingLog([]);
+    }
+
+    // Fetch table schema if table name is provided
+    let columns = tableColumns;
+    if (tableName && !isRetry) {
+      setHealingLog(prev => [...prev, `📋 Fetching schema for table: ${tableName}...`]);
+      columns = await fetchTableSchema(tableName);
+      if (columns) {
+        setHealingLog(prev => [...prev, `✅ Found ${columns.length} columns`]);
+      }
+    }
 
     try {
+      if (isRetry) {
+        setHealingLog(prev => [...prev, `🔄 Retry #${retryCount + 1}: Asking AI to fix the error...`]);
+      } else {
+        setHealingLog(prev => [...prev, `🤖 Generating SQL from prompt...`]);
+      }
+
       const response = await fetch('/api/generate-validation', {
         method: 'POST',
         headers: {
@@ -70,7 +121,10 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           prompt,
           database,
           schema,
-          tables: tables.length > 0 ? tables : undefined
+          tables: tables.length > 0 ? tables : undefined,
+          tableColumns: columns,
+          previousError: isRetry ? previousError : undefined,
+          previousSQL: isRetry ? previousSQL : undefined
         }),
       });
 
@@ -78,16 +132,24 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
 
       if (response.ok && data.success) {
         setGeneratedSQL(data.sql);
-        toast({
-          title: "✨ Validation Generated",
-          description: "AI has generated your validation query",
-        });
+        setHealingLog(prev => [...prev, `✅ SQL generated successfully`]);
+        
+        if (!isRetry) {
+          toast({
+            title: "✨ Validation Generated",
+            description: "AI has generated your validation query",
+          });
+        }
+
+        // Auto-test the generated query
+        await autoTestAndSave(data.sql);
       } else {
         toast({
           title: "Generation Failed",
           description: data.message || "Failed to generate validation",
           variant: "destructive",
         });
+        setGenerating(false);
       }
     } catch (error) {
       toast({
@@ -95,8 +157,77 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
         description: "Could not connect to the server",
         variant: "destructive",
       });
-    } finally {
       setGenerating(false);
+    }
+  };
+
+  const autoTestAndSave = async (sql: string) => {
+    setHealingLog(prev => [...prev, `🧪 Auto-testing query in Snowflake...`]);
+    setTesting(true);
+
+    try {
+      const response = await fetch('/api/test-query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: sql,
+          snowflakeConfig
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({
+          success: true,
+          results: data.results,
+          rowCount: data.rowCount
+        });
+        setHealingLog(prev => [...prev, `✅ Query test passed! Returned ${data.rowCount} row(s)`]);
+        
+        // Auto-save on success
+        setHealingLog(prev => [...prev, `💾 Auto-saving to history...`]);
+        await handleSaveToHistory(sql, data);
+        
+        setGenerating(false);
+        setTesting(false);
+      } else {
+        // Test failed - retry with self-healing
+        const errorMessage = data.message || "Query execution failed";
+        setHealingLog(prev => [...prev, `❌ Test failed: ${errorMessage}`]);
+        
+        if (retryCount < 3) {
+          setRetryCount(prev => prev + 1);
+          setTestResult(null);
+          setTesting(false);
+          
+          // Self-heal: Ask AI to fix the query
+          await handleGenerate(true, errorMessage, sql);
+        } else {
+          setHealingLog(prev => [...prev, `⚠️ Max retries reached (3). Please review the query manually.`]);
+          setTestResult({
+            success: false,
+            error: errorMessage
+          });
+          toast({
+            title: "Self-Healing Failed",
+            description: "Could not auto-fix the query after 3 attempts. Please review manually.",
+            variant: "destructive",
+          });
+          setGenerating(false);
+          setTesting(false);
+        }
+      }
+    } catch (error) {
+      setHealingLog(prev => [...prev, `❌ Connection error: Could not connect to server`]);
+      setTestResult({
+        success: false,
+        error: "Could not connect to the server"
+      });
+      setGenerating(false);
+      setTesting(false);
     }
   };
 
@@ -163,13 +294,18 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
     }
   };
 
-  const handleSaveToHistory = async () => {
-    if (!generatedSQL.trim() || !testResult?.success) {
-      toast({
-        title: "Cannot Save",
-        description: "Please test the query successfully before saving",
-        variant: "destructive",
-      });
+  const handleSaveToHistory = async (sql?: string, testData?: any) => {
+    const sqlToSave = sql || generatedSQL;
+    const testResultToSave = testData || testResult;
+    
+    if (!sqlToSave.trim() || !testResultToSave?.success) {
+      if (!sql) {
+        toast({
+          title: "Cannot Save",
+          description: "Please test the query successfully before saving",
+          variant: "destructive",
+        });
+      }
       return;
     }
 
@@ -181,24 +317,32 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
         },
         body: JSON.stringify({
           prompt,
-          sql: generatedSQL,
+          sql: sqlToSave,
           database,
           schema,
-          testResult: testResult.results
+          testResult: testResultToSave.results
         }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
+        setHealingLog(prev => [...prev, `✅ Saved to AI Validation History successfully!`]);
         toast({
           title: "💾 Saved to AI History",
-          description: "You can activate it from AI Validation History",
+          description: "Validation auto-saved! You can activate it from AI Validation History",
         });
-        // Clear form
-        setPrompt("");
-        setGeneratedSQL("");
-        setTestResult(null);
+        
+        if (!sql) {
+          // Only clear form on manual save
+          setPrompt("");
+          setGeneratedSQL("");
+          setTestResult(null);
+          setTableName("");
+          setTableColumns([]);
+          setHealingLog([]);
+          setRetryCount(0);
+        }
       } else {
         toast({
           title: "Save Failed",
@@ -285,14 +429,15 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tables">Tables (optional, comma-separated)</Label>
+            <Label htmlFor="tableName">Table Name (required for schema fetch)</Label>
             <Input
-              id="tables"
-              value={tables.join(", ")}
-              onChange={(e) => setTables(e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
-              placeholder="RESERVATIONS, EVENTS, CUSTOMERS"
+              id="tableName"
+              value={tableName}
+              onChange={(e) => setTableName(e.target.value)}
+              placeholder="RESERVATION"
               className="bg-slate-800 border-slate-700 text-white"
             />
+            <p className="text-xs text-slate-400">AI will fetch column names automatically</p>
           </div>
 
           <div className="space-y-2">
@@ -307,24 +452,45 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           </div>
 
           <Button 
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={generating || !prompt.trim()}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
             {generating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
+                Generating & Testing...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Generate Validation Query
+                Generate, Test & Save
               </>
             )}
           </Button>
         </CardContent>
       </Card>
+
+      {/* Healing Log */}
+      {healingLog.length > 0 && (
+        <Card className="bg-slate-900 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              🔬 AI Self-Healing Log
+            </CardTitle>
+            <CardDescription>Watch AI automatically fix errors</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 space-y-2 max-h-64 overflow-y-auto">
+              {healingLog.map((log, idx) => (
+                <div key={idx} className="text-sm text-slate-300 font-mono">
+                  {log}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Generated Query */}
       {generatedSQL && (
@@ -362,12 +528,12 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
               </Button>
 
               <Button 
-                onClick={handleSaveToHistory}
+                onClick={() => handleSaveToHistory()}
                 disabled={!testResult?.success}
                 className="flex-1 bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save to History
+                Manual Save
               </Button>
             </div>
           </CardContent>
