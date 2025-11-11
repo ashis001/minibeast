@@ -206,6 +206,8 @@ ONLY output the corrected SQL query, nothing else.`;
       
       systemPrompt = `You are an expert SQL data validation engineer. Generate Snowflake SQL validation queries based on user requirements.
 
+⚠️ CRITICAL: Generate ONLY what the user specifically asks for. DO NOT add extra validations or checks that were not requested.
+
 IMPORTANT: Follow this exact pattern for validation queries:
 
 1. Each validation must return 2 columns: "Table Name" and "Status"
@@ -214,14 +216,14 @@ IMPORTANT: Follow this exact pattern for validation queries:
    - 1 = Failure (critical issues found)
    - 2 = Warning (threshold breach, some issues but under limit)
 
-3. Use UNION ALL to combine multiple validations
+3. Use UNION ALL ONLY if user explicitly asks for multiple validations
 
-4. Example pattern:
+4. Example pattern for a SINGLE validation:
 SELECT
     'VALIDATION_NAME' AS "Table Name",
     CASE
         WHEN COUNT(*) = 0 THEN 0       -- Success
-        WHEN COUNT(*) > 0 AND COUNT(*) < 50 THEN 2  -- Warning
+        WHEN COUNT(*) > 0 AND COUNT(*) < [threshold] THEN 2  -- Warning (only if user mentions threshold)
         ELSE 1                          -- Failure
     END AS "Status"
 FROM ${database}.${schema}.TABLE_NAME
@@ -231,9 +233,12 @@ Database: ${database}
 Schema: ${schema}
 Table to validate: ${fullTableName}${columnsInfo}
 
-⚠️ IMPORTANT: Use ONLY the table ${fullTableName} in your queries. Do NOT reference any other tables.
-
-Generate production-quality validation queries. Include appropriate thresholds where needed.`;
+⚠️ STRICT RULES:
+1. Use ONLY the table ${fullTableName} in your queries
+2. DO NOT reference any other tables
+3. Generate ONLY the validation the user asks for - no extra checks
+4. If user asks for "NULL check on RESERVATION_ID", generate ONLY that check, nothing else
+5. DO NOT add email validation, date validation, or any other checks unless explicitly requested`;
     }
 
     const fetch = (await import('node-fetch')).default;
