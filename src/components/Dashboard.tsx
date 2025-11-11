@@ -247,7 +247,7 @@ const Dashboard = () => {
       id: "migrator-parent",
       module: "migrator",
       children: [
-        { icon: Rocket, label: "Launch Pad", id: "migrator" },
+        { icon: Rocket, label: "Launch", id: "migrator" },
         { icon: Activity, label: "Activity Log", id: "migration-activity-log" },
       ]
     },

@@ -589,16 +589,16 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           <Button 
             onClick={() => handleGenerate()}
             disabled={generating || !prompt.trim()}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
           >
             {generating ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin text-white" />
                 Generating & Testing...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="h-4 w-4 mr-2 text-white" />
                 Generate, Test & Save
               </>
             )}
