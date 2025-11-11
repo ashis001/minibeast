@@ -6,14 +6,20 @@ const path = require('path');
 // Test Gemini API connection
 router.post('/test-gemini', async (req, res) => {
   try {
+    console.log('🔍 Gemini test request received');
+    console.log('Request body:', req.body);
     const { api_key } = req.body;
 
     if (!api_key) {
+      console.log('❌ No API key provided');
       return res.status(400).json({
         success: false,
         message: 'API key is required'
       });
     }
+    
+    console.log('✅ API key provided, testing Gemini API...');
+    console.log('API key (first 10 chars):', api_key.substring(0, 10) + '...');
 
     // Test the Gemini API with a simple request
     const fetch = (await import('node-fetch')).default;
@@ -38,6 +44,7 @@ router.post('/test-gemini', async (req, res) => {
     const data = await response.json();
 
     if (response.ok && data.candidates) {
+      console.log('✅ Gemini API test successful');
       // Save config to server
       const configDir = path.join(__dirname, 'configs');
       await fs.mkdir(configDir, { recursive: true });
@@ -50,12 +57,15 @@ router.post('/test-gemini', async (req, res) => {
         message: 'Gemini API key validated successfully'
       });
     } else {
+      console.log('❌ Gemini API test failed:', data);
       return res.status(400).json({
         success: false,
         message: data.error?.message || 'Invalid API key'
       });
     }
   } catch (error) {
+    console.error('💥 Gemini API test error:', error);
+    console.error('Error stack:', error.stack);
     console.error('Gemini test error:', error);
     return res.status(500).json({
       success: false,
