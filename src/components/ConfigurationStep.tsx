@@ -135,6 +135,8 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
         setSnowflakeStatus('success');
         setSnowflakeConfigSaved(true);
         // Server already saves to deployments/connections.json
+        // Notify other components that connections changed
+        window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "Snowflake Connection Successful",
           description: "Configuration saved successfully",

@@ -70,22 +70,31 @@ const ModuleDeployment = () => {
     }
   ];
 
-  // Check if connections are configured
+  // Check if connections are configured (from server API)
   useEffect(() => {
-    const checkConnections = () => {
-      const awsConfigStr = localStorage.getItem('awsConfig');
-      const snowflakeConfigStr = localStorage.getItem('snowflakeConfig');
-      
-      if (awsConfigStr && snowflakeConfigStr) {
-        try {
-          const parsedAwsConfig = JSON.parse(awsConfigStr);
-          setAwsConfig(parsedAwsConfig);
-          setConnectionsConfigured(true);
-        } catch (error) {
-          console.error('Failed to parse configs:', error);
+    const checkConnections = async () => {
+      try {
+        const response = await fetch('/api/connections');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.connections) {
+            const hasAws = !!data.connections.aws;
+            const hasSnowflake = !!data.connections.snowflake;
+            
+            if (hasAws && hasSnowflake) {
+              setAwsConfig(data.connections.aws);
+              setConnectionsConfigured(true);
+            } else {
+              setConnectionsConfigured(false);
+            }
+          } else {
+            setConnectionsConfigured(false);
+          }
+        } else {
           setConnectionsConfigured(false);
         }
-      } else {
+      } catch (error) {
+        console.error('Failed to check connections:', error);
         setConnectionsConfigured(false);
       }
     };
