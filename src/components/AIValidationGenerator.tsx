@@ -32,6 +32,9 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
   const [expandedSQL, setExpandedSQL] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetails, setSuccessDetails] = useState<{rowCount: number, results?: any[]} | null>(null);
 
   useEffect(() => {
     // Check if Gemini is configured
@@ -201,26 +204,33 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
   };
 
   const handleGenerate = async (isRetry = false, previousError = '', previousSQL = '') => {
-    if (!prompt.trim() && !isRetry) {
-      toast({
-        title: "Prompt Required",
-        description: "Please describe what you want to validate",
-        variant: "destructive",
-      });
-      return;
+    setGenerating(true);
+    setTestResult(null);
+    setGeneratedSQL("");
+    setShowSuccessModal(false);
+    setSuccessDetails(null);
+    
+    if (!isRetry) {
+      setHealingLog([]);
+      setRetryCount(0);
+      setShowLogsModal(true); // Open logs modal
     }
 
-    setGenerating(true);
-    if (!isRetry) {
-      setGeneratedSQL("");
-      setTestResult(null);
-      setRetryCount(0);
-      setHealingLog([]);
+    // Get table name and columns
+    let parsedTableName = tableName.trim();
+    if (!parsedTableName) {
+      toast({
+        title: "Missing Table",
+        description: "Please enter a table name",
+        variant: "destructive",
+      });
+      setGenerating(false);
+      setShowLogsModal(false);
+      return;
     }
 
     // Fetch table schema if table name is provided
     let columns = tableColumns;
-    let parsedTableName = tableName;
     
     if (tableName && !isRetry) {
       setHealingLog(prev => [...prev, `📋 Fetching schema for table: ${tableName}...`]);
@@ -319,6 +329,13 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
         // Auto-save on success
         setHealingLog(prev => [...prev, `💾 Auto-saving to history...`]);
         await handleSaveToHistory(sql, data);
+        
+        // Show success modal after completion
+        setTimeout(() => {
+          setShowLogsModal(false);
+          setSuccessDetails({ rowCount: data.rowCount, results: data.results });
+          setShowSuccessModal(true);
+        }, 500);
         
         setGenerating(false);
         setTesting(false);
@@ -606,25 +623,80 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
         </CardContent>
       </Card>
 
-      {/* Healing Log */}
-      {healingLog.length > 0 && (
-        <Card className="bg-slate-900 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              🔬 AI Self-Healing Log
-            </CardTitle>
-            <CardDescription>Watch AI automatically fix errors</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 space-y-2 max-h-64 overflow-y-auto">
-              {healingLog.map((log, idx) => (
-                <div key={idx} className="text-sm text-slate-300 font-mono">
-                  {log}
-                </div>
-              ))}
+      {/* Live Logs Modal */}
+      {showLogsModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border-2 border-purple-500/50 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
+            <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <div className="space-y-3">
+                {healingLog.map((log, idx) => (
+                  <div 
+                    key={idx} 
+                    className="text-base text-slate-200 font-mono bg-slate-950/50 p-3 rounded-lg border border-slate-700/50 animate-fade-in"
+                  >
+                    {log}
+                  </div>
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Success Summary Modal */}
+      {showSuccessModal && successDetails && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border-2 border-green-500/50 rounded-2xl shadow-2xl w-full max-w-2xl">
+            <div className="p-8 space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <CheckCircle className="h-16 w-16 text-green-400" />
+                <h3 className="text-2xl font-bold text-white">Query Test Successful</h3>
+                <p className="text-lg text-slate-300">
+                  Query returned <span className="font-bold text-green-400">{successDetails.rowCount}</span> row(s)
+                </p>
+              </div>
+              
+              {successDetails.results && successDetails.results.length > 0 && (
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 overflow-x-auto max-h-64">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        {Object.keys(successDetails.results[0]).map((key) => (
+                          <th key={key} className="text-left p-2 text-slate-300 font-semibold">
+                            {key}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {successDetails.results.slice(0, 5).map((row: any, idx: number) => (
+                        <tr key={idx} className="border-b border-slate-800">
+                          {Object.values(row).map((value: any, cellIdx: number) => (
+                            <td key={cellIdx} className="p-2 text-slate-400">
+                              {String(value)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              <div className="flex justify-center pt-4">
+                <Button 
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setSuccessDetails(null);
+                  }}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-8 py-2"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Generated Query */}
