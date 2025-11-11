@@ -24,7 +24,7 @@ router.post('/test-gemini', async (req, res) => {
     // Test the Gemini API with a simple request
     const fetch = (await import('node-fetch')).default;
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
       {
         method: 'POST',
         headers: {
@@ -238,7 +238,7 @@ Generate production-quality validation queries. Include appropriate thresholds w
 
     const fetch = (await import('node-fetch')).default;
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
       {
         method: 'POST',
         headers: {
