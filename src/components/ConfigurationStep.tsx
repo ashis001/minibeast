@@ -93,7 +93,7 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       if (response.ok && data.success) {
         setAwsStatus('success');
         setAwsConfigSaved(true);
-        localStorage.setItem('awsConfig', JSON.stringify(awsConfig));
+        // Server already saves to deployments/connections.json
         toast({
           title: "AWS Connection Successful",
           description: "Configuration saved successfully",
@@ -132,18 +132,7 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       if (response.ok && data.success) {
         setSnowflakeStatus('success');
         setSnowflakeConfigSaved(true);
-        localStorage.setItem('snowflakeConfig', JSON.stringify(snowflakeConfig));
-        
-        // Also save to backend for persistence across deployments
-        try {
-          const response = await fetch('/api/config/snowflake', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(snowflakeConfig),
-          });
-        } catch (error) {
-          console.error('Failed to save config to backend:', error);
-        }
+        // Server already saves to deployments/connections.json
         toast({
           title: "Snowflake Connection Successful",
           description: "Configuration saved successfully",
@@ -182,7 +171,7 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       if (response.ok && data.success) {
         setMysqlStatus('success');
         setMysqlConfigSaved(true);
-        localStorage.setItem('mysqlConfig', JSON.stringify(mysqlConfig));
+        // Server already saves to deployments/connections.json
         window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "MySQL Connection Successful",
@@ -222,7 +211,7 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       if (response.ok && data.success) {
         setPostgresStatus('success');
         setPostgresConfigSaved(true);
-        localStorage.setItem('postgresConfig', JSON.stringify(postgresConfig));
+        // Server already saves to deployments/connections.json
         window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "PostgreSQL Connection Successful",
@@ -262,7 +251,7 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
       if (response.ok && data.success) {
         setBigqueryStatus('success');
         setBigqueryConfigSaved(true);
-        localStorage.setItem('bigqueryConfig', JSON.stringify(bigqueryConfig));
+        // Server already saves to deployments/connections.json
         window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "BigQuery Connection Successful",
@@ -339,35 +328,30 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
             setAwsConfig(aws);
             setAwsStatus('success');
             setAwsConfigSaved(true);
-            localStorage.setItem('awsConfig', JSON.stringify(aws));
           }
           
           if (snowflake) {
             setSnowflakeConfig(snowflake);
             setSnowflakeStatus('success');
             setSnowflakeConfigSaved(true);
-            localStorage.setItem('snowflakeConfig', JSON.stringify(snowflake));
           }
           
           if (mysql) {
             setMysqlConfig(mysql);
             setMysqlStatus('success');
             setMysqlConfigSaved(true);
-            localStorage.setItem('mysqlConfig', JSON.stringify(mysql));
           }
           
           if (postgres) {
             setPostgresConfig(postgres);
             setPostgresStatus('success');
             setPostgresConfigSaved(true);
-            localStorage.setItem('postgresConfig', JSON.stringify(postgres));
           }
           
           if (bigquery) {
             setBigqueryConfig(bigquery);
             setBigqueryStatus('success');
             setBigqueryConfigSaved(true);
-            localStorage.setItem('bigqueryConfig', JSON.stringify(bigquery));
           }
           
           if (gemini) {
