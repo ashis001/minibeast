@@ -205,12 +205,42 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
       console.log('🔍 Loading tables for:', selectedSource.type, selectedSource.id);
       setLoadingTables(true);
       try {
-        // Get connection config from localStorage
-        const configKey = `${selectedSource.id}Config`;
-        console.log('📦 Looking for config key:', configKey);
-        const configStr = localStorage.getItem(configKey);
-        
-        if (!configStr) {
+        // Get connection config from server API
+        const connectionsResponse = await fetch('/api/connections');
+        if (!connectionsResponse.ok) {
+          toast({
+            title: "Failed to Load Configuration",
+            description: "Could not fetch connection configurations from server.",
+            variant: "destructive"
+          });
+          setLoadingTables(false);
+          return;
+        }
+
+        const data = await connectionsResponse.json();
+        if (!data.success || !data.connections) {
+          toast({
+            title: "Configuration Missing",
+            description: `No configuration found for ${selectedSource.name}. Please configure in Settings → Connections.`,
+            variant: "destructive"
+          });
+          setLoadingTables(false);
+          return;
+        }
+
+        // Get the specific connection config based on source type
+        let config;
+        if (selectedSource.id === 'snowflake') {
+          config = data.connections.snowflake;
+        } else if (selectedSource.id === 'mysql') {
+          config = data.connections.mysql;
+        } else if (selectedSource.id === 'postgresql') {
+          config = data.connections.postgres;
+        } else if (selectedSource.id === 'bigquery') {
+          config = data.connections.bigquery;
+        }
+
+        if (!config) {
           console.error('❌ No config found for', selectedSource.id);
           toast({
             title: "Configuration Missing",
@@ -221,8 +251,7 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
           return;
         }
 
-        const config = JSON.parse(configStr);
-        console.log('✅ Config loaded:', config);
+        console.log('✅ Config loaded from server:', config);
         
         // Call appropriate API based on connection type
         let response;
