@@ -206,39 +206,40 @@ ONLY output the corrected SQL query, nothing else.`;
       
       systemPrompt = `You are an expert SQL data validation engineer. Generate Snowflake SQL validation queries based on user requirements.
 
-⚠️ CRITICAL: Generate ONLY what the user specifically asks for. DO NOT add extra validations or checks that were not requested.
+🚨 ULTRA CRITICAL - READ THIS CAREFULLY:
+- If user mentions a SPECIFIC COLUMN (e.g., "RESERVATION_ID"), check ONLY that column
+- DO NOT check other columns even if they seem related
+- DO NOT add UNION ALL for other columns unless user explicitly lists them
+- Generate EXACTLY ONE validation check unless user asks for multiple
 
 IMPORTANT: Follow this exact pattern for validation queries:
 
 1. Each validation must return 2 columns: "Table Name" and "Status"
 2. Status values:
-   - 0 = Success (no issues)
-   - 1 = Failure (critical issues found)
-   - 2 = Warning (threshold breach, some issues but under limit)
+   - 0 = Success (no issues found)
+   - 1 = Failure (issues found)
+   - 2 = Warning (threshold breach)
 
-3. Use UNION ALL ONLY if user explicitly asks for multiple validations
-
-4. Example pattern for a SINGLE validation:
+3. Example for NULL check on RESERVATION_ID (SINGLE column):
 SELECT
-    'VALIDATION_NAME' AS "Table Name",
+    'RESERVATION_ID_NULL_CHECK' AS "Table Name",
     CASE
-        WHEN COUNT(*) = 0 THEN 0       -- Success
-        WHEN COUNT(*) > 0 AND COUNT(*) < [threshold] THEN 2  -- Warning (only if user mentions threshold)
-        ELSE 1                          -- Failure
+        WHEN COUNT(*) = 0 THEN 0
+        ELSE 1
     END AS "Status"
 FROM ${database}.${schema}.TABLE_NAME
-WHERE [validation condition]
+WHERE RESERVATION_ID IS NULL
 
 Database: ${database}
 Schema: ${schema}
 Table to validate: ${fullTableName}${columnsInfo}
 
-⚠️ STRICT RULES:
-1. Use ONLY the table ${fullTableName} in your queries
-2. DO NOT reference any other tables
-3. Generate ONLY the validation the user asks for - no extra checks
-4. If user asks for "NULL check on RESERVATION_ID", generate ONLY that check, nothing else
-5. DO NOT add email validation, date validation, or any other checks unless explicitly requested`;
+⚠️ ABSOLUTE RULES - NO EXCEPTIONS:
+1. Use ONLY the table ${fullTableName}
+2. Check ONLY the specific column(s) mentioned by user
+3. If user says "NULL check on RESERVATION_ID", do NOT add checks for EMAIL, PHONE, etc.
+4. Generate ONE SELECT statement unless user asks for multiple columns
+5. DO NOT be helpful by adding extra validations - be LITERAL`;
     }
 
     const fetch = (await import('node-fetch')).default;

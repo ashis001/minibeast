@@ -798,18 +798,24 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
                         let statusText;
                         let statusColor;
                         
-                        if (statusValue === 1 || statusValue === '1' || String(statusValue).toLowerCase() === 'pass') {
+                        // Status codes: 0=Pass, 1=Fail, 2=Warning
+                        if (statusValue === 0 || statusValue === '0' || String(statusValue).toLowerCase() === 'pass') {
                           statusIcon = '✓';
                           statusText = 'Pass';
                           statusColor = 'text-green-400';
-                        } else if (statusValue === 0 || statusValue === '0' || String(statusValue).toLowerCase() === 'fail') {
+                        } else if (statusValue === 1 || statusValue === '1' || String(statusValue).toLowerCase() === 'fail') {
                           statusIcon = '✗';
                           statusText = 'Fail';
                           statusColor = 'text-red-400';
-                        } else {
+                        } else if (statusValue === 2 || statusValue === '2' || String(statusValue).toLowerCase() === 'warning') {
                           statusIcon = '⚠';
                           statusText = 'Warning';
                           statusColor = 'text-yellow-400';
+                        } else {
+                          // Fallback for unknown values
+                          statusIcon = '?';
+                          statusText = 'Unknown';
+                          statusColor = 'text-gray-400';
                         }
                         
                         return (
