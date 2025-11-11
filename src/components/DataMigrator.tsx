@@ -79,82 +79,69 @@ const DataMigrator = ({ onNavigateToActivityLog }: DataMigratorProps) => {
   // CDC mode settings
   const [cdcMode, setCdcMode] = useState(false);
   
-  // Fetch connections from localStorage (Settings/Connections)
+  // Fetch connections from server API (Settings/Connections)
   useEffect(() => {
-    const loadConnections = () => {
+    const loadConnections = async () => {
       try {
         setLoadingConnections(true);
         const loadedConnections: Connection[] = [];
         
-        // Load Snowflake connection
-        const snowflakeConfig = localStorage.getItem('snowflakeConfig');
-        if (snowflakeConfig) {
-          try {
-            const config = JSON.parse(snowflakeConfig);
-            loadedConnections.push({
-              id: 'snowflake',
-              type: 'Snowflake',
-              name: 'Snowflake Connection',
-              account: config.account,
-              database: config.database,
-              status: 'connected'
-            });
-          } catch (e) {
-            console.error('Failed to parse Snowflake config:', e);
-          }
-        }
-        
-        // Load MySQL connection
-        const mysqlConfig = localStorage.getItem('mysqlConfig');
-        if (mysqlConfig) {
-          try {
-            const config = JSON.parse(mysqlConfig);
-            loadedConnections.push({
-              id: 'mysql',
-              type: 'MySQL',
-              name: 'MySQL Connection',
-              host: config.host,
-              database: config.database,
-              status: 'connected'
-            });
-          } catch (e) {
-            console.error('Failed to parse MySQL config:', e);
-          }
-        }
-        
-        // Load PostgreSQL connection
-        const postgresConfig = localStorage.getItem('postgresConfig');
-        if (postgresConfig) {
-          try {
-            const config = JSON.parse(postgresConfig);
-            loadedConnections.push({
-              id: 'postgresql',
-              type: 'PostgreSQL',
-              name: 'PostgreSQL Connection',
-              host: config.host,
-              database: config.database,
-              status: 'connected'
-            });
-          } catch (e) {
-            console.error('Failed to parse PostgreSQL config:', e);
-          }
-        }
-        
-        // Load BigQuery connection
-        const bigqueryConfig = localStorage.getItem('bigqueryConfig');
-        if (bigqueryConfig) {
-          try {
-            const config = JSON.parse(bigqueryConfig);
-            loadedConnections.push({
-              id: 'bigquery',
-              type: 'BigQuery',
-              name: 'BigQuery Connection',
-              account: config.project_id,
-              database: config.dataset,
-              status: 'connected'
-            });
-          } catch (e) {
-            console.error('Failed to parse BigQuery config:', e);
+        // Fetch connections from server
+        const response = await fetch('/api/connections');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.connections) {
+            // Load Snowflake connection
+            if (data.connections.snowflake) {
+              const config = data.connections.snowflake;
+              loadedConnections.push({
+                id: 'snowflake',
+                type: 'Snowflake',
+                name: 'Snowflake Connection',
+                account: config.account,
+                database: config.database,
+                status: 'connected'
+              });
+            }
+            
+            // Load MySQL connection
+            if (data.connections.mysql) {
+              const config = data.connections.mysql;
+              loadedConnections.push({
+                id: 'mysql',
+                type: 'MySQL',
+                name: 'MySQL Connection',
+                host: config.host,
+                database: config.database,
+                status: 'connected'
+              });
+            }
+            
+            // Load PostgreSQL connection
+            if (data.connections.postgres) {
+              const config = data.connections.postgres;
+              loadedConnections.push({
+                id: 'postgresql',
+                type: 'PostgreSQL',
+                name: 'PostgreSQL Connection',
+                host: config.host,
+                database: config.database,
+                status: 'connected'
+              });
+            }
+            
+            // Load BigQuery connection
+            if (data.connections.bigquery) {
+              const config = data.connections.bigquery;
+              loadedConnections.push({
+                id: 'bigquery',
+                type: 'BigQuery',
+                name: 'BigQuery Connection',
+                account: config.project_id,
+                database: config.dataset,
+                status: 'connected'
+              });
+            }
           }
         }
         

@@ -117,20 +117,41 @@ const Dashboard = () => {
     loadSnowflakeConfig();
   }, [currentView, loadSnowflakeConfig]);
 
-  // Check if connections are configured
+  // Check if connections are configured (from server, not localStorage)
   React.useEffect(() => {
-    const checkConnections = () => {
-      const awsConfig = localStorage.getItem('awsConfig');
-      // Only AWS config is required to unlock Deployment
-      const hasConnections = !!awsConfig;
-      setConnectionsConfigured(hasConnections);
+    const checkConnections = async () => {
+      try {
+        const response = await fetch('/api/connections');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.connections) {
+            // Only AWS config is required to unlock Deployment
+            const hasAws = !!data.connections.aws;
+            setConnectionsConfigured(hasAws);
+          } else {
+            setConnectionsConfigured(false);
+          }
+        } else {
+          setConnectionsConfigured(false);
+        }
+      } catch (error) {
+        console.error('Failed to check connections:', error);
+        setConnectionsConfigured(false);
+      }
     };
     
     checkConnections();
-    // Re-check when view changes to connections
-    if (currentView === 'connections') {
+    
+    // Listen for connection updates from ConfigurationStep
+    const handleConnectionUpdate = () => {
       checkConnections();
-    }
+    };
+    
+    window.addEventListener('connectionsUpdated', handleConnectionUpdate);
+    
+    return () => {
+      window.removeEventListener('connectionsUpdated', handleConnectionUpdate);
+    };
   }, [currentView]);
 
   // Check deployment status for each module

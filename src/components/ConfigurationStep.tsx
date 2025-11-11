@@ -94,6 +94,8 @@ const ConfigurationStep = ({ onNext, selectedService }: ConfigurationStepProps) 
         setAwsStatus('success');
         setAwsConfigSaved(true);
         // Server already saves to deployments/connections.json
+        // Notify other components (like Dashboard) that connections changed
+        window.dispatchEvent(new Event('connectionsUpdated'));
         toast({
           title: "AWS Connection Successful",
           description: "Configuration saved successfully",
