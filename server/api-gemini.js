@@ -355,7 +355,7 @@ router.post('/test-query', async (req, res) => {
 // Save AI validation to history
 router.post('/save-ai-validation', async (req, res) => {
   try {
-    const { prompt, sql, database, schema, testResult } = req.body;
+    const { prompt, sql, database, schema, tableName, testResult, description, threshold, entity, validatedBy, team } = req.body;
 
     const historyDir = path.join(__dirname, 'ai-validations');
     await fs.mkdir(historyDir, { recursive: true });
@@ -366,7 +366,13 @@ router.post('/save-ai-validation', async (req, res) => {
       sql,
       database,
       schema,
+      tableName,
       testResult,
+      description,
+      threshold: threshold || 10,
+      entity: entity || tableName,
+      validatedBy,
+      team,
       createdAt: new Date().toISOString(),
       isActive: false
     };

@@ -1291,7 +1291,11 @@ app.post('/api/bigquery/tables', async (req, res) => {
 app.post('/api/snowflake/tables', async (req, res) => {
   let connection;
   try {
-    const { account, username, password, database, schema, warehouse, role } = req.body;
+    const { database, schema, snowflakeConfig } = req.body;
+    
+    // Use snowflakeConfig if provided, otherwise fallback to individual fields
+    const config = snowflakeConfig || req.body;
+    const { account, username, password, warehouse, role } = config;
     
     console.log(`📊 Connecting to Snowflake: ${database}.${schema}`);
     
@@ -1324,17 +1328,8 @@ app.post('/api/snowflake/tables', async (req, res) => {
     
     const rows = await executeSnowflakeQuery(connection, query);
     
-    // Format the results
-    const tables = rows.map(row => ({
-      name: row.TABLE_NAME,
-      exists: true
-    }));
-    
-    // Check if TBL_VALIDATING_TEST_CASES exists
-    const configTableExists = tables.some(table => table.name === 'TBL_VALIDATING_TEST_CASES');
-    if (!configTableExists) {
-      tables.push({ name: 'TBL_VALIDATING_TEST_CASES', exists: false });
-    }
+    // Return simple array of table names
+    const tables = rows.map(row => row.TABLE_NAME);
     
     console.log(`✅ Found ${tables.length} tables in ${database}.${schema}`);
     

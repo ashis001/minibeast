@@ -35,6 +35,14 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successDetails, setSuccessDetails] = useState<{rowCount: number, results?: any[]} | null>(null);
+  
+  // Validation details form fields
+  const [validationDescription, setValidationDescription] = useState("");
+  const [threshold, setThreshold] = useState("10");
+  const [entity, setEntity] = useState("");
+  const [validatedBy, setValidatedBy] = useState("");
+  const [team, setTeam] = useState("");
+  const [availableTables, setAvailableTables] = useState<string[]>([]);
 
   useEffect(() => {
     // Check if Gemini is configured
@@ -50,6 +58,13 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
     loadAIHistory();
   }, [snowflakeConfig]);
 
+  // Fetch tables when database or schema changes
+  useEffect(() => {
+    if (database && schema && snowflakeConfig) {
+      fetchTablesForSchema(database, schema);
+    }
+  }, [database, schema, snowflakeConfig]);
+
   const checkGeminiConfig = async () => {
     try {
       const response = await fetch('/api/connections');
@@ -59,6 +74,44 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
       }
     } catch (error) {
       console.error('Failed to check Gemini config:', error);
+    }
+  };
+
+  const fetchTablesForSchema = async (db: string, sch: string) => {
+    if (!db || !sch) {
+      setAvailableTables([]);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/snowflake/tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          database: db,
+          schema: sch,
+          snowflakeConfig
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setAvailableTables(data.tables || []);
+      } else {
+        toast({
+          title: "Error Fetching Tables",
+          description: data.message || "Role may not have permission to access this database/schema",
+          variant: "destructive",
+        });
+        setAvailableTables([]);
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to Fetch Tables",
+        description: "Could not connect to server",
+        variant: "destructive",
+      });
+      setAvailableTables([]);
     }
   };
 
@@ -469,7 +522,13 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           sql: sqlToSave,
           database,
           schema,
-          testResult: testResultToSave.results
+          tableName,
+          testResult: testResultToSave.results,
+          description: validationDescription,
+          threshold: parseInt(threshold) || 10,
+          entity: entity || tableName,
+          validatedBy,
+          team
         }),
       });
 
@@ -551,10 +610,10 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
       <Card className="bg-slate-900 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
-            <Database className="h-5 w-5" />
+            <Sparkles className="h-5 w-5 text-purple-400" />
             Validation Details
           </CardTitle>
-          <CardDescription>Describe what you want to validate</CardDescription>
+          <CardDescription>Configure your validation rule</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -581,26 +640,89 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tableName">Table Name (required for schema fetch)</Label>
-            <Input
+            <Label htmlFor="tableName">Table Name</Label>
+            <select
               id="tableName"
               value={tableName}
               onChange={(e) => setTableName(e.target.value)}
-              placeholder="RESERVATION"
-              className="bg-slate-800 border-slate-700 text-white"
-            />
+              className="w-full p-2 rounded-md border border-slate-700 bg-slate-800 text-white"
+            >
+              <option value="">Select a table...</option>
+              {availableTables.map((table) => (
+                <option key={table} value={table}>{table}</option>
+              ))}
+            </select>
             <p className="text-xs text-slate-400">AI will fetch column names automatically</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="prompt">What do you want to validate?</Label>
+            <Label htmlFor="validationDescription">Validation Description</Label>
+            <Input
+              id="validationDescription"
+              value={validationDescription}
+              onChange={(e) => setValidationDescription(e.target.value)}
+              placeholder="Brief description of this validation"
+              className="bg-slate-800 border-slate-700 text-white"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="prompt">Validation Logic</Label>
             <textarea
               id="prompt"
-              className="w-full min-h-[120px] p-3 rounded-md border border-slate-700 bg-slate-800 text-white"
-              placeholder="Example: Check if all reservations in staging match base table, with a threshold of 50 mismatches as warning"
+              className="w-full min-h-[100px] p-3 rounded-md border border-slate-700 bg-slate-800 text-white"
+              placeholder="Example: Check if all reservations in staging match base table"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="threshold">Error Threshold for Warning</Label>
+              <Input
+                id="threshold"
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                placeholder="10"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+              <p className="text-xs text-slate-400">Number of errors before warning</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="entity">Entity</Label>
+              <Input
+                id="entity"
+                value={entity}
+                onChange={(e) => setEntity(e.target.value)}
+                placeholder="e.g., RESERVATION"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="validatedBy">Validated By</Label>
+              <Input
+                id="validatedBy"
+                value={validatedBy}
+                onChange={(e) => setValidatedBy(e.target.value)}
+                placeholder="Your name"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="team">Team</Label>
+              <Input
+                id="team"
+                value={team}
+                onChange={(e) => setTeam(e.target.value)}
+                placeholder="Team name"
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
           </div>
 
           <Button 
@@ -646,7 +768,7 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
       {/* Success Summary Modal */}
       {showSuccessModal && successDetails && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border-2 border-green-500/50 rounded-2xl shadow-2xl w-full max-w-2xl">
+          <div className="bg-slate-900 border-2 border-green-500/50 rounded-2xl shadow-2xl w-full max-w-3xl">
             <div className="p-8 space-y-6">
               <div className="flex flex-col items-center gap-4">
                 <CheckCircle className="h-16 w-16 text-green-400" />
@@ -657,27 +779,49 @@ const AIValidationGenerator = ({ onNext, snowflakeConfig }: AIValidationGenerato
               </div>
               
               {successDetails.results && successDetails.results.length > 0 && (
-                <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 overflow-x-auto max-h-64">
-                  <table className="w-full text-sm">
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-700 overflow-x-auto max-h-96">
+                  <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-700">
-                        {Object.keys(successDetails.results[0]).map((key) => (
-                          <th key={key} className="text-left p-2 text-slate-300 font-semibold">
-                            {key}
-                          </th>
-                        ))}
+                      <tr className="border-b-2 border-slate-700">
+                        <th className="text-left p-3 text-slate-300 font-semibold">Table Name</th>
+                        <th className="text-left p-3 text-slate-300 font-semibold">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {successDetails.results.slice(0, 5).map((row: any, idx: number) => (
-                        <tr key={idx} className="border-b border-slate-800">
-                          {Object.values(row).map((value: any, cellIdx: number) => (
-                            <td key={cellIdx} className="p-2 text-slate-400">
-                              {String(value)}
+                      {successDetails.results.map((row: any, idx: number) => {
+                        const keys = Object.keys(row);
+                        const nameKey = keys[0];
+                        const statusKey = keys[1];
+                        const statusValue = row[statusKey];
+                        
+                        let statusIcon;
+                        let statusText;
+                        let statusColor;
+                        
+                        if (statusValue === 1 || statusValue === '1' || String(statusValue).toLowerCase() === 'pass') {
+                          statusIcon = '✓';
+                          statusText = 'Pass';
+                          statusColor = 'text-green-400';
+                        } else if (statusValue === 0 || statusValue === '0' || String(statusValue).toLowerCase() === 'fail') {
+                          statusIcon = '✗';
+                          statusText = 'Fail';
+                          statusColor = 'text-red-400';
+                        } else {
+                          statusIcon = '⚠';
+                          statusText = 'Warning';
+                          statusColor = 'text-yellow-400';
+                        }
+                        
+                        return (
+                          <tr key={idx} className="border-b border-slate-800 hover:bg-slate-800/50">
+                            <td className="p-3 text-slate-300">{row[nameKey]}</td>
+                            <td className={`p-3 font-semibold ${statusColor} flex items-center gap-2`}>
+                              <span className="text-lg">{statusIcon}</span>
+                              <span>{statusText}</span>
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
